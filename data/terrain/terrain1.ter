@@ -1,0 +1,25 @@
+terrain
+{
+	heightmap
+	{
+		file "height1.raw"
+		width 256
+		depth 256
+		height_min 0
+		height_max 700
+		width_scaler 50
+		depth_scaler 50
+	}
+	origin
+	{
+		position 10.0 10 10
+		orientation 0 0 0
+	}
+	layers
+	{
+		textureScale 10
+		detailScale 50
+		texture "concretewall001a.tga"
+		detail "gravelfloor001a.tga"
+	}
+}

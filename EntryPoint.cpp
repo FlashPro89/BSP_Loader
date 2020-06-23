@@ -23,6 +23,8 @@ LPDIRECT3DVERTEXBUFFER9 m_VB = 0;
 LPDIRECT3DINDEXBUFFER9 m_IB = 0;
 LPDIRECT3DTEXTURE9 pTexLightsAtlas = 0;
 
+gTextureAtlas atlas;
+
 //вс€кое вс€чино:
 gInput* input = 0;
 gTimer* timer = 0;
@@ -69,9 +71,6 @@ int bsp_lightdatasize = 0;
 int bsp_visdatasize = 0;
 
 
-//WADHeader wadhdr;
-//WADLumpInfo_t* wad_lumps = 0;
-
 gCamera					cam;
 gResourceManager		rmgr(&pD3DDev9);
 gSceneManager			smgr(&rmgr);
@@ -116,15 +115,10 @@ inline bool isLeafVisible(byte* decomprPVS, int leafBit);
 
 void drawLeaf(int leaf);
 
-
 #define MAX_TEXS_NUM 512
-#define MAX_LIGHTMAPS_NUM 0xFFFF
 
 gResource* tmap[MAX_TEXS_NUM]; // texures
-//LPDIRECT3DTEXTURE9 tmap[MAX_TEXS_NUM]; // texures
-LPDIRECT3DTEXTURE9 ltmap[MAX_LIGHTMAPS_NUM]; // lightmaps
-gTextureSizeSortingStruct sstex[MAX_LIGHTMAPS_NUM];
-unsigned int numLightedFaces = 0;
+unsigned int numLightedFaces = 0; // ??
 
 typedef struct
 {
@@ -171,12 +165,7 @@ void unLoadWAD()
 			rmgr.destroyResource(tmap[i]->getResourceName(), tmap[i]->getGroup());
 			tmap[i] = 0;
 		}
-		//if (tmap[i]) tmap[i]->Release();
 	}
-	
-
-	//if (wadhdr) delete wadhdr; wadhdr = 0;
-	//if (wad_lumps) delete[] wad_lumps; wad_lumps = 0;
 }
 
 void loadWAD()
@@ -209,24 +198,17 @@ void loadWAD()
 
 void unLoadLightmaps()
 {
-	for (int i = 0; i < num_faces; i++)
-	{
-		if (ltmap[i])
-			ltmap[i]->Release();
-		ltmap[i] = 0;
-	}
-
 	if (pTexLightsAtlas)
 		pTexLightsAtlas->Release();
 	pTexLightsAtlas = 0;
 }
 
 
-void createLightmapsAtlas( unsigned int width, unsigned int height, unsigned char border )
+void createLightmapsAtlas(unsigned int width, unsigned int height, unsigned char border)
 {
 	LPDIRECT3DTEXTURE9 pTexTmp = 0;
 	// TODO: проверить устройство на поддержку размера текстуры не соотв 2 в степени N
-	HRESULT hr = pD3DDev9->CreateTexture( width, height, 1, 0, D3DFMT_X8R8G8B8, D3DPOOL_SYSTEMMEM, &pTexLightsAtlas, 0);
+	HRESULT hr = pD3DDev9->CreateTexture(width, height, 1, 0, D3DFMT_X8R8G8B8, D3DPOOL_SYSTEMMEM, &pTexLightsAtlas, 0);
 	if (FAILED(hr))
 		throw("Cannot create lightmap atlas texture in sysmem!");
 
@@ -237,49 +219,35 @@ void createLightmapsAtlas( unsigned int width, unsigned int height, unsigned cha
 	RECT rc;
 	D3DLOCKED_RECT dlr;
 
-	rc.left = 0; rc.top = 0; rc.bottom = height-1; rc.right = width-1;
-	hr = pTexLightsAtlas->LockRect( 0, &dlr, &rc, D3DLOCK_DISCARD);
-
-	HRESULT g1 = D3DERR_INVALIDCALL;
-	HRESULT g2 = D3DERR_WASSTILLDRAWING;
+	rc.left = 0; rc.top = 0; rc.bottom = height - 1; rc.right = width - 1;
+	hr = pTexLightsAtlas->LockRect(0, &dlr, &rc, D3DLOCK_DISCARD);
 
 	if (FAILED(hr))
-		throw("Cannot look rect of lightmap atlas texture!");
+		throw("Cannot lock rect of lightmap atlas texture!");
 
-	memset( dlr.pBits, 0x7F, dlr.Pitch * height );
+	memset(dlr.pBits, 0x7F, dlr.Pitch * height);
 
-	/*
-	hr = pTexLightsAtlas->UnlockRect(0);
-
-	D3DXSaveTextureToFile("atlas_fill.bmp", D3DXIFF_BMP, pTexLightsAtlas, 0);
-
-	hr = pTexLightsAtlas->LockRect(0, &dlr, &rc, D3DLOCK_NO_DIRTY_UPDATE);
-	if (FAILED(hr))
-		throw("Cannot look rect of lightmap atlas texture!");
-
-	*/
+	unsigned int w = 0, h = 0, remappedX = 0, remappedY = 0;
 
 	for (unsigned int i = 0; i < numLightedFaces; i++)
 	{
-		/*
-		rc.left = sstex[i].remappedX;
-		rc.top = sstex[i].remappedY;
-		rc.right = sstex[i].remappedX + sstex[i].width;
-		rc.bottom = sstex[i].remappedY + sstex[i].height;
-		*/
+		w = atlas.getTextureWidthBySortedOrder(i);
+		h = atlas.getTextureHeightBySortedOrder(i);
+		remappedX = atlas.getTextureRemapedXPosBySortedOrder(i);
+		remappedY = atlas.getTextureRemapedYPosBySortedOrder(i);
 
-		if (sstex[i].width * sstex[i].height == 0) 
+		if (w * h == 0)
 			continue;
 
 		//load lightmap to DX texture
 		icolor* ptr_dx = 0;
-		iwadcolor* ptr_ld = (iwadcolor*)(bsp_lightdata + bsp_faces[sstex[i].baseIndex].lightofs);
+		iwadcolor* ptr_ld = (iwadcolor*)(bsp_lightdata + bsp_faces[atlas.getTextureBaseIndexInSortedOrder(i)].lightofs);
 
-		for( int y = sstex[i].remappedY; y < sstex[i].height + sstex[i].remappedY; y++ )
+		for (int y = remappedY; y < h + remappedY; y++)
 		{
-			for( int x = sstex[i].remappedX; x < sstex[i].width + sstex[i].remappedX; x++ )
+			for (int x = remappedX; x < w + remappedX; x++)
 			{
-				ptr_dx = (icolor*)(((byte*)dlr.pBits) + dlr.Pitch * y + x*4);
+				ptr_dx = (icolor*)(((byte*)dlr.pBits) + dlr.Pitch * y + x * 4);
 
 				ptr_dx->a = 0xFF;
 				ptr_dx->r = ptr_ld->r;
@@ -288,58 +256,24 @@ void createLightmapsAtlas( unsigned int width, unsigned int height, unsigned cha
 				ptr_ld++;
 			}
 		}
-
-
-
-		//char buff[256];
-		//sprintf_s(buff, 256, "atlas_in_filling_i%i.bmp", i);
-
-		//D3DXSaveTextureToFile( buff, D3DXIFF_BMP, pTexLightsAtlas, 0 );
 	}
 
 	hr = pTexLightsAtlas->UnlockRect(0);
 	if (FAILED(hr))
-		throw("Cannot unlook rect of lightmap atlas texture!");
+		throw("Cannot unlock rect of lightmap atlas texture!");
 
+	//DEBUG LMAP:
 	D3DXSaveTextureToFile("atlas_fill_lights.bmp", D3DXIFF_BMP, pTexLightsAtlas, 0);
 	hr = pD3DDev9->UpdateTexture(pTexLightsAtlas, pTexTmp);
 
 	pTexLightsAtlas->Release();
 	pTexLightsAtlas = pTexTmp;
 
-	hr = D3DXSaveTextureToFile("atlas_fill_lights.bmp", D3DXIFF_BMP, pTexLightsAtlas, 0);
-}
-
-//for texsizes qsort
-int compareLMSz( const void* i, const void* j )
-{
-	const gTextureSizeSortingStruct* t1 = (const gTextureSizeSortingStruct *)i;
-	const gTextureSizeSortingStruct* t2 = ( const gTextureSizeSortingStruct*)j;
-
-	int ret = 1;
-
-	if (t1->height > t2->height)
-	{
-		ret = -1;
-	}
-	else if (t1->height == t2->height)
-	{
-		if (t1->width > t2->width)
-			ret = -1;
-		else if ( t1->width == t2->width )
-			ret = 0;
-	}
-	return ret;
 }
 
 void loadLighmaps()
 {
-	memset(ltmap, 0, MAX_LIGHTMAPS_NUM * sizeof(LPDIRECT3DTEXTURE9));
-
 	printf_s( "Loading Lightmaps...\n" );
-
-	////TEST
-	//char buff[256];
 
 	float mins[2], maxs[2];
 	int texsize[2];
@@ -349,6 +283,7 @@ void loadLighmaps()
 	BSPFace_t* s;
 
 	numLightedFaces = 0;
+	atlas.beginAtlas( num_faces );
 
 	for (int i = 0; i < num_faces; i++)
 	{
@@ -358,11 +293,6 @@ void loadLighmaps()
 
 		tex = &bsp_texinfs[bsp_faces[i].texinfo];
 		s = &bsp_faces[i];
-
-		sstex[i].baseIndex = i;
-
-		if (i == 138)
-			int g = 1221 + 1;
 
 		if (s->styles[0] == 0)
 		{
@@ -398,133 +328,18 @@ void loadLighmaps()
 				texsize[l] = (int)(maxs[l] - mins[l] + 1);
 				if (texsize[l] > 17) //17+1
 					throw("Bad surface extents");
-
 			}
 
-			sstex[i].width = texsize[0];
-			sstex[i].height = texsize[1];
-
-			//старый код дл€ лайтмапов
-			/*
-			//create texture and lock it
-			LPDIRECT3DTEXTURE9 pTex = 0;
-			HRESULT hr = pD3DDev9->CreateTexture(texsize[0], texsize[1], 1, 0, D3DFMT_X8R8G8B8, D3DPOOL_SYSTEMMEM, &pTex, 0);
-			if (FAILED(hr)) throw("Failed to create lightmap texture!");
-			hr = pD3DDev9->CreateTexture(texsize[0], texsize[1], 1, 0, D3DFMT_X8R8G8B8, D3DPOOL_DEFAULT, &ltmap[i], 0);
-			if (FAILED(hr)) throw("Failed to create lightmap texture(Video Memory)!");
-
-
-			D3DLOCKED_RECT rect;
-			hr = pTex->LockRect(0, &rect, 0, D3DLOCK_DISCARD);
-			if (FAILED(hr)) throw("Failed to lock texture!");
-
-			//load lightmap to DX texture
-			icolor* ptr_dx = (icolor*)rect.pBits;
-			iwadcolor* ptr_ld = (iwadcolor*)(bsp_lightdata + bsp_faces[i].lightofs);
-
-			for (int p = 0; p < texsize[0] * texsize[1]; p++)
-			{
-				ptr_dx->a = 0xFF;
-				ptr_dx->r = ptr_ld->r;
-				ptr_dx->g = ptr_ld->g;
-				ptr_dx->b = ptr_ld->b;
-				ptr_dx++; ptr_ld++;
-			}
-
-			//unlock texture
-			pTex->UnlockRect(0);
-			//pTex->GenerateMipSubLevels(); //ADD D3DUSAGE_AUTOGENMIPMAP
-
-			hr = pD3DDev9->UpdateTexture(pTex, ltmap[i]);
-			if (FAILED(hr)) throw("Failed to update lightmap texture!");
-			pTex->Release();
-			//ltmap[i] = pTex;
-			*/
-			
+			atlas.pushTexture(texsize[0], texsize[1]);
 		}
 		else
 		{
-			sstex[i].width = sstex[i].height = 0;
+			atlas.pushTexture(0, 0);
 		}
 	}
 
-	//qsort forever!
-	qsort( (void*)sstex, num_faces, sizeof(gTextureSizeSortingStruct), compareLMSz );
-
-	/*
-	//сортировка стр®мным пузырьком =)
-	for (int i = 0; i < num_faces - 1; i++)
-	{
-		for (int j = 0; j < num_faces - i - 1; j++)
-		{
-			if (sstex[j].height < sstex[j + 1].height)
-			{
-				//exchange
-				gTextureSizeSortingStruct tmp = sstex[j];
-				sstex[j] = sstex[j + 1];
-				sstex[j + 1] = tmp;
-			}
-			else if (sstex[j].height == sstex[j + 1].height)
-			{
-				if (sstex[j].width < sstex[j + 1].width)
-				{
-					//exchange
-					gTextureSizeSortingStruct tmp = sstex[j];
-					sstex[j] = sstex[j + 1];
-					sstex[j + 1] = tmp;
-				}
-			}
-		}
-	}
-	*/
-
-	int lMapMaxSideSize = 256;
-
-	//рассчитаем габариты текстуры
-	int tWidth, tHeight;
-	int border = 0;
-	int tXPos = border, tYPos = border;
-	int rowHeight;
-
-remapping:
-
-	tWidth = 0, tHeight = 0;
-	tXPos = border, tYPos = border;
-	rowHeight = sstex[0].height;
-
-	//размечаем атлас
-	for (unsigned int i = 0; i < numLightedFaces; i++)
-	{
-		if (tXPos < (lMapMaxSideSize - sstex[i].width - border))
-		{
-			sstex[i].remappedX = tXPos;
-			sstex[i].remappedY = tYPos;
-
-			tXPos += sstex[i].width + border;
-		}
-		else //сдвиг на один р€д вниз размером с текущую текстуру и бордюр
-		{
-			tYPos += rowHeight + border;
-			tXPos = border;
-			rowHeight = sstex[i].height;
-
-			tWidth = lMapMaxSideSize;
-			tHeight = tYPos + sstex[i].height + border;
-
-			if (tHeight > lMapMaxSideSize)
-			{
-				lMapMaxSideSize *= 2;
-				goto remapping;
-			}
-
-			sstex[i].remappedX = tXPos;
-			sstex[i].remappedY = tYPos;
-
-			//передигаем курсор на позицию правее
-			tXPos += sstex[i].width + border;
-		}
-	}
-	createLightmapsAtlas( tWidth, tHeight, border );
+	atlas.mergeToAtlas( 4096, 4096 );
+	createLightmapsAtlas( atlas.getAtlasWidth(), atlas.getAtlasHeight(), 0 );
 }
 
 #define ONPLANE		0
@@ -654,16 +469,6 @@ void loadFonts()
 {
 	gResource* res = rmgr.createTextDrawer("font1", gFontParameters(10, 16, 5, false, "Arial") );
 	res = rmgr.createTextDrawer("font2", gFontParameters(14, 20, 7, false, "Colibri"));
-}
-
-unsigned int getLightmapIndex( int baseindex )
-{
-	for (unsigned int i = 0; i < numLightedFaces; i++)
-	{
-		if (sstex[i].baseIndex == baseindex)
-			return i;
-	}
-	return 0;
 }
 
 void loadScene( const char* mapname )
@@ -1022,6 +827,8 @@ void loadScene( const char* mapname )
 	unsigned int atlasW = desc.Width;
 	unsigned int atlasH = desc.Height;
 
+	unsigned int w = 0, h = 0, remappedX = 0, remappedY = 0;
+
 	for ( int i = 0; i < num_faces; i++ )
 	{
 		//расчитаем размеры лайтмапа дл€ фэйса
@@ -1174,7 +981,11 @@ void loadScene( const char* mapname )
 		//заполн€ем вершинный буфер
 		/////////////////////////////////////////
 
-		unsigned int li = getLightmapIndex(i);
+		w = atlas.getTextureWidthByBaseIndex(i);
+		h = atlas.getTextureHeightByBaseIndex(i);
+		remappedX = atlas.getTextureRemapedXPosByBaseIndex(i);
+		remappedY = atlas.getTextureRemapedYPosByBaseIndex(i);
+
 		int pre_pos_in_vbuffer = pos_in_vbuffer;
 		for (int j = 0; j < vert_in_face; j++)
 		{
@@ -1210,13 +1021,13 @@ void loadScene( const char* mapname )
 			{
 				tex_bounds[0] = maxs[0] - mins[0];
 				tex_bounds[1] = maxs[1] - mins[1];
-				tex_center[0] = tex_bounds[0] / 2 + mins[0];
-				tex_center[1] = tex_bounds[1] / 2 + mins[1];
+				tex_center[0] = tex_bounds[0] * 0.5f + mins[0];
+				tex_center[1] = tex_bounds[1] * 0.5f + mins[1];
 
 				float scaleU = (float)((float)texsize[0] - 1.f) / (float)texsize[0];
 				float scaleV = (float)((float)texsize[1] - 1.f) / (float)texsize[1];
 
-				float dott[2] = { (p_vdata[g].tu / 16.f), (p_vdata[g].tv / 16.f) };
+				float dott[2] = { (p_vdata[g].tu * 0.0625f), (p_vdata[g].tv * 0.0625f) }; // /16 = *0.0625
 
 				p_vdata[g].tu2 = ((dott[0] - tex_center[0]) / tex_bounds[0]) * scaleU + 0.5f;
 				p_vdata[g].tv2 = ((dott[1] - tex_center[1]) / tex_bounds[1]) * scaleV + 0.5f;
@@ -1225,11 +1036,8 @@ void loadScene( const char* mapname )
 				float pxV = 1.f / atlasH;
 
 				//remap for Lightmap atlas
-				p_vdata[g].tu2 = ( pxU * sstex[li].remappedX + p_vdata[g].tu2 * (float)sstex[li].width / atlasW);
-				p_vdata[g].tv2 = ( pxV * sstex[li].remappedY + p_vdata[g].tv2 * (float)sstex[li].height / atlasH);
-
-				//if ((texsize[0] != sstex[li].width) || (texsize[1] != sstex[li].height))
-				//	int g = 12 * 2;
+				p_vdata[g].tu2 = ( pxU * remappedX + p_vdata[g].tu2 * (float)w / atlasW);
+				p_vdata[g].tv2 = ( pxV * remappedY + p_vdata[g].tv2 * (float)h / atlasH);
 
 			}
 			else
@@ -1237,7 +1045,6 @@ void loadScene( const char* mapname )
 				p_vdata[g].tu2 = 0;
 				p_vdata[g].tv2 = 0;
 			}
-
 
 			p_vdata[g].tu /= miptex->width;
 			p_vdata[g].tv /= miptex->height;
@@ -1267,9 +1074,6 @@ void loadScene( const char* mapname )
 			pos_in_ibuffer += 3;
 
 		}
-
-		//if (s->styles[0] == 0)
-		//	usedLightedFaces++;
 	}
 
 	r_num_i = pos_in_ibuffer;
@@ -1750,7 +1554,7 @@ void renderFaces()
 			//pD3DDev9->SetTexture(1, ltmap[i]);
 			if( !last_draw_useLMap)
 			{
-				pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE2X);
+				pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
 				last_draw_useLMap = true;
 			}
 		}

@@ -1,7 +1,9 @@
 #include "Mesh.h"
 #include "Scene.h"
 #include "Terrain.h"
+#include "TextureAtlas.h"
 #include "gmath.h"
+#include "FileSystem.h"
 
 #define BUFSZ 2048
 
@@ -595,11 +597,14 @@ gResourceSkinnedMesh::gResourceSkinnedMesh(gResourceManager* mgr, GRESOURCEGROUP
 
 	m_pTransformedBones = 0;
 	//m_pTransformedBonesByQuat = 0;
-	_time = 0.f;
+	_time = 0.f; // TODO: delete
 }
 
 gResourceSkinnedMesh::~gResourceSkinnedMesh()
 {
+
+	m_trisCacher.clear(); // ??
+
 	auto it = m_animMap.begin();
 	while (it != m_animMap.end())
 	{
@@ -696,11 +701,14 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 					tg.trisNum = 1; // прибавляем сдесь 1!
 					tg.__used_tris = 0;
 					tg.__before = m_trisNum;
-					
-
 					tg.trisOffsetInBuff = m_trisNum * 3;
 					
 					sprintf_s( fullFileName, BUFSZ, "%s%s", dirName, buffer );
+
+					gFileImpl* file = new gFileImpl( fullFileName, false, true );
+					tg.bitmap = new gBMPFile();
+					tg.bitmap->loadFromFile(file); // TODO: free mem of bitmap after load
+					delete file;
 
 					gResource2DTexture* pTex = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName);
 					tg.pTex = pTex;
@@ -735,6 +743,45 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 		}
 	}
 	fclose(f);
+
+	//optimize textures to atlas
+	gTextureAtlas atlas;
+	atlas.beginAtlas(m_trisCacher.size());
+
+	auto it = m_trisCacher.begin();
+	while (it != m_trisCacher.end())
+	{
+		atlas.pushTexture( it->second.bitmap->getWidth(), it->second.bitmap->getHeight(), &it->second );
+		it++;
+	}
+	atlas.mergeTexturesToAtlas( 4096, 4096, 0 );
+
+	gBMPFile outAtlas;
+	outAtlas.createBitMap(atlas.getAtlasWidth(), atlas.getAtlasHeight());
+	gFileImpl* file = new gFileImpl( "outAtlas.bmp", true, true );
+
+	for (unsigned int i = 0; i < m_trisCacher.size(); i++)
+	{
+		/*
+		char tmp[256];
+		sprintf_s(tmp, 256, "tex%i.bmp", i);
+		gFileImpl* tfile = new gFileImpl(tmp, true, true);
+		((gTrisGroup*)atlas.getUserDataBySortedIndex(i))->bitmap->saveToFile(tfile);
+		delete tfile;
+		*/
+		outAtlas.overlapOther(*((gTrisGroup*)atlas.getUserDataBySortedIndex(i))->bitmap,
+			atlas.getTextureRemapedXPosBySortedOrder(i),
+			atlas.getTextureRemapedYPosBySortedOrder(i));
+
+		//free bitmap memory
+		delete ((gTrisGroup*)atlas.getUserDataBySortedIndex(i))->bitmap;
+		((gTrisGroup*)atlas.getUserDataBySortedIndex(i))->bitmap = 0;
+	}
+
+
+	outAtlas.saveToFile(file);
+	delete file;
+
 	return true;
 }
 
@@ -977,9 +1024,9 @@ bool gResourceSkinnedMesh::load()
 	}
 
 	// DEBUG OUTPUT
-	fopen_s(&fd, "out_transformed_bones.txt", "wt");
+	//fopen_s(&fd, "out_transformed_bones.txt", "wt");
 	_transform_to_world( m_pTransformedBones, -1 );
-	fclose(fd);
+	//fclose(fd);
 
 	//приготовим инверсные матрицы начального положения
 	m_pMatInverted = new D3DXMATRIX[ m_bonesNum ];
@@ -1004,6 +1051,8 @@ bool gResourceSkinnedMesh::load()
 
 void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функции не изменяются
 {
+	//TODO: need to delete texture resources
+
 	m_AABB.reset();
 	
 	if ( m_pMatInverted )
@@ -1380,6 +1429,7 @@ bool gResourceStaticMesh::preload()
 		}
 	}
 	fclose(f);
+
 	return true;
 }
 bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT

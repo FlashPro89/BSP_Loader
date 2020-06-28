@@ -8,6 +8,7 @@
 #include "Scene.h"
 #include "FileSystem.h"
 #include "TextureAtlas.h"
+#include "BMPFile.h"
 #include <cstdio>
 #include <map>
 #include <string>
@@ -243,9 +244,9 @@ void createLightmapsAtlas(unsigned int width, unsigned int height, unsigned char
 		icolor* ptr_dx = 0;
 		iwadcolor* ptr_ld = (iwadcolor*)(bsp_lightdata + bsp_faces[atlas.getTextureBaseIndexInSortedOrder(i)].lightofs);
 
-		for (int y = remappedY; y < h + remappedY; y++)
+		for (unsigned int y = remappedY; y < h + remappedY; y++)
 		{
-			for (int x = remappedX; x < w + remappedX; x++)
+			for (unsigned int x = remappedX; x < w + remappedX; x++)
 			{
 				ptr_dx = (icolor*)(((byte*)dlr.pBits) + dlr.Pitch * y + x * 4);
 
@@ -338,7 +339,7 @@ void loadLighmaps()
 		}
 	}
 
-	atlas.mergeToAtlas( 4096, 4096 );
+	atlas.mergeTexturesToAtlas( 4096, 4096 );
 	createLightmapsAtlas( atlas.getAtlasWidth(), atlas.getAtlasHeight(), 0 );
 }
 
@@ -424,7 +425,29 @@ void unLoadScene();
 
 void testFileSystem()
 {
-	gFile* f = new gFileImpl( "test_fsystem.txt", true );
+	gFileSystem sys;
+	char path[MAX_PATH];
+	sys.OpenFileDialogBox( path, MAX_PATH, "BMP files(*.bmp)\0*.bmp\0", 23, "Открыть файл:", "hollow.bmp" );
+
+	gBMPFile bmp;
+	gFile* f = new gFileImpl(path, false, true);
+	bmp.loadFromFile(f);
+	delete f;
+
+	gBMPFile tmpBuffer;
+	f = new gFileImpl("out.bmp", true, true);
+	tmpBuffer.createBitMap(256, 256);
+	tmpBuffer.overlapOther(bmp, 0, 0);
+	tmpBuffer.overlapOther(bmp, bmp.getWidth(), bmp.getHeight());
+	tmpBuffer.overlapOther(bmp, bmp.getWidth()*2, bmp.getHeight()*2);
+	tmpBuffer.overlapOther(bmp, bmp.getWidth()*3, bmp.getHeight()*3);
+	tmpBuffer.overlapOther(bmp, bmp.getWidth() * 4, bmp.getHeight() * 4);
+
+	tmpBuffer.saveToFile(f);
+	delete f;
+
+
+	f = new gFileImpl( "test_fsystem.txt", true );
 
 	f->puts( "--- TEST LINE 1 ---\n" );
 	f->puts( "--- TEST LINE 2 ---\n" );

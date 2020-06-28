@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include "Resources.h"
+#include "BMPFile.h"
 
 #define SKINNING_FPS_DEFAULT 20.f
 
@@ -32,6 +33,8 @@ struct gTrisGroup //для отрисовки
 	unsigned int trisOffsetInBuff;
 	gResource2DTexture* pTex;
 	gSkinIndexRemapedSubsets remapedSubsets;
+
+	gBMPFile* bitmap;
 
 	unsigned int __used_tris; // !!! используется только при загрузке данных
 	unsigned int __before; // !!! offset количесво байт в буффере _перед_ данной группой треугольников 

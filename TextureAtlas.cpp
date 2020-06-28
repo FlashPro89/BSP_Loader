@@ -47,7 +47,7 @@ bool gTextureAtlas::pushTexture( unsigned short width, unsigned short height, vo
 	m_pSortableTextureSizes[m_curPosInArray].baseIndex = m_curPosInArray;
 	m_pSortableTextureSizes[m_curPosInArray].width = width;
 	m_pSortableTextureSizes[m_curPosInArray].height = height;
-	//m_pSortableTextureSizes[m_curPosInArray].userData = userData;
+	m_pSortableTextureSizes[m_curPosInArray].userData = userData;
 	m_pSortableTextureSizes[m_curPosInArray].key = (height << 16) | width;
 
 	m_curPosInArray++;
@@ -94,7 +94,7 @@ int compareByBaseIndex(const void* i, const void* j)
 }
 
 
-bool gTextureAtlas::mergeToAtlas( unsigned short maxWidth, unsigned short maxHeight, unsigned char border )
+bool gTextureAtlas::mergeTexturesToAtlas( unsigned short maxWidth, unsigned short maxHeight, unsigned char border )
 {
 
 	//qsort( (void*)m_pSortableTextureSizesPointers, m_curPosInArray, sizeof(gTextureSizeSortingStruct*), compareByTexSz );
@@ -229,6 +229,15 @@ unsigned short  gTextureAtlas::getTextureRemapedYPosBySortedOrder(unsigned int i
 
 	return m_pSortableTextureSizesPointers[index]->remappedY;
 }
+
+void* gTextureAtlas::getUserDataBySortedIndex(unsigned int index) const
+{
+	if ((index > m_texturesNum) || (m_pSortableTextureSizes == 0))
+		return 0;
+
+	return m_pSortableTextureSizesPointers[index]->userData;
+}
+
 
 unsigned short gTextureAtlas::getTextureWidthByBaseIndex(unsigned int baseIndex) const
 {

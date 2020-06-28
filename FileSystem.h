@@ -84,6 +84,14 @@ public:
 	gFile* openFile( const char* filename, bool writeable, bool binary );
 	void closeFile( gFile* file );
 
+	size_t getFileSize( const char* filename ) const;
+	bool isFileExist(const char* filename) const;
+
+	bool OpenFileDialogBox(char* fname, unsigned short maxLenght, 
+		const char* filter = 0, unsigned short filterLenght = 0, 
+		const char* title = 0, const char* defaultName = 0 );
+	bool SaveFileDialogBox(char* fname, unsigned short maxLenght, const char* filter = 0, const char* title = 0, const char* defaultName = 0);
+
 };
 
 #endif

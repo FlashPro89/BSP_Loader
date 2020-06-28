@@ -1,5 +1,6 @@
 #include "FileSystem.h"
 #include <stdarg.h>
+#include <Windows.h>
 
 #define STRING_BUFFER_SIZE 4096
 char sBuffer[STRING_BUFFER_SIZE] = "";
@@ -71,7 +72,7 @@ gFileImpl::gFileImpl( const char* filename, bool writeable, bool binary, void* d
 gFileImpl::~gFileImpl()
 {
 	if (m_filename)
-		delete m_filename;
+		delete[] m_filename;
 
 	if (m_file)
 		fclose(m_file);
@@ -126,15 +127,15 @@ const size_t gFileImpl::read(void* dst, size_t size)
 
 	if (m_memFileSize) //memory file
 	{
-		int writeSz = size;
+		int readSz = size;
 		if ((size + m_memCurrentPos) > m_memFileSize)
-			writeSz = m_memFileSize - m_memCurrentPos;
-		memcpy_s( dst, writeSz, (void*)((char*)m_memFileData + m_memCurrentPos), writeSz );
-		m_memCurrentPos += writeSz;
-		return writeSz;
+			readSz = m_memFileSize - m_memCurrentPos;
+		memcpy_s( dst, readSz, (void*)((char*)m_memFileData + m_memCurrentPos), readSz);
+		m_memCurrentPos += readSz;
+		return readSz;
 	}
 	else
-		return fwrite( dst, size, 1, m_file );
+		return fread_s( dst, size, 1, size, m_file );
 }
 
 size_t gFileImpl::write(void* src, size_t size)
@@ -144,15 +145,15 @@ size_t gFileImpl::write(void* src, size_t size)
 
 	if (m_memFileSize) //memory file
 	{
-		int readSz = size;
+		int writeSz = size;
 		if ((size + m_memCurrentPos) > m_memFileSize)
-			readSz = m_memFileSize - m_memCurrentPos;
-		memcpy_s((void*)( (char*)m_memFileData + m_memCurrentPos ), readSz, src, readSz);
-		m_memCurrentPos += readSz;
-		return readSz;
+			writeSz = m_memFileSize - m_memCurrentPos;
+		memcpy_s((void*)( (char*)m_memFileData + m_memCurrentPos ), writeSz, src, writeSz);
+		m_memCurrentPos += writeSz;
+		return writeSz;
 	}
 	else
-		return fread_s( src, size, size, 1, m_file);
+		return fwrite( src, 1, size, m_file);
 }
 
 
@@ -280,4 +281,80 @@ void gFileSystem::closeFile(gFile* file)
 {
 	if (file)
 		delete ((gFileImpl*)file);
+}
+
+size_t gFileSystem::getFileSize( const char* filename ) const
+{
+	size_t sz = 0;
+	FILE* f = 0;
+	errno_t err = fopen_s( &f, filename, "rb" );
+	if (err) 
+		return sz;
+
+	struct stat buff;
+	fstat(_fileno(f), &buff);
+	fclose(f);
+
+	sz = buff.st_size;
+
+	return sz;
+}
+
+bool gFileSystem::isFileExist( const char* filename ) const
+{
+	return getFileSize(filename) != 0;
+} 
+
+
+bool gFileSystem::OpenFileDialogBox(char* fname, unsigned short maxLenght,
+	const char* filter, unsigned short filterLenght,
+	const char* title, const char* defaultName)
+{
+	OPENFILENAME ofn = { 0 };
+
+	char fileTitle[256];
+	memset(fileTitle, 0, 256);
+	if (title)
+		strcpy_s(fileTitle, 256, title);
+
+	char* fileFilter = new char[filterLenght+1];
+	memset(fileFilter, 0, filterLenght);
+	if (filter)
+		memcpy_s(fileFilter, filterLenght+1, filter, filterLenght );
+
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = NULL;
+
+	ofn.lpstrFile = fname;
+	if (defaultName)
+		strcpy_s(fname, maxLenght, defaultName);
+	else
+		*(ofn.lpstrFile) = 0;
+
+	ofn.nMaxFile = maxLenght;
+	ofn.lpstrFilter = fileFilter;
+	
+	if( filter != 0 )
+		ofn.nFilterIndex = 1;
+
+	ofn.lpstrFileTitle = fileTitle;
+	*(ofn.lpstrFileTitle) = 0;
+	ofn.nMaxFileTitle = 0;
+
+	ofn.lpstrInitialDir = NULL;
+	ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST;
+
+	char path[MAX_PATH];
+	GetCurrentDirectory(sizeof(path), path); //HACK)
+	GetOpenFileName(&ofn);
+	SetCurrentDirectory(path);
+
+	return true;
+}
+
+bool gFileSystem::SaveFileDialogBox( char* out, unsigned short maxLenght, const char* filter,
+	const char* title, const char* defaultName )
+{
+	
+	return true;
 }

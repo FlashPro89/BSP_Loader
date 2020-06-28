@@ -149,6 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Animator.cpp" />
+    <ClCompile Include="BMPFile.cpp" />
     <ClCompile Include="BSPFile.cpp" />
     <ClCompile Include="ColDet.cpp" />
     <ClCompile Include="EntryPoint.cpp" />
@@ -168,6 +169,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animator.h" />
+    <ClInclude Include="BMPFile.h" />
     <ClInclude Include="BSPFile.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ColDet.h" />

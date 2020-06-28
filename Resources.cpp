@@ -167,6 +167,8 @@ gResource2DTexture::gResource2DTexture(gResourceManager* mgr, GRESOURCEGROUP gro
 	m_pTex = 0;
 	m_isRenderable = false;
 	m_pLumpInfo = lumpinfo;
+	m_width = 0;
+	m_height = 0;
 }
 
 gResource2DTexture::~gResource2DTexture()
@@ -184,10 +186,22 @@ bool gResource2DTexture::preload()
 		if (inf.ResourceType != D3DRTYPE_TEXTURE)
 			return false;
 
+		m_width = inf.Width;
+		m_height = inf.Height;
+
 		return true;
 	}
 	else
+	{
+		size_t sz = WADLoadLumpFromFile(m_fileName.c_str(), (void*)t, m_pLumpInfo->filepos, sizeof( WADPic ) );
+		if (sz != sizeof(WADPic))
+			return false;
+
+		WADPic* pic = ((WADPic*)t);
+		m_width = pic->width, m_height = pic->height;
+
 		return true;
+	}
 }
 
 bool gResource2DTexture::load()
@@ -323,6 +337,16 @@ void gResource2DTexture::unload() //данные, загруженые preload() в этой функции 
 const LPDIRECT3DTEXTURE9 gResource2DTexture::getTexture() const
 {
 	return m_pTex;
+}
+
+unsigned short gResource2DTexture::getTextureWidth() const
+{
+	return m_width;
+}
+
+unsigned short gResource2DTexture::getTextureHeight() const
+{
+	return m_height;
 }
 
 //-----------------------------------------------
@@ -557,7 +581,7 @@ bool gResourceManager::onRenderDeviceReset()
 {
 	bool result = true;
 
-	for (int i = 0; i < GRESGROUP_NUM; i++)
+	for ( int i = 0; i < GRESGROUP_NUM; i++)
 	{
 		auto it = m_resources[i].begin();
 		while ( it != m_resources[i].end() )

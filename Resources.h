@@ -30,8 +30,8 @@ class gResourceSkinnedMesh;
 enum GRESOURCEGROUP
 {
 	GRESGROUP_2DTEXTURE,
-	GRESGROUP_SHAPE,
 	GRESGROUP_CUBETEXTURE,
+	GRESGROUP_SHAPE,
 	GRESGROUP_SHADERSET,
 	GRESGROUP_STATICMESH,
 	GRESGROUP_SKINNEDMESH,
@@ -137,10 +137,15 @@ public:
 
 	const LPDIRECT3DTEXTURE9 getTexture() const;
 
+	unsigned short getTextureWidth() const;
+	unsigned short getTextureHeight() const;
+
 protected:
 	WADLumpInfo_t* m_pLumpInfo;
 	//bool m_isTexFromWAD;
 	LPDIRECT3DTEXTURE9 m_pTex;
+	unsigned short m_width;
+	unsigned short m_height;
 };
 
 class gResourceShape :  public gRenderable

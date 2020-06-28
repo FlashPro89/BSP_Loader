@@ -11,8 +11,8 @@ struct gTextureSizeSortingStruct
 	unsigned short height;
 	unsigned int baseIndex;
 	unsigned int key; //sorting key
-	//void* userData; //lockedRect bits ??
-}; //32bytes on x86
+	void* userData; //lockedRect bits ??
+};
 
 class gTextureAtlas
 {
@@ -23,7 +23,7 @@ public:
 	
 	void beginAtlas( unsigned int texturesNum );
 	bool pushTexture( unsigned short width, unsigned short height, void* userData = 0 );
-	bool mergeToAtlas( unsigned short maxWidth, unsigned short maxHeight, unsigned char border = 0 );
+	bool mergeTexturesToAtlas( unsigned short maxWidth, unsigned short maxHeight, unsigned char border = 0 );
 
 	unsigned int getAtlasWidth() const;
 	unsigned int getAtlasHeight() const;
@@ -35,12 +35,13 @@ public:
 	unsigned short getTextureRemapedXPosBySortedOrder(unsigned int index) const;
 	unsigned short getTextureRemapedYPosBySortedOrder(unsigned int index) const;
 
+	void* getUserDataBySortedIndex(unsigned int index) const;
+
 	unsigned short getTextureWidthByBaseIndex(unsigned int baseIndex) const;
 	unsigned short getTextureHeightByBaseIndex(unsigned int baseIndex) const;
 	unsigned short getTextureRemapedXPosByBaseIndex( unsigned int baseIndex ) const;
 	unsigned short getTextureRemapedYPosByBaseIndex( unsigned int baseIndex ) const;
-	//__inline const void* getTextureUserData( unsigned int baseIndex ) const;
-
+	
 protected:
 	gTextureSizeSortingStruct* m_pSortableTextureSizes;
 	gTextureSizeSortingStruct** m_pSortableTextureSizesPointers;

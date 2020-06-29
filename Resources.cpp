@@ -302,8 +302,20 @@ bool gResource2DTexture::load()
 	}
 	else
 	{
-		HRESULT hr = D3DXCreateTextureFromFileEx(m_rmgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
-			D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DFMT_FROM_FILE, 0, 0, 0, &m_pTex);
+		D3DXIMAGE_INFO inf;
+		D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
+
+		HRESULT hr;
+		if (inf.Format == D3DFMT_P8) // ?? пока оставим так
+		{
+			hr = D3DXCreateTextureFromFileEx(m_rmgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
+				D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_UNKNOWN, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
+		}
+		else
+		{
+			hr = D3DXCreateTextureFromFileEx(m_rmgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
+				D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
+		}
 
 		if (FAILED(hr))
 			return false;
@@ -313,6 +325,7 @@ bool gResource2DTexture::load()
 		//TEST:
 		D3DSURFACE_DESC desc;
 		m_pTex->GetLevelDesc( 0, &desc );
+
 		D3DLOCKED_RECT dlr;
 		RECT rc;
 		rc.left = 0; rc.top = 0; rc.right = desc.Width - 1; rc.bottom = desc.Height - 1;
@@ -772,9 +785,6 @@ gResource* gResourceManager::loadTexture2DFromWADList( const char* name )
 		}
 		it++;
 	}
-
-	//if (!strcmp("06_CHALETI_WOO", name))
-		//fclose(f);
 
 	return 0;
 }

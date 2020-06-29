@@ -11,6 +11,7 @@
 #include <string>
 #include "Resources.h"
 #include "BMPFile.h"
+#include "TextureAtlas.h"
 
 #define SKINNING_FPS_DEFAULT 20.f
 
@@ -33,6 +34,12 @@ struct gTrisGroup //для отрисовки
 	unsigned int trisOffsetInBuff;
 	gResource2DTexture* pTex;
 	gSkinIndexRemapedSubsets remapedSubsets;
+
+	unsigned short baseIndex;
+	unsigned short remappedX;
+	unsigned short remappedY;
+	unsigned short texWidth;
+	unsigned short texHeight;
 
 	gBMPFile* bitmap;
 
@@ -154,6 +161,9 @@ public:
 protected:
 	void _skeleton( const gSkinBone* frame, int b1 ) const;
 	void _transform_to_world( gSkinBone* bones, int bone );
+
+	gResource2DTexture* m_pAtlasTexture;
+	gTextureAtlas m_atlas;
 
 	LPDIRECT3DVERTEXBUFFER9 m_pVB;
 	LPDIRECT3DINDEXBUFFER9 m_pIB;

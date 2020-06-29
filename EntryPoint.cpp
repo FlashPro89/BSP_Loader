@@ -425,12 +425,14 @@ void unLoadScene();
 
 void testFileSystem()
 {
+	gFile* f = 0;
+	/*
 	gFileSystem sys;
 	char path[MAX_PATH];
 	sys.OpenFileDialogBox( path, MAX_PATH, "BMP files(*.bmp)\0*.bmp\0", 23, "Открыть файл:", "hollow.bmp" );
 
 	gBMPFile bmp;
-	gFile* f = new gFileImpl(path, false, true);
+	f = new gFileImpl(path, false, true);
 	bmp.loadFromFile(f);
 	delete f;
 
@@ -446,6 +448,7 @@ void testFileSystem()
 	tmpBuffer.saveToFile(f);
 	delete f;
 
+	*/
 
 	f = new gFileImpl( "test_fsystem.txt", true );
 
@@ -615,7 +618,6 @@ void loadScene( const char* mapname )
 		pSMesh->addAnimation("../data/models/barney/idle4.smd", "idle4");
 		pSMesh->addAnimation("../data/models/barney/run.smd", "run" );
 		pSMesh->addAnimation("../data/models/barney/walk.smd", "walk" );
-
 
 
 		ent = smgr.createEntity("ent__skinning1");

@@ -46,6 +46,9 @@ void gEntity::setRenderable( gRenderable* renderable )
 {
 	deleteAnimators();
 
+	if (m_renderable)
+		m_renderable->release();
+
 	m_renderable = renderable;
 	if (m_renderable != 0)
 	{
@@ -57,6 +60,9 @@ void gEntity::setRenderable( gRenderable* renderable )
 
 const gRenderable* gEntity::getRenderable() const
 {
+	if (m_renderable)
+		m_renderable->addRef(); // точно const??? )
+
 	return m_renderable;
 }
 

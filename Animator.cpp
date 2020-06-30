@@ -22,12 +22,14 @@ GANIMATOR_TYPE gAnimator::getType() const
 
 gSkinnedMeshAnimator::gSkinnedMeshAnimator( gEntity* entity )
 {
-	//m_pMesh = mesh;
 	m_pEntity = entity;
 
-	int bonesNum = ((gResourceSkinnedMesh*)m_pEntity->getRenderable())->getBonesNum();
-	m_mixedFrame = new gSkinBone[bonesNum];
-	m_worldBonesMatrixes = new D3DXMATRIX[bonesNum];
+	gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)m_pEntity->getRenderable();
+	m_bonesNum = pSMesh->getBonesNum();
+	pSMesh->release();
+
+	m_mixedFrame = new gSkinBone[m_bonesNum];
+	m_worldBonesMatrixes = new D3DXMATRIX[m_bonesNum];
 	m_type = GANIMATOR_SKINNED;
 }
 
@@ -61,9 +63,7 @@ void gSkinnedMeshAnimator::tick(float delta)
 	//вычисление смешанного ADD кадра
 	it = m_tracks.begin();
 
-	int bonesNum = ( (gResourceSkinnedMesh*) m_pEntity->getRenderable() )->getBonesNum();
-
-	for (int i = 0; i < bonesNum; i++)
+	for (int i = 0; i < m_bonesNum; i++)
 	{
 		m_mixedFrame[i].setPosition( D3DXVECTOR3(0.f, 0.f, 0.f) );
 		m_mixedFrame[i].setOrientation(D3DXQUATERNION(0.f, 0.f, 0.f, 1.f)); // Id
@@ -71,7 +71,7 @@ void gSkinnedMeshAnimator::tick(float delta)
 
 	while (it != m_tracks.end())
 	{
-		for (int i = 0; i < bonesNum; i++)
+		for (int i = 0; i < m_bonesNum; i++)
 		{
 			m_mixedFrame[i].move( it->second->getCurrentFrame()[i].getPosition() );
 			m_mixedFrame[i].rotate(it->second->getCurrentFrame()[i].getOrientation());
@@ -80,15 +80,16 @@ void gSkinnedMeshAnimator::tick(float delta)
 	}
 
 	//переводим в мировую систему координат ( трансформация по иерархии костей )
-	_transformHierarchyFrameBones( m_mixedFrame, -1, bonesNum );
+	_transformHierarchyFrameBones( m_mixedFrame, -1, m_bonesNum );
 
 	D3DXMATRIX mTr, mRot, mAbs;
 	D3DXVECTOR3 v; 
 	D3DXQUATERNION q;
 
-	const D3DXMATRIX* mInverted = ((gResourceSkinnedMesh*)m_pEntity->getRenderable())->getInvertedMatrixes();
+	gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)m_pEntity->getRenderable();
+	const D3DXMATRIX* mInverted = pSMesh->getInvertedMatrixes();
 
-	for (int i = 0; i < bonesNum; i++ )
+	for (int i = 0; i < m_bonesNum; i++ )
 	{
 		v = m_mixedFrame[i].getPosition();
 		q = m_mixedFrame[i].getOrientation();
@@ -102,6 +103,8 @@ void gSkinnedMeshAnimator::tick(float delta)
 		D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &mInverted[i], &mAbs );
 		
 	}
+
+	pSMesh->release();
 }
 
 void gSkinnedMeshAnimator::clear()
@@ -165,21 +168,28 @@ const gSkinnedMeshAnimationTrack* gSkinnedMeshAnimator::getTrack(const char* nam
 gSkinnedMeshAnimationTrack* gSkinnedMeshAnimator::addTrack(const char* name,
 	GSKINANIM_TYPE type)
 {
+	gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)m_pEntity->getRenderable();
+	gSkinnedMeshAnimationTrack* track = 0;
 
-	gResourceSkinAnimation* anim = ((gResourceSkinnedMesh*)m_pEntity->getRenderable())->getAnimation(name);
+	gResourceSkinAnimation* anim = pSMesh->getAnimation(name);
 	if (!anim)
-		return (gSkinnedMeshAnimationTrack*)0;
+	{
+		pSMesh->release();
+		return track;
+	}
 
 	auto it = m_tracks.find(name);
 	if (it == m_tracks.end())
 	{
-		gSkinnedMeshAnimationTrack* track = new gSkinnedMeshAnimationTrack(anim);
+		track = new gSkinnedMeshAnimationTrack(anim);
 		track->setAnimationType(type);
 		m_tracks[name] = track;
-		return track;
 	}
-	else //пока что возвращаем 0 чтобы исключить влияние на уже используемые анимации
-		return (gSkinnedMeshAnimationTrack*)0;
+
+	//else //пока что возвращаем 0 чтобы исключить влияние на уже используемые анимации
+
+	pSMesh->release();
+	return track;
 }
 
 const gSkinBone* gSkinnedMeshAnimator::getMixedFrame() const

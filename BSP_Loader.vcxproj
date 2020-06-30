@@ -157,7 +157,9 @@
     <ClCompile Include="gmath.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Materials.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="RefCounter.cpp" />
     <ClCompile Include="RenderQueue.cpp" />
     <ClCompile Include="Resources.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -176,7 +178,9 @@
     <ClInclude Include="FileSystem.h" />
     <ClInclude Include="gmath.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="Materials.h" />
     <ClInclude Include="Mesh.h" />
+    <ClInclude Include="RefCounter.h" />
     <ClInclude Include="RenderQueue.h" />
     <ClInclude Include="Resources.h" />
     <ClInclude Include="Scene.h" />

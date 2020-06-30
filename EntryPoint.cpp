@@ -163,7 +163,8 @@ void unLoadWAD()
 	{
 		if ( tmap[i] )
 		{
-			rmgr.destroyResource(tmap[i]->getResourceName(), tmap[i]->getGroup());
+			//rmgr.destroyResource(tmap[i]->getResourceName(), tmap[i]->getGroup());
+			tmap[i]->release();
 			tmap[i] = 0;
 		}
 	}

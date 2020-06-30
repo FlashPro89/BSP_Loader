@@ -102,6 +102,20 @@ gResource::gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* f
 		m_resName = m_fileName;
 
 	m_isRenderable = false;
+	m_refCounter = 1; // 1 or 0??
+	m_resourceId = m_rmgr->_incrementResourceIdCounter();
+}
+
+unsigned int gResource::getResourceId() const
+{
+	return m_resourceId;
+}
+
+void gResource::release()
+{
+	m_refCounter--;
+	if (m_refCounter == 0)
+		m_rmgr->destroyResource( m_resName.c_str(), m_group ); 
 }
 
 const char* gResource::getResourceName()
@@ -572,10 +586,12 @@ gResourceManager::gResourceManager( LPDIRECT3DDEVICE9* pDev )
 
 	m_pLineDrawer = new gResourceLineDrawer( this, GRESGROUP_RESERVED_1, "*_line" );
 	m_resources[GRESGROUP_RESERVED_1]["*_line"] = m_pLineDrawer;
+
+	m_nextResourceId = 0;
 }
 gResourceManager::~gResourceManager()
 {
-	onRenderDeviceLost();
+	onRenderDeviceLost(); // unloadAllResources() ??
 }
 
 void gResourceManager::onRenderDeviceLost()
@@ -664,7 +680,7 @@ void gResourceManager::unloadAllResources()
 		auto it = m_resources[i].begin();
 		while (it != m_resources[i].end())
 		{
-			if (it->second)
+			if ( it->second )
 			{
 				delete it->second;
 				it->second = 0;
@@ -674,6 +690,11 @@ void gResourceManager::unloadAllResources()
 		m_resources[i].clear();
 	}
 	_clearWADFilesList();
+}
+
+unsigned int gResourceManager::_incrementResourceIdCounter()
+{
+	return m_nextResourceId++;
 }
 
 void gResourceManager::_clearWADFilesList()
@@ -874,7 +895,10 @@ const gResource* gResourceManager::getResource(const char* name, GRESOURCEGROUP 
 	auto it = m_resources[group].find(name);
 
 	if (it != m_resources[group].end())
+	{
 		res = it->second;
+		res->addRef();
+	}
 
 	return res;
 }

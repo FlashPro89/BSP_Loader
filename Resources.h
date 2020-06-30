@@ -9,6 +9,7 @@
 #include <string>
 #include "ColDet.h"
 #include "WADFile.h"
+#include "RefCounter.h"
 
 void toUpper(char* str);
 
@@ -26,6 +27,7 @@ struct gFontParameters
 
 class gEntity;
 class gResourceSkinnedMesh;
+class gResource2DTexture;
 
 enum GRESOURCEGROUP
 {
@@ -55,11 +57,15 @@ enum gShapeType
 
 class gResourceManager;
 
-class gResource
+class gResource : public gReferenceCounter
 {
 public:
 	gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
 	virtual ~gResource() {}
+
+	unsigned int getResourceId() const;
+
+	void release();
 
 	virtual bool preload() { return true; } //загрузка статических данных
 	virtual bool load() = 0;
@@ -85,9 +91,12 @@ protected:
 	std::string m_resName;
 	std::string m_fileName;
 	bool m_isLoaded;
+
+	//unsigned char m_refCounter;
+	unsigned int m_resourceId;
 };
 
-// ????
+
 class gRenderableSettings
 {
 public:
@@ -231,6 +240,8 @@ public:
 
 	void unloadAllResources();
 
+	unsigned int _incrementResourceIdCounter();
+
 protected:
 
 	void _clearWADFilesList();
@@ -241,6 +252,8 @@ protected:
 	std::map < std::string, gResource* > m_resources[ GRESGROUP_NUM ];
 	gResourceLineDrawer* m_pLineDrawer;
 	std::map < std::string, WADFile* > m_wadFiles;
+
+	unsigned int m_nextResourceId;
 };
 
 #endif

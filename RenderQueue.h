@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string>
 
 /*
 int num[10] = {
@@ -36,9 +37,50 @@ int comp(const void* i, const void* j)
 
 */
 
+class gRenderable;
+class gMaterial;
+
+struct gRenderableParameters
+{
+};
+
+typedef __int64 GRQSORTINGKEY;
+
+class gRenderElement
+{
+public:
+	gRenderElement();
+	gRenderElement( gRenderable* renderable, gMaterial* material, float distance );
+	~gRenderElement();
+
+	unsigned __int64 getKey() const;
+
+protected:
+	__int64 m_key;
+
+	void _buildKey();
+
+	gRenderable* m_renderable;
+	gMaterial* m_material;
+	unsigned short m_distance;
+};
 
 class gRenderQueue
 {
+public:
+	gRenderQueue();
+	~gRenderQueue();
+
+	void initialize(unsigned int materialsNum);
+	void sort();
+	bool pushBack( const gRenderElement& element );
+	bool popBack( gRenderElement& element );
+
+protected:
+	gRenderElement* m_elements;
+	unsigned int m_elementsArraySize;
+	unsigned int m_arrayPos;
+	
 };
 
 #endif

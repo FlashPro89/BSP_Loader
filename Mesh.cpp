@@ -603,16 +603,17 @@ gResourceSkinnedMesh::gResourceSkinnedMesh(gResourceManager* mgr, GRESOURCEGROUP
 
 gResourceSkinnedMesh::~gResourceSkinnedMesh()
 {
-	//if( m_pAtlasTexture )
-	//	m_rmgr->destroyResource(m_pAtlasTexture->getResourceName(), GRESGROUP_2DTEXTURE);
+	if (m_pAtlasTexture)
+		m_pAtlasTexture->release();
 	
 	m_trisCacher.clear(); // ??
 
 	auto it = m_animMap.begin();
 	while (it != m_animMap.end())
 	{
-		if( it->second )
-			m_rmgr->destroyResource( it->second->getResourceName(), it->second->getGroup());
+		if (it->second)
+			//m_rmgr->destroyResource( it->second->getResourceName(), it->second->getGroup());
+			it->second->release();
 		it++;
 	}
 	unload();
@@ -713,9 +714,10 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 					tg.bitmap->loadFromFile(file); 
 					delete file;
 
-					gResource2DTexture* pTex = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName);
-					tg.pTex = pTex;
-					//tg.pTex = 0; //вдальнейшем убрать !
+
+					//gResource2DTexture* pTex = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName);
+					//tg.pTex = pTex;
+					tg.pTex = 0; //вдальнейшем убрать !
 
 					m_trisCacher[buffer] = tg;
 				}
@@ -782,7 +784,8 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 		tg->texWidth = m_atlas.getTextureWidthBySortedOrder(i);
 		tg->texHeight = m_atlas.getTextureHeightBySortedOrder(i);
 
-		outAtlas.overlapOther( *tg->bitmap, tg->remappedX, tg->remappedY);
+		if( tg->bitmap!=0 )
+			outAtlas.overlapOther( *(tg->bitmap), tg->remappedX, tg->remappedY);
 
 		//free bitmap memory
 		delete tg->bitmap;
@@ -1181,7 +1184,6 @@ void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функци
 
 void gResourceSkinnedMesh::onFrameRender( const D3DXMATRIX& transform ) const
 {
-	//m_
 
 	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
 	if (!pD3DDev9) 

@@ -44,24 +44,25 @@ struct gRenderableParameters
 {
 };
 
-typedef __int64 GRQSORTINGKEY;
+typedef unsigned __int64 GRQSORTINGKEY;
 
 class gRenderElement
 {
 public:
+	//gRenderElement(gRenderElement& other);
 	gRenderElement();
 	gRenderElement( gRenderable* renderable, gMaterial* material, float distance );
 	~gRenderElement();
 
-	unsigned __int64 getKey() const;
+	GRQSORTINGKEY getKey() const;
 
 protected:
-	__int64 m_key;
+	GRQSORTINGKEY m_key;
 
 	void _buildKey();
 
-	gRenderable* m_renderable;
-	gMaterial* m_material;
+	gRenderable* m_pRenderable;
+	gMaterial* m_pMaterial;
 	unsigned short m_distance;
 };
 
@@ -71,12 +72,17 @@ public:
 	gRenderQueue();
 	~gRenderQueue();
 
-	void initialize(unsigned int materialsNum);
+	void initialize( unsigned int elementsMaxNum ); //only one time
 	void sort();
 	bool pushBack( const gRenderElement& element );
 	bool popBack( gRenderElement& element );
+	void clear();
 
 protected:
+	gRenderQueue(gRenderQueue&) {};
+	gRenderQueue(const gRenderQueue&) {};
+
+	gRenderElement** m_elementsPointers;
 	gRenderElement* m_elements;
 	unsigned int m_elementsArraySize;
 	unsigned int m_arrayPos;

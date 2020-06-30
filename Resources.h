@@ -63,7 +63,7 @@ public:
 	gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
 	virtual ~gResource() {}
 
-	unsigned int getResourceId() const;
+	unsigned int getId() const;
 
 	void release();
 
@@ -85,7 +85,7 @@ public:
 
 protected:
 	GRESOURCEGROUP m_group;
-	gResourceManager* m_rmgr;
+	gResourceManager* m_pResMgr;
 	bool m_isManaged;
 	bool m_isRenderable;
 	std::string m_resName;
@@ -113,6 +113,8 @@ protected:
 	unsigned int m_worldMarixesNum; //int or char??
 };
 
+class gMaterial;
+
 class gRenderable : public gResource
 {
 public:
@@ -126,7 +128,7 @@ public:
 	void setVisible(bool visible);
 
 	const gAABB& getAABB();
-
+	
 protected:
 	bool m_isVisible;
 	gAABB m_AABB;
@@ -237,7 +239,6 @@ public:
 	const gResource* getResource(const char* name, GRESOURCEGROUP group) const;
 	
 	bool destroyResource(const char* name, GRESOURCEGROUP group);
-
 	void unloadAllResources();
 
 	unsigned int _incrementResourceIdCounter();

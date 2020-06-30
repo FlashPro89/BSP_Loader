@@ -11,8 +11,9 @@
 gEntity::gEntity( const char* name )
 {
 	m_name = name;
-	m_holdingNode = 0;
-	m_renderable = 0;
+	m_pHoldingNode = 0;
+	m_pRenderable = 0;
+	m_pMaterial = 0; // may be use "default" mat?
 
 	deleteAnimators();
 }
@@ -29,30 +30,30 @@ const char* gEntity::getName() const
 
 void gEntity::onAttachToNode( gSceneNode* node )
 {
-	m_holdingNode = node;
+	m_pHoldingNode = node;
 }
 
 void gEntity::onDetachFromNode()
 {
-	m_holdingNode = 0;
+	m_pHoldingNode = 0;
 }
 
 gSceneNode* gEntity::getHoldingNode() const
 {
-	return m_holdingNode;
+	return m_pHoldingNode;
 }
 
 void gEntity::setRenderable( gRenderable* renderable )
 {
 	deleteAnimators();
 
-	if (m_renderable)
-		m_renderable->release();
+	if (m_pRenderable)
+		m_pRenderable->release();
 
-	m_renderable = renderable;
-	if (m_renderable != 0)
+	m_pRenderable = renderable;
+	if (m_pRenderable != 0)
 	{
-		if ( m_renderable->getGroup() == GRESGROUP_SKINNEDMESH )
+		if ( m_pRenderable->getGroup() == GRESGROUP_SKINNEDMESH )
 			m_animators[GANIMATOR_SKINNED] = new gSkinnedMeshAnimator(this);
 		//((gSkinnedMeshAnimator*)m_animators[GANIMATOR_SKINNED])->getWordBonesMatrixes();
 	}
@@ -60,10 +61,10 @@ void gEntity::setRenderable( gRenderable* renderable )
 
 const gRenderable* gEntity::getRenderable() const
 {
-	if (m_renderable)
-		m_renderable->addRef(); // точно const??? )
+	if (m_pRenderable)
+		m_pRenderable->addRef(); // точно const??? )
 
-	return m_renderable;
+	return m_pRenderable;
 }
 
 void gEntity::onFrameMove( float delta )
@@ -75,20 +76,22 @@ void gEntity::onFrameMove( float delta )
 	}
 }
 
-void gEntity::onFrameRender() const
+void gEntity::onFrameRender( gRenderQueue& queue ) const
 {
-	if ( m_renderable && m_holdingNode )
+	if ( m_pRenderable && m_pHoldingNode )
 	{
-		if (m_renderable->isRenderable())
+		if (m_pRenderable->isRenderable())
 		{
-			if (m_renderable->getGroup() == GRESGROUP_SKINNEDMESH)
+			if (m_pRenderable->getGroup() == GRESGROUP_SKINNEDMESH)
 			{
-				m_renderable->onFrameRender( m_holdingNode->getAbsoluteMatrix() );
+				m_pRenderable->onFrameRender( m_pHoldingNode->getAbsoluteMatrix() );
 			}
 			else
 			{
-				//applyWorldMatrixesToRenderSystem( m_holdingNode->getAbsoluteMatrix() );
-				m_renderable->onFrameRender( m_holdingNode->getAbsoluteMatrix() );
+				queue.pushBack( gRenderElement( m_pRenderable, m_pMaterial, 0 ) );
+
+				//applyWorldMatrixesToRenderSystem( m_pHoldingNode->getAbsoluteMatrix() );
+				m_pRenderable->onFrameRender( m_pHoldingNode->getAbsoluteMatrix() );
 			}		
 		}
 	}
@@ -103,14 +106,24 @@ void gEntity::applyWorldMatrixesToRenderSystem( const D3DXMATRIX& transform, LPD
 const gAABB& gEntity::getAABB()
 {
 	m_AABB.reset();
-	if (m_renderable)
-		m_AABB =  m_renderable->getAABB();
+	if (m_pRenderable)
+		m_AABB =  m_pRenderable->getAABB();
 	return m_AABB;
 }
 
 gAnimator* gEntity::getAnimator( GANIMATOR_TYPE type ) const
 {
 	return m_animators[type];
+}
+
+void gEntity::setMaterial(gMaterial* material)
+{
+	m_pMaterial = material;
+}
+
+gMaterial* gEntity::getMaterial() const
+{
+	return m_pMaterial;
 }
 
 void gEntity::deleteAnimators()
@@ -336,9 +349,9 @@ void gSceneNode::onFrameMove(float delta)
 	}
 }
 
-void gSceneNode::onFrameRender()
+void gSceneNode::onFrameRender( gRenderQueue& queue ) 
 {	
-	drawEntityList();
+	drawEntityList( queue );
 
 	if (m_isAABBVisible)
 		drawAABB();
@@ -353,10 +366,10 @@ void gSceneNode::onFrameRender()
 			{
 	
 				if( cam->getViewingFrustum().testAABB( it->second->getAABB() ) )
-					it->second->onFrameRender();
+					it->second->onFrameRender( queue );
 			}
 			else
-				it->second->onFrameRender();
+				it->second->onFrameRender(queue);
 		}
 		it++;
 	}
@@ -400,7 +413,7 @@ void gSceneNode::nodeAABBChanged()
 //		m_parent->nodeAABBChanged();
 }
 
-void gSceneNode::drawEntityList()
+void gSceneNode::drawEntityList( gRenderQueue& queue )
 {
 	gAABB tmp;
 	const gCamera* cam = 0;
@@ -416,7 +429,7 @@ void gSceneNode::drawEntityList()
 				if (cam->getViewingFrustum().testAABB(tmp))
 				{
 					m_sceneManager->__statEntDraw();
-					it->second->onFrameRender();
+					it->second->onFrameRender(queue);
 				}
 			}
 		}
@@ -502,10 +515,16 @@ void gSceneNode::drawAABB()
 
 gSceneManager::gSceneManager( gResourceManager* rmgr ) : m_rootNode( "root", this, 0 )
 {
-	m_rmgr = rmgr;
+	m_pResMgr = rmgr;
 	m_activeCam = 0;
 	m_entsInFrustum = 0;
 	m_nodesInFrustum = 0;
+
+	m_matFactory.createMaterial("default");
+	m_matFactory.createMaterial("default1");
+	m_matFactory.createMaterial("default2");
+	m_matFactory.createMaterial("default3");
+	m_matFactory.createMaterial("default4");
 }
 
 gSceneManager::~gSceneManager()
@@ -515,7 +534,7 @@ gSceneManager::~gSceneManager()
 
 const gResourceManager* gSceneManager::getResourseManager() const
 {
-	return m_rmgr;
+	return m_pResMgr;
 }
 
 gSceneNode& gSceneManager::getRootNode() const
@@ -563,6 +582,9 @@ gEntity* gSceneManager::createEntity( const char* name )
 	if (it != m_entList.end())			//уже существует
 		return (gEntity*)0;
 	gEntity* pEnt = new gEntity(name);
+
+	pEnt->setMaterial(m_matFactory.getMaterial("default"));
+
 	m_entList[name] = pEnt;
 	return pEnt;
 }
@@ -615,14 +637,14 @@ void gSceneManager::destroyAllEntities( )
 	return;
 }
 
-void gSceneManager::frameRender()
+void gSceneManager::frameRender( gRenderQueue& queue )
 {
 	m_entsInFrustum = 0;
 	m_nodesInFrustum = 0;
 
-	if (!m_rmgr) return;
+	if (!m_pResMgr) return;
 
-	LPDIRECT3DDEVICE9 pD3DDev = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev = m_pResMgr->getDevice();
 
 	if ( m_activeCam && pD3DDev )
 	{
@@ -630,7 +652,7 @@ void gSceneManager::frameRender()
 		pD3DDev->SetTransform(D3DTS_PROJECTION, &m_activeCam->getProjMatrix());
 
 		if (m_activeCam->getViewingFrustum().testAABB(m_rootNode.getAABB()))
-			m_rootNode.onFrameRender();
+			m_rootNode.onFrameRender( queue );
 	}
 }
 

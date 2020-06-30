@@ -7,7 +7,9 @@
 #include <map>
 #include <vector>
 #include <string>
+#include "RenderQueue.h"
 #include "Resources.h"
+#include "Materials.h"
 #include "Camera.h"
 #include "Animator.h"
 
@@ -41,10 +43,13 @@ public:
 	const gRenderable* getRenderable() const;
 
 	void onFrameMove( float delta );
-	void onFrameRender() const; 
+	void onFrameRender( gRenderQueue& queue ) const;
 
 	const gAABB& getAABB();
 	gAnimator* getAnimator( GANIMATOR_TYPE type ) const;
+
+	void setMaterial(gMaterial* material);
+	gMaterial* getMaterial() const;
 
 protected:
 	gEntity() { }
@@ -53,9 +58,11 @@ protected:
 	void applyWorldMatrixesToRenderSystem( const D3DXMATRIX& transform, LPDIRECT3DDEVICE9 pDevice ) const;
 	void deleteAnimators();
 
+	gMaterial* m_pMaterial;
+
 	std::string m_name;
-	gSceneNode* m_holdingNode;
-	mutable gRenderable* m_renderable;
+	gSceneNode* m_pHoldingNode;
+	mutable gRenderable* m_pRenderable;
 	gAnimator* m_animators[GANIMATOR_NUM];
 	gAABB m_AABB;
 
@@ -92,12 +99,12 @@ public:
 	void computeTransform();
 
 	void onFrameMove(float delta);
-	void onFrameRender();
+	void onFrameRender( gRenderQueue& queue );
 
 protected:
 
 	void nodeAABBChanged(); 
-	void drawEntityList();
+	void drawEntityList( gRenderQueue& queue );
 	void updateEntityList( float delta );
 	void drawAABB();
 
@@ -120,12 +127,15 @@ protected:
 	gSceneManager* m_sceneManager;
 };
 
+class gRenderQueue;
+
 class gSceneManager
 {
 public:
 	gSceneManager( gResourceManager* rmgr );
 	~gSceneManager();
 
+	const gMaterialFactory* getMaterialFactory() const;
 	const gResourceManager* getResourseManager() const;
 	gSceneNode& getRootNode() const;
 	gSceneNode* getNode( const char* name ) const;
@@ -139,7 +149,7 @@ public:
 	bool destroyEntity( const char* name );
 	void destroyAllEntities();
 
-	void frameRender();
+	void frameRender( gRenderQueue& queue );
 	void frameMove(float delta);
 
 	void setActiveCamera( gCamera* cam );
@@ -153,7 +163,8 @@ public:
 
 protected:
 	gCamera* m_activeCam;
-	gResourceManager* m_rmgr;
+	gResourceManager* m_pResMgr;
+	gMaterialFactory m_matFactory;
 	mutable gSceneNode m_rootNode;
 	std::map < std::string, gSceneNode* > m_nodeList;
 	std::map < std::string, gEntity* > m_entList;

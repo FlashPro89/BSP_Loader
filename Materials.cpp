@@ -18,19 +18,19 @@ gMaterialFactory::~gMaterialFactory()
 
 gMaterial* gMaterialFactory::createMaterial(const char* name)
 {
-	auto it = m_materialsMap.find(name);
-	if (it == m_materialsMap.end())
+	auto it = m_pMaterialsMap.find(name);
+	if (it == m_pMaterialsMap.end())
 		return 0;
 
 	gMaterial* material = new gMaterial(this, name, m_idCounter++);
-	m_materialsMap[name] = material;
+	m_pMaterialsMap[name] = material;
 	return material;
 }
 
 gMaterial* gMaterialFactory::getMaterial( const char* name ) const
 {
-	auto it = m_materialsMap.find(name);
-	if (it != m_materialsMap.end())
+	auto it = m_pMaterialsMap.find(name);
+	if (it != m_pMaterialsMap.end())
 	{
 		if (it->second) 
 			it->second->addRef();
@@ -42,28 +42,28 @@ gMaterial* gMaterialFactory::getMaterial( const char* name ) const
 
 bool gMaterialFactory::destroyMaterial( const char* name )
 {
-	return 0 != m_materialsMap.erase(name);
+	return 0 != m_pMaterialsMap.erase(name);
 	/*
-	auto it = m_materialsMap.find(name);
-	if (it != m_materialsMap.end())
+	auto it = m_pMaterialsMap.find(name);
+	if (it != m_pMaterialsMap.end())
 	{
 		if (it->second)
 			delete it->second;
-		m_materialsMap.erase(it);
+		m_pMaterialsMap.erase(it);
 	}
 	*/
 }
 
 void gMaterialFactory::destroyAllMaterials()
 {
-	auto it = m_materialsMap.begin();
-	while (it != m_materialsMap.end())
+	auto it = m_pMaterialsMap.begin();
+	while (it != m_pMaterialsMap.end())
 	{
 		if( it->second )
 			delete it->second;
 		it++;
 	}
-	m_materialsMap.clear();
+	m_pMaterialsMap.clear();
 }
 
 //-----------------------------------------------
@@ -82,7 +82,7 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 	m_textures[0] = 0; m_textures[1] = 0; m_textures[2] = 0; m_textures[3] = 0;
 	m_textures[4] = 0; m_textures[5] = 0; m_textures[6] = 0; m_textures[7] = 0;
 
-	m_materialId = id;
+	m_pMaterialId = id;
 
 	if (name)
 	{
@@ -169,6 +169,6 @@ void gMaterial::setTexture(unsigned char level, gResource2DTexture* texture)
 
 unsigned short gMaterial::getId() const
 {
-	return m_materialId;
+	return m_pMaterialId;
 }
 

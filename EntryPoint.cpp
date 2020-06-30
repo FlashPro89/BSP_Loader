@@ -9,6 +9,7 @@
 #include "FileSystem.h"
 #include "TextureAtlas.h"
 #include "BMPFile.h"
+#include "RenderQueue.h"
 #include <cstdio>
 #include <map>
 #include <string>
@@ -75,6 +76,7 @@ int bsp_visdatasize = 0;
 gCamera					cam;
 gResourceManager		rmgr(&pD3DDev9);
 gSceneManager			smgr(&rmgr);
+gRenderQueue			rqueue;
 
 int currentFace = 0;
 int currentLeaf = 0;
@@ -500,6 +502,8 @@ void loadFonts()
 
 void loadScene( const char* mapname )
 {
+	rqueue.initialize(0xFFFF);
+
 	currentFace = 0;
 
 	printf( "===================================================================\n" );
@@ -1687,7 +1691,8 @@ void frame_render()
 	//pD3DDev9->SetTexture(0, 0);
 	//pD3DDev9->SetTexture(1, 0);
 
-	smgr.frameRender();
+	smgr.frameRender( rqueue );
+	rqueue.clear();
 
 
 	D3DXMATRIX mId;

@@ -584,7 +584,7 @@ gResourceSkinnedMesh::gResourceSkinnedMesh(gResourceManager* mgr, GRESOURCEGROUP
 	m_vertexesNum = 0;
 	m_indexesNum = 0;
 	m_bonesNum = 0;
-	m_materialsNum = 0;
+	m_pMaterialsNum = 0;
 	m_trisNum = 0;
 
 	m_nodes_blockpos = 0;
@@ -612,7 +612,7 @@ gResourceSkinnedMesh::~gResourceSkinnedMesh()
 	while (it != m_animMap.end())
 	{
 		if (it->second)
-			//m_rmgr->destroyResource( it->second->getResourceName(), it->second->getGroup());
+			//m_pResMgr->destroyResource( it->second->getResourceName(), it->second->getGroup());
 			it->second->release();
 		it++;
 	}
@@ -701,7 +701,7 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 				if (cit == m_trisCacher.end())
 				{
 					gTrisGroup tg;
-					tg.textureIndex = m_materialsNum++;
+					tg.textureIndex = m_pMaterialsNum++;
 					tg.trisNum = 1; // прибавляем сдесь 1!
 					tg.__used_tris = 0;
 					tg.__before = m_trisNum;
@@ -715,7 +715,7 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 					delete file;
 
 
-					//gResource2DTexture* pTex = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName);
+					//gResource2DTexture* pTex = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName);
 					//tg.pTex = pTex;
 					tg.pTex = 0; //вдальнейшем убрать !
 
@@ -796,7 +796,7 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 	outAtlas.saveToFile(file);
 	delete file;
 
-	m_pAtlasTexture = (gResource2DTexture*) m_rmgr->loadTexture2D( atlasFileName );
+	m_pAtlasTexture = (gResource2DTexture*) m_pResMgr->loadTexture2D( atlasFileName );
 
 	return true;
 }
@@ -815,7 +815,7 @@ bool gResourceSkinnedMesh::load()
 		return false;
 
 	HRESULT hr1 = S_OK, hr2 = S_OK;
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 
 	//---------------------------------
 	// Create and lock DXbuffers
@@ -1185,7 +1185,7 @@ void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функци
 void gResourceSkinnedMesh::onFrameRender( const D3DXMATRIX& transform ) const
 {
 
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9) 
 		return;
 	HRESULT hr;
@@ -1294,7 +1294,7 @@ bool gResourceSkinnedMesh::addAnimation(const char* filename, const char* name)
 	char animResName[256];
 	sprintf_s( animResName, "%s.%s", m_resName.c_str(), name );
 	
-	gResourceSkinAnimation* anim = (gResourceSkinAnimation*)m_rmgr->loadSkinnedAnimationSMD( filename, animResName, this );
+	gResourceSkinAnimation* anim = (gResourceSkinAnimation*)m_pResMgr->loadSkinnedAnimationSMD( filename, animResName, this );
 	if ( !anim )
 	{
 		return false;
@@ -1420,7 +1420,7 @@ void gResourceSkinnedMesh::_skeleton( const gSkinBone* frame, int b1 ) const
 	if (frame == 0)
 		return;
 
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9)
 		return;
 
@@ -1466,7 +1466,7 @@ gResourceStaticMesh::gResourceStaticMesh( gResourceManager* mgr, GRESOURCEGROUP 
 
 	m_vertexesNum = 0;
 	m_indexesNum = 0;
-	m_materialsNum = 0;
+	m_pMaterialsNum = 0;
 	m_trisNum = 0;
 
 	m_tris_blockpos = 0;
@@ -1521,7 +1521,7 @@ bool gResourceStaticMesh::preload()
 				if (cit == m_trisCacher.end())
 				{
 					gTrisGroup tg;
-					tg.textureIndex = m_materialsNum++;
+					tg.textureIndex = m_pMaterialsNum++;
 					tg.trisNum = 1; // прибавляем сдесь 1!
 					tg.__used_tris = 0;
 					tg.__before = m_trisNum;
@@ -1529,7 +1529,7 @@ bool gResourceStaticMesh::preload()
 
 					sprintf_s(fullFileName, BUFSZ, "%s%s", dirName, buffer);
 
-					gResource2DTexture* pTex = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName);
+					gResource2DTexture* pTex = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName);
 					tg.pTex = pTex;
 
 					m_trisCacher[buffer] = tg;
@@ -1562,7 +1562,7 @@ bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT
 		return false;
 
 	HRESULT hr1 = S_OK, hr2 = S_OK;
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 
 	//---------------------------------
 	// Create and lock DXbuffers
@@ -1707,7 +1707,7 @@ void gResourceStaticMesh::drawNormals() const
 	if (!m_normals)
 		return;
 
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9)
 		return;
 
@@ -1730,7 +1730,7 @@ void gResourceStaticMesh::drawNormals() const
 
 void gResourceStaticMesh::onFrameRender(const D3DXMATRIX& transform) const
 {
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9)
 		return;
 

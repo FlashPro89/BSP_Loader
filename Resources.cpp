@@ -91,7 +91,7 @@ const gAABB& gRenderable::getAABB()
 gResource::gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name )
 {
 	m_isLoaded = false;
-	m_rmgr = mgr;
+	m_pResMgr = mgr;
 	m_group = group;
 	m_isManaged = false;
 	if( filename )
@@ -103,10 +103,10 @@ gResource::gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* f
 
 	m_isRenderable = false;
 	m_refCounter = 1; // 1 or 0??
-	m_resourceId = m_rmgr->_incrementResourceIdCounter();
+	m_resourceId = m_pResMgr->_incrementResourceIdCounter(); //TODO: может это переделать?
 }
 
-unsigned int gResource::getResourceId() const
+unsigned int gResource::getId() const
 {
 	return m_resourceId;
 }
@@ -115,7 +115,7 @@ void gResource::release()
 {
 	m_refCounter--;
 	if (m_refCounter == 0)
-		m_rmgr->destroyResource( m_resName.c_str(), m_group ); 
+		m_pResMgr->destroyResource( m_resName.c_str(), m_group ); 
 }
 
 const char* gResource::getResourceName()
@@ -238,14 +238,14 @@ bool gResource2DTexture::load()
 
 		//create tex in Sys mem
 		LPDIRECT3DTEXTURE9 pTexTmp = 0;
-		HRESULT hr = m_rmgr->getDevice()->CreateTexture( w, h, 1, 0, 
+		HRESULT hr = m_pResMgr->getDevice()->CreateTexture( w, h, 1, 0, 
 			D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &pTexTmp, 0 );
 
 		if (FAILED(hr))  
 			return m_isLoaded;
 
 		//create tex in Video mem
-		hr = m_rmgr->getDevice()->CreateTexture( w, h, 1, D3DUSAGE_AUTOGENMIPMAP, 
+		hr = m_pResMgr->getDevice()->CreateTexture( w, h, 1, D3DUSAGE_AUTOGENMIPMAP, 
 			D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pTex, 0 );
 
 		if (FAILED(hr))
@@ -296,7 +296,7 @@ bool gResource2DTexture::load()
 		pTexTmp->UnlockRect(0);
 
 		// move texture to video mem
-		hr = m_rmgr->getDevice()->UpdateTexture( pTexTmp, m_pTex );
+		hr = m_pResMgr->getDevice()->UpdateTexture( pTexTmp, m_pTex );
 		if (FAILED(hr))
 		{
 			pTexTmp->Release();
@@ -322,12 +322,12 @@ bool gResource2DTexture::load()
 		HRESULT hr;
 		if (inf.Format == D3DFMT_P8) // ?? пока оставим так
 		{
-			hr = D3DXCreateTextureFromFileEx(m_rmgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
+			hr = D3DXCreateTextureFromFileEx(m_pResMgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
 				D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_UNKNOWN, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
 		}
 		else
 		{
-			hr = D3DXCreateTextureFromFileEx(m_rmgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
+			hr = D3DXCreateTextureFromFileEx(m_pResMgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
 				D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
 		}
 
@@ -408,19 +408,19 @@ bool gResourceShape::load()
 	switch (m_shType)
 	{
 	case GSHAPE_BOX:
-		hr = D3DXCreateBox( m_rmgr->getDevice(), m_width, m_height, m_depth, &m_pMesh, 0 );
+		hr = D3DXCreateBox( m_pResMgr->getDevice(), m_width, m_height, m_depth, &m_pMesh, 0 );
 		break;
 	case GSHAPE_CYLINDER:
-		hr = D3DXCreateCylinder( m_rmgr->getDevice(), m_r1, m_r2, m_height, 16, 2, &m_pMesh, 0 );
+		hr = D3DXCreateCylinder( m_pResMgr->getDevice(), m_r1, m_r2, m_height, 16, 2, &m_pMesh, 0 );
 		break;
 	case GSHAPE_SPHERE:
-		hr = D3DXCreateSphere( m_rmgr->getDevice(), m_r1, 10, 10, &m_pMesh, 0 );
+		hr = D3DXCreateSphere( m_pResMgr->getDevice(), m_r1, 10, 10, &m_pMesh, 0 );
 		break;
 	case GSHAPE_TORUS:
-		hr = D3DXCreateTorus( m_rmgr->getDevice(), m_r1, m_r2, 16, 16, &m_pMesh, 0 );
+		hr = D3DXCreateTorus( m_pResMgr->getDevice(), m_r1, m_r2, 16, 16, &m_pMesh, 0 );
 		break;
 	case GSHAPE_TEAPOT:
-		hr = D3DXCreateTeapot( m_rmgr->getDevice(), &m_pMesh, 0 );
+		hr = D3DXCreateTeapot( m_pResMgr->getDevice(), &m_pMesh, 0 );
 		break;
 	default: return false;
 	}
@@ -474,9 +474,9 @@ void gResourceShape::setSizes(float height, float width, float depth, float r1, 
 
 void gResourceShape::onFrameRender( const D3DXMATRIX& transform ) const
 {
-	if ( m_pMesh!=0 && m_rmgr->getDevice()!=0 )
+	if ( m_pMesh!=0 && m_pResMgr->getDevice()!=0 )
 	{
-		m_rmgr->getDevice()->SetTransform( D3DTS_WORLD, &transform );
+		m_pResMgr->getDevice()->SetTransform( D3DTS_WORLD, &transform );
 		m_pMesh->DrawSubset(0);
 	}
 }
@@ -501,7 +501,7 @@ gResourceLineDrawer::~gResourceLineDrawer()
 bool gResourceLineDrawer::load()
 {
 	unload();
-	HRESULT hr = D3DXCreateLine( m_rmgr->getDevice(), &m_pLine );
+	HRESULT hr = D3DXCreateLine( m_pResMgr->getDevice(), &m_pLine );
 	if (SUCCEEDED(hr)) 
 		m_isLoaded = true;
 	return m_isLoaded;
@@ -543,7 +543,7 @@ bool gResourceTextDrawer::load()
 {
 	unload();
 
-	HRESULT hr = D3DXCreateFont(m_rmgr->getDevice(), m_fontParams.height, m_fontParams.width, m_fontParams.weight,
+	HRESULT hr = D3DXCreateFont(m_pResMgr->getDevice(), m_fontParams.height, m_fontParams.width, m_fontParams.weight,
 		0, m_fontParams.italic, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS, 0, DEFAULT_PITCH | FF_MODERN, m_fontParams.faceName.c_str(), &m_pFont);
 
 	if( SUCCEEDED(hr) ) 

@@ -171,7 +171,7 @@ protected:
 	unsigned int m_vertexesNum;
 	unsigned int m_indexesNum;
 	unsigned int m_bonesNum;
-	unsigned int m_materialsNum;
+	unsigned int m_pMaterialsNum;
 	unsigned int m_trisNum;
 
 	int m_nodes_blockpos;
@@ -214,7 +214,7 @@ protected:
 
 	unsigned int m_vertexesNum;
 	unsigned int m_indexesNum;
-	unsigned int m_materialsNum;
+	unsigned int m_pMaterialsNum;
 	unsigned int m_trisNum;
 
 	int m_tris_blockpos;

@@ -69,7 +69,7 @@ protected:
 
 	unsigned int m_vertexesNum;
 	unsigned int m_indexesNum;
-	unsigned int m_materialsNum;
+	unsigned int m_pMaterialsNum;
 	unsigned int m_trisNum;
 
 	std::string m_hMapFilename;

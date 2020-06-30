@@ -21,7 +21,7 @@ gResourceTerrain::gResourceTerrain( gResourceManager* mgr, GRESOURCEGROUP group,
 
 	m_vertexesNum = 0;
 	m_indexesNum = 0;
-	m_materialsNum = 0;
+	m_pMaterialsNum = 0;
 	m_trisNum = 0;
 	m_pTex = 0;
 	m_pTexDetail = 0;
@@ -127,10 +127,10 @@ bool gResourceTerrain::preload() //загрузка статических данных
 	//load textures
 	char fullFileName[FBUFFSZ];
 	sprintf_s(fullFileName, FBUFFSZ, "%s%s", dirName, texFileName);
-	m_pTex = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName, "terrainTex");
+	m_pTex = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName, "terrainTex");
 	
 	sprintf_s(fullFileName, FBUFFSZ, "%s%s", dirName, texDetailFileName);
-	m_pTexDetail = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName, "terrainDetailTex");
+	m_pTexDetail = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName, "terrainDetailTex");
 
 	m_hMapFilename = dirName;
 	m_hMapFilename+= hMapFilename;
@@ -173,7 +173,7 @@ void gResourceTerrain::onFrameRender(const D3DXMATRIX& transform) const
 	if (!m_isLoaded)
 		return;
 
-	LPDIRECT3DDEVICE9 pD3DDev = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev = m_pResMgr->getDevice();
 	if (!pD3DDev)
 		return;
 	
@@ -217,7 +217,7 @@ void gResourceTerrain::drawNormals() const
 	if (!m_normals)
 		return;
 
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9)
 		return;
 
@@ -268,7 +268,7 @@ bool gResourceTerrain::loadHeightMap()
 
 bool gResourceTerrain::fillBuffers()
 {
-	LPDIRECT3DDEVICE9 pDev = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pDev = m_pResMgr->getDevice();
 	if (!pDev)
 		return false;
 

@@ -25,7 +25,7 @@ public:
 	void destroyAllMaterials();
 
 protected:
-	std::map < std::string, gMaterial* > m_materialsMap;
+	std::map < std::string, gMaterial* > m_pMaterialsMap;
 	unsigned int m_idCounter;
 };
 
@@ -61,7 +61,7 @@ protected:
 	char* m_name;
 	gMaterialFactory* m_factory;
 
-	unsigned short m_materialId; // only 65536 materials
+	unsigned short m_pMaterialId; // only 65536 materials
 
 	GCOLOR m_diffuse;
 	GCOLOR m_specular;

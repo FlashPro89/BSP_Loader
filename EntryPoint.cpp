@@ -1550,7 +1550,7 @@ void renderFaces()
 
 	//set lightmap atlas
 	pD3DDev9->SetTexture(1, pTexLightsAtlas);
-	pD3DDev9->SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);
+	pD3DDev9->SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);s
 	pD3DDev9->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
 	pD3DDev9->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 

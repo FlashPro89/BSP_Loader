@@ -19,7 +19,7 @@ gMaterialFactory::~gMaterialFactory()
 gMaterial* gMaterialFactory::createMaterial(const char* name)
 {
 	auto it = m_pMaterialsMap.find(name);
-	if (it == m_pMaterialsMap.end())
+	if (it != m_pMaterialsMap.end())
 		return 0;
 
 	gMaterial* material = new gMaterial(this, name, m_idCounter++);
@@ -89,6 +89,7 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 		size_t lenght = strlen(name);
 		m_name = new char[ lenght + 1];
 		memcpy( m_name, name, lenght );
+		m_name[lenght] = 0;
 	}
 	else
 		throw("Material name null pointer!");

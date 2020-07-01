@@ -81,18 +81,11 @@ void gEntity::onFrameRender( gRenderQueue& queue ) const
 	if ( m_pRenderable && m_pHoldingNode )
 	{
 		if (m_pRenderable->isRenderable())
-		{
-			if (m_pRenderable->getGroup() == GRESGROUP_SKINNEDMESH)
-			{
-				m_pRenderable->onFrameRender( m_pHoldingNode->getAbsoluteMatrix() );
-			}
-			else
-			{
+		{			
 				queue.pushBack( gRenderElement( m_pRenderable, m_pMaterial, 0 ) );
 
 				//applyWorldMatrixesToRenderSystem( m_pHoldingNode->getAbsoluteMatrix() );
-				m_pRenderable->onFrameRender( m_pHoldingNode->getAbsoluteMatrix() );
-			}		
+				m_pRenderable->onFrameRender( m_pHoldingNode->getAbsoluteMatrix() );	
 		}
 	}
 }
@@ -646,6 +639,8 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 
 	LPDIRECT3DDEVICE9 pD3DDev = m_pResMgr->getDevice();
 
+	queue.clear();
+
 	if ( m_activeCam && pD3DDev )
 	{
 		pD3DDev->SetTransform(D3DTS_VIEW, &m_activeCam->getViewMatrix());
@@ -654,6 +649,8 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 		if (m_activeCam->getViewingFrustum().testAABB(m_rootNode.getAABB()))
 			m_rootNode.onFrameRender( queue );
 	}
+
+	queue.sort();
 }
 
 void gSceneManager::frameMove(float delta)

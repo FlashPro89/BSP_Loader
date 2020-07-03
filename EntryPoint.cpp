@@ -72,10 +72,10 @@ int bsp_texdatasize = 0;
 int bsp_lightdatasize = 0;
 int bsp_visdatasize = 0;
 
-
+gMaterialFactory        matFactory;
 gCamera					cam;
-gResourceManager		rmgr(&pD3DDev9);
-gSceneManager			smgr(&rmgr);
+gResourceManager		rmgr( &pD3DDev9, &matFactory );
+gSceneManager			smgr( &rmgr, &matFactory );
 gRenderQueue			rqueue;
 
 int currentFace = 0;
@@ -550,6 +550,11 @@ void loadScene( const char* mapname )
 
 
 		gResource2DTexture* t = (gResource2DTexture*)rmgr.loadTexture2D( "../data/textures/XCRATE5B.BMP", "box" );
+		gMaterial* mat = matFactory.createMaterial("default");
+		if (mat)
+		{
+			mat->setTexture(0, t);
+		}
 
 		gResourceShape* shape = (gResourceShape*)rmgr.createShape("box_1", GSHAPE_BOX);
 		shape->setSizes(40, 40, 40, 10, 10);
@@ -558,6 +563,8 @@ void loadScene( const char* mapname )
 
 		gEntity* ent = smgr.createEntity("box__root");
 		ent->setRenderable(shape);
+		ent->setMaterial(mat);
+
 		smgr.getRootNode().attachEntity(ent);
 
 		ent = smgr.createEntity("box__center");
@@ -627,6 +634,7 @@ void loadScene( const char* mapname )
 
 		ent = smgr.createEntity("ent__skinning1");
 		ent->setRenderable(pSMesh);
+		ent->setMaterial( matFactory.getMaterial(pSMesh->getDefaultMaterialName() ) );
 		node_skin1->attachEntity( ent );
 
 		gSkinnedMeshAnimator* ctrl = (gSkinnedMeshAnimator * )ent->getAnimator(GANIMATOR_SKINNED);
@@ -639,12 +647,13 @@ void loadScene( const char* mapname )
 
 		ent = smgr.createEntity("ent__skinning2");
 		ent->setRenderable(pSMesh2);
+		ent->setMaterial(matFactory.getMaterial( pSMesh2->getDefaultMaterialName() ) );
 		node_skin2->attachEntity(ent);
 
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("idle1", GSKINANIM_LOOP)->play();
 
-		/*
+		
 		///////////////////////////////////////////////////////////////////
 		// Static mesh test
 		ent = smgr.createEntity("ent__crystal1");
@@ -660,7 +669,7 @@ void loadScene( const char* mapname )
 		node_terrain->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
 
-	*/
+	
 
 	FILE* f = 0;
 	errno_t err = fopen_s(&f, fname, "rb");
@@ -1308,13 +1317,13 @@ void unLoadScene()
 	//////////////////////////////////////////////////////////////////
 	//// scene node graph test
 	smgr.destroyNode("new_central");
-	//smgr.destroyNode("new_joint1");
-	//smgr.destroyNode("new_joint2");
-	//smgr.destroyNode("new_joint3");
-	//smgr.destroyNode("new_joint4");
-	//smgr.destroyNode("new_joint5");
-	//smgr.destroyNode("new_joint51");
-	//smgr.destroyNode("new_joint52");
+	smgr.destroyNode("new_joint1");
+	smgr.destroyNode("new_joint2");
+	smgr.destroyNode("new_joint3");
+	smgr.destroyNode("new_joint4");
+	smgr.destroyNode("new_joint5");
+	smgr.destroyNode("new_joint51");
+	smgr.destroyNode("new_joint52");
 	smgr.destroyNode("new_joint53");
 	smgr.destroyNode("new_skin1");
 	smgr.destroyNode("new_skin2");
@@ -1533,6 +1542,11 @@ void drawLeaf(int leaf)
 
 void renderFaces()
 {
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_GAUSSIANQUAD);
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MAXANISOTROPY, 16);
+
 	DWORD oldLightingState;
 	pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, false);
@@ -1544,13 +1558,13 @@ void renderFaces()
 
 	pD3DDev9->SetStreamSource(0, m_VB, 0, sizeof(D3DVertex));
 	pD3DDev9->SetIndices(m_IB);
-	pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2);
+	pD3DDev9->SetFVF( getFVF(GVF_LEVEL) );
 
 	//LPDIRECT3DTEXTURE9 lmap = ((gResource2DTexture*)rmgr.getResource("lmap", GRESGROUP_2DTEXTURE))->getTexture();
-
+	 
 	//set lightmap atlas
 	pD3DDev9->SetTexture(1, pTexLightsAtlas);
-	pD3DDev9->SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);s
+	pD3DDev9->SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);
 	pD3DDev9->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_CURRENT);
 	pD3DDev9->SetTextureStageState(1, D3DTSS_COLORARG1, D3DTA_TEXTURE);
 
@@ -1603,6 +1617,11 @@ void renderFaces()
 	pD3DDev9->SetTexture(1, 0);
 	pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTEXOPCAPS_DISABLE);
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
+
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_ANISOTROPIC);
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MAXANISOTROPY, 16);
 }
 
 void drawModel( int model )

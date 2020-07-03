@@ -103,8 +103,6 @@ void gSkinnedMeshAnimator::tick(float delta)
 		D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &mInverted[i], &mAbs );
 		
 	}
-
-	pSMesh->release();
 }
 
 void gSkinnedMeshAnimator::clear()
@@ -173,10 +171,7 @@ gSkinnedMeshAnimationTrack* gSkinnedMeshAnimator::addTrack(const char* name,
 
 	gResourceSkinAnimation* anim = pSMesh->getAnimation(name);
 	if (!anim)
-	{
-		pSMesh->release();
 		return track;
-	}
 
 	auto it = m_tracks.find(name);
 	if (it == m_tracks.end())
@@ -188,7 +183,6 @@ gSkinnedMeshAnimationTrack* gSkinnedMeshAnimator::addTrack(const char* name,
 
 	//else //пока что возвращаем 0 чтобы исключить влияние на уже используемые анимации
 
-	pSMesh->release();
 	return track;
 }
 

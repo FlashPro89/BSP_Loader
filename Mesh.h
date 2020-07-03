@@ -155,6 +155,9 @@ public:
 
 	unsigned int getBonesNum() const;
 
+	GVERTEXFORMAT getVertexFormat();
+	const char* getDefaultMaterialName();
+
 	//for debug anim
 	float _time;
 
@@ -162,6 +165,7 @@ protected:
 	void _skeleton( const gSkinBone* frame, int b1 ) const;
 	void _transform_to_world( gSkinBone* bones, int bone );
 
+	gMaterial* m_pMaterial;
 	gResource2DTexture* m_pAtlasTexture;
 	gTextureAtlas m_atlas;
 
@@ -202,6 +206,8 @@ public:
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
 	void onFrameRender(const D3DXMATRIX& transform) const;
+
+	GVERTEXFORMAT getVertexFormat();
 
 protected:
 

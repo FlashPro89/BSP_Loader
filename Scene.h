@@ -132,11 +132,12 @@ class gRenderQueue;
 class gSceneManager
 {
 public:
-	gSceneManager( gResourceManager* rmgr );
+	gSceneManager( gResourceManager* rmgr, gMaterialFactory* mfactory );
 	~gSceneManager();
 
-	const gMaterialFactory* getMaterialFactory() const;
-	const gResourceManager* getResourseManager() const;
+	gMaterialFactory* getMaterialFactory() const;
+	gResourceManager* getResourseManager() const;
+
 	gSceneNode& getRootNode() const;
 	gSceneNode* getNode( const char* name ) const;
 	gEntity* getEntity( const char* name ) const;
@@ -162,9 +163,10 @@ public:
 	unsigned int	__statNodesInFrustum() const; // num drawed entities in activeCam
 
 protected:
+
 	gCamera* m_activeCam;
 	gResourceManager* m_pResMgr;
-	gMaterialFactory m_matFactory;
+	gMaterialFactory* m_pMatFactory;
 	mutable gSceneNode m_rootNode;
 	std::map < std::string, gSceneNode* > m_nodeList;
 	std::map < std::string, gEntity* > m_entList;

@@ -11,6 +11,25 @@
 #include "WADFile.h"
 #include "RefCounter.h"
 
+
+enum GVERTEXFORMAT
+{
+	GVF_RHW, // 2D overlay D3DFVF_XYZRHW | D3DFVF_TEX1
+
+	//GVF_LIGHTMAPPED, // D3DFVF_XYZ| D3DFVF_NORMAL|D3DFVF_TEX2
+	//GVF_TERRAIN,     // D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2  // same as bsp level?!?!?
+
+	GVF_LEVEL,
+	GVF_LINE,			// D3DFVF_XYZ | D3DFVF_DIFFUSE 
+	GVF_STATICMESH,		 // D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX1
+	GVF_SHAPE,
+	GVF_SKINNED0WEIGHTS, // D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1 
+	GVF_RESERVED0,
+	GVF_RESERVED1,
+	GVF_NUM
+};
+
+DWORD getFVF( GVERTEXFORMAT fmt );
 void toUpper(char* str);
 
 struct gFontParameters
@@ -31,15 +50,15 @@ class gResource2DTexture;
 
 enum GRESOURCEGROUP
 {
-	GRESGROUP_2DTEXTURE,
-	GRESGROUP_CUBETEXTURE,
+	GRESGROUP_TERRAIN,
 	GRESGROUP_SHAPE,
-	GRESGROUP_SHADERSET,
 	GRESGROUP_STATICMESH,
 	GRESGROUP_SKINNEDMESH,
 	GRESGROUP_SKINEDANIMATION,
-	GRESGROUP_TERRAIN,
 	GRESGROUP_TEXTDRAWER,
+	GRESGROUP_CUBETEXTURE,
+	GRESGROUP_2DTEXTURE,
+	GRESGROUP_SHADERSET,
 	GRESGROUP_RESERVED_1,
 	GRESGROUP_RESERVED_2,
 	GRESGROUP_RESERVED_3,
@@ -128,6 +147,8 @@ public:
 	void setVisible(bool visible);
 
 	const gAABB& getAABB();
+	virtual GVERTEXFORMAT getVertexFormat() = 0;
+	virtual const char* getDefaultMaterialName(){ return 0; }
 	
 protected:
 	bool m_isVisible;
@@ -174,6 +195,8 @@ public:
 
 	void setSizes( float height, float width, float depth, float r1, float r2 );
 
+	GVERTEXFORMAT getVertexFormat();
+
 protected:
 	LPD3DXMESH m_pMesh;
 	gShapeType m_shType;
@@ -213,10 +236,12 @@ protected:
 	gFontParameters m_fontParams;
 };
 
+class gMaterialFactory;
+
 class gResourceManager
 {
 public:
-	gResourceManager( LPDIRECT3DDEVICE9* pDev );
+	gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* pMaterialFactory );
 	~gResourceManager();
 
 	void onRenderDeviceLost();
@@ -237,6 +262,7 @@ public:
 
 	const LPDIRECT3DDEVICE9 getDevice() const;
 	const gResource* getResource(const char* name, GRESOURCEGROUP group) const;
+	gMaterialFactory* getMaterialFactory() const;
 	
 	bool destroyResource(const char* name, GRESOURCEGROUP group);
 	void unloadAllResources();
@@ -248,6 +274,7 @@ protected:
 	void _clearWADFilesList();
 	bool _loadWADFileHeader( const char* filename );
 
+	gMaterialFactory* m_pMatFactory;
 	std::string m_wadFolder;
 	LPDIRECT3DDEVICE9* m_ppDev;
 	std::map < std::string, gResource* > m_resources[ GRESGROUP_NUM ];

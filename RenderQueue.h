@@ -40,9 +40,6 @@ int comp(const void* i, const void* j)
 class gRenderable;
 class gMaterial;
 
-struct gRenderableParameters
-{
-};
 
 typedef unsigned __int64 GRQSORTINGKEY;
 
@@ -75,7 +72,7 @@ public:
 	void initialize( unsigned int elementsMaxNum ); //only one time
 	void sort();
 	bool pushBack( const gRenderElement& element );
-	bool popBack( gRenderElement& element );
+	bool popBack( gRenderElement** element );
 	void clear();
 
 protected:

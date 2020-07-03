@@ -1,4 +1,5 @@
 #include "Resources.h"
+#include "Materials.h"
 #include "Scene.h"
 #include "Mesh.h"
 #include "Terrain.h"
@@ -13,6 +14,28 @@ struct gShapeVertex
 	D3DXVECTOR3 pos;
 	D3DXVECTOR3 norm;
 };
+
+DWORD getFVF( GVERTEXFORMAT fmt )
+{
+	switch (fmt)
+	{
+	case GVF_RHW:
+		return D3DFVF_XYZRHW | D3DFVF_TEX1;
+	case GVF_LEVEL:
+		return D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2;
+	case GVF_LINE:
+		return D3DFVF_XYZ | D3DFVF_DIFFUSE;
+	case GVF_STATICMESH:
+		return D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX1;
+	case GVF_SHAPE:
+		return D3DFVF_XYZ | D3DFVF_NORMAL;
+	case GVF_SKINNED0WEIGHTS:
+		return D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1;
+
+	default:
+		return 0;
+	}
+}
 
 void toUpper(char* str)
 {
@@ -54,7 +77,6 @@ const unsigned int gRenderableSettings::getWorldMatrixesNum() const
 {
 	return m_worldMarixesNum;
 }
-
 
 //-----------------------------------------------
 //
@@ -102,7 +124,7 @@ gResource::gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* f
 		m_resName = m_fileName;
 
 	m_isRenderable = false;
-	m_refCounter = 1; // 1 or 0??
+	//m_refCounter = 0; // 1 or 0??
 	m_resourceId = m_pResMgr->_incrementResourceIdCounter(); //TODO: может это переделать?
 }
 
@@ -113,9 +135,10 @@ unsigned int gResource::getId() const
 
 void gResource::release()
 {
-	m_refCounter--;
 	if (m_refCounter == 0)
 		m_pResMgr->destroyResource( m_resName.c_str(), m_group ); 
+	else
+		m_refCounter--;
 }
 
 const char* gResource::getResourceName()
@@ -472,6 +495,11 @@ void gResourceShape::setSizes(float height, float width, float depth, float r1, 
 	m_r2 = r2;
 }
 
+GVERTEXFORMAT gResourceShape::getVertexFormat()
+{
+	return GVF_SHAPE;
+}
+
 void gResourceShape::onFrameRender( const D3DXMATRIX& transform ) const
 {
 	if ( m_pMesh!=0 && m_pResMgr->getDevice()!=0 )
@@ -580,9 +608,10 @@ void gResourceTextDrawer::drawInScreenSpace(const char* text, int x, int y, DWOR
 //
 //-----------------------------------------------
 
-gResourceManager::gResourceManager( LPDIRECT3DDEVICE9* pDev )
+gResourceManager::gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* pMaterialFactory )
 {
 	m_ppDev = pDev;
+	m_pMatFactory = pMaterialFactory;
 
 	m_pLineDrawer = new gResourceLineDrawer( this, GRESGROUP_RESERVED_1, "*_line" );
 	m_resources[GRESGROUP_RESERVED_1]["*_line"] = m_pLineDrawer;
@@ -669,6 +698,7 @@ bool gResourceManager::destroyResource(const char* name, GRESOURCEGROUP group)
 		return false;
 	else if (it->second != 0)
 		delete it->second;
+
 	m_resources[group].erase(it);
 	return true;
 }
@@ -828,6 +858,11 @@ gResource* gResourceManager::loadStaticMesh(const char* filename, const char* na
 		m_resources[GRESGROUP_STATICMESH][filename] = pRes;
 	else
 		m_resources[GRESGROUP_STATICMESH][name] = pRes;
+
+	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	if (!pMaterial)
+		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+
 	pRes->preload();
 	return pRes;
 }
@@ -839,6 +874,11 @@ gResource* gResourceManager::loadSkinnedMeshSMD(const char* filename, const char
 		m_resources[GRESGROUP_SKINNEDMESH][filename] = pRes;
 	else
 		m_resources[GRESGROUP_SKINNEDMESH][name] = pRes;
+
+	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	if (!pMaterial)
+		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+
 	pRes->preload();
 	return pRes;
 }
@@ -850,6 +890,11 @@ gResource* gResourceManager::loadTerrain(const char* filename, const char* name)
 		m_resources[GRESGROUP_TERRAIN][filename] = pRes;
 	else
 		m_resources[GRESGROUP_TERRAIN][name] = pRes;
+
+	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	if (!pMaterial)
+		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+
 	pRes->preload();
 	return pRes;
 }
@@ -861,6 +906,7 @@ gResource* gResourceManager::loadSkinnedAnimationSMD( const char* filename, cons
 		m_resources[GRESGROUP_SKINEDANIMATION][filename] = pRes;
 	else
 		m_resources[GRESGROUP_SKINEDANIMATION][name] = pRes;
+
 	pRes->preload();
 	return pRes;
 }
@@ -869,7 +915,11 @@ gResource* gResourceManager::createShape( const char* name, gShapeType type )
 {
 	gResourceShape* pRes = new gResourceShape( this, GRESGROUP_SHAPE, type, name );
 	m_resources[GRESGROUP_SHAPE][name] = (gResource*)pRes;
-	
+
+	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	if (!pMaterial)
+		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+
 	return (gResource*)pRes;
 }
 
@@ -897,8 +947,12 @@ const gResource* gResourceManager::getResource(const char* name, GRESOURCEGROUP 
 	if (it != m_resources[group].end())
 	{
 		res = it->second;
-		res->addRef();
 	}
 
 	return res;
+}
+
+gMaterialFactory* gResourceManager::getMaterialFactory() const
+{
+	return m_pMatFactory;
 }

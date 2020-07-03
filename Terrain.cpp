@@ -212,6 +212,11 @@ void gResourceTerrain::onFrameRender(const D3DXMATRIX& transform) const
 	//drawNormals();
 }
 
+GVERTEXFORMAT gResourceTerrain::getVertexFormat()
+{
+	return GVF_LEVEL;
+}
+
 void gResourceTerrain::drawNormals() const
 {
 	if (!m_normals)

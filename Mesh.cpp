@@ -798,6 +798,11 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 
 	m_pAtlasTexture = (gResource2DTexture*) m_pResMgr->loadTexture2D( atlasFileName );
 
+	gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial( getDefaultMaterialName() );
+	if (!pMaterial)
+		m_pResMgr->getMaterialFactory()->createMaterial( getDefaultMaterialName() );
+	pMaterial->setTexture( 0, m_pAtlasTexture );
+
 	return true;
 }
 
@@ -1330,7 +1335,15 @@ unsigned int gResourceSkinnedMesh::getBonesNum() const
 	return m_bonesNum;
 }
 
+GVERTEXFORMAT gResourceSkinnedMesh::getVertexFormat()
+{
+	return GVF_SKINNED0WEIGHTS;
+}
 
+const char* gResourceSkinnedMesh::getDefaultMaterialName()
+{
+	return m_resName.c_str();
+}
 
 void gResourceSkinnedMesh::_transform_to_world( gSkinBone* frames, int bone )
 {
@@ -1726,6 +1739,11 @@ void gResourceStaticMesh::drawNormals() const
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
 	pD3DDev9->SetFVF(lastFVF);
 	//pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
+}
+
+GVERTEXFORMAT gResourceStaticMesh::getVertexFormat()
+{
+	return GVF_STATICMESH;
 }
 
 void gResourceStaticMesh::onFrameRender(const D3DXMATRIX& transform) const

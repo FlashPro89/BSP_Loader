@@ -32,8 +32,8 @@ gMaterial* gMaterialFactory::getMaterial( const char* name ) const
 	auto it = m_pMaterialsMap.find(name);
 	if (it != m_pMaterialsMap.end())
 	{
-		if (it->second) 
-			it->second->addRef();
+		//if (it->second) 
+		//	it->second->addRef();
 		return it->second;
 	}
 	else
@@ -99,11 +99,17 @@ gMaterial::~gMaterial()
 {
 	if (m_name)
 		delete[] m_name;
+
+	for (unsigned char i = 0; i < 8; i++)
+		if (m_textures[i]) m_textures[i]->release();
 }
 
 void gMaterial::release()
 {
-	m_refCounter--;
+	if (m_refCounter == 0)
+		m_factory->destroyMaterial(m_name);
+	else
+		m_refCounter--;
 }
 
 void gMaterial::setDiffuse(GCOLOR color)
@@ -151,8 +157,8 @@ gResource2DTexture* gMaterial::getTexture(unsigned char level)
 	//if (level > 7)
 	//	return;
 
-	if (m_textures[level])
-		m_textures[level]->addRef();
+	// (m_textures[level])
+	//	m_textures[level]->addRef();
 
 	return m_textures[level];
 }
@@ -166,6 +172,8 @@ void gMaterial::setTexture(unsigned char level, gResource2DTexture* texture)
 		m_textures[level]->release();
 
 	m_textures[level] = texture;
+	if (m_textures[level])
+		m_textures[level]->addRef();
 }
 
 unsigned short gMaterial::getId() const

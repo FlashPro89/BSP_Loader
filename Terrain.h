@@ -42,6 +42,8 @@ public:
 
 	void onFrameRender(const D3DXMATRIX& transform) const;
 
+	GVERTEXFORMAT getVertexFormat();
+
 protected:
 	gResourceTerrain();
 

@@ -28,8 +28,8 @@ gRenderElement::gRenderElement()
 
 gRenderElement::gRenderElement( gRenderable* renderable, gMaterial* material, float distance )
 {
-	if (!renderable || !material)
-		throw("Null pointers in Material!");
+	if (!renderable)
+		throw("Null renderable pointer!");
 
 	m_pRenderable = renderable;
 	m_pMaterial = material;
@@ -52,7 +52,8 @@ void gRenderElement::_buildKey()
 	m_key = m_distance; //16 bit of dist 0bit-first
 	
 	m_key = m_key << 16;
-	m_key |= m_pMaterial->getId(); //16 bit of matId 16bit-first
+	if (m_pMaterial)
+		m_key |= m_pMaterial->getId(); //16 bit of matId 16bit-first
 	
 	m_key = m_key << 32;
 	m_key |= m_pRenderable->getId(); //16 bit of renderableId 32bit-first
@@ -95,12 +96,15 @@ void gRenderQueue::initialize( unsigned int elementsMaxNum )
 	}
 }
 
-int compRE( const void* i, const void* j ) // сделать чтото с этим
+int compRE( const void* i, const void* j ) 
 {
+	//gRenderElement** ppE1 = (gRenderElement**)i;
+	//gRenderElement** ppE2 = (gRenderElement**)j;
+
 	__int64 x = (*((gRenderElement**)i))->getKey();
 	__int64 y = (*((gRenderElement**)j))->getKey();
 
-	if (x > y) return 1;
+	if (x > y) return 1; // TODO: сделать чтото с этим
 	else if (x == y) return 0;
 	else
 		return -1;
@@ -108,7 +112,26 @@ int compRE( const void* i, const void* j ) // сделать чтото с этим
 
 void gRenderQueue::sort()
 {
-	qsort( m_elementsPointers, m_arrayPos, sizeof(gRenderElement), compRE);
+	/*
+	FILE* f = 0;
+	errno_t err = fopen_s(&f, "out_sorting_queue.txt", "wt");
+
+	for (unsigned int i = 0; i < m_arrayPos; i++)
+	{
+		fprintf(f, "%lli ", m_elementsPointers[i]->getKey() );
+	}
+	fprintf(f, "\n------------------------------------------------------\n");
+	*/
+
+	qsort( m_elementsPointers, m_arrayPos, sizeof(gRenderElement**), compRE);
+
+	/*
+	for (unsigned int i = 0; i < m_arrayPos; i++)
+	{
+		fprintf(f, "%lli ", m_elementsPointers[i]->getKey());
+	}
+	fclose(f);
+	*/
 }
 
 bool gRenderQueue::pushBack(const gRenderElement& element)
@@ -119,11 +142,11 @@ bool gRenderQueue::pushBack(const gRenderElement& element)
 	return true;
 }
 
-bool gRenderQueue::popBack(gRenderElement& element)
+bool gRenderQueue::popBack(gRenderElement** element)
 {
 	if( !m_elements || m_arrayPos == 0 )
 		return false;
-	element = *m_elementsPointers[m_arrayPos--];
+	*element = m_elementsPointers[--m_arrayPos];
 	return true;
 }
 

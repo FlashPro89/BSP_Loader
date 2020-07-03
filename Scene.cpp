@@ -21,6 +21,8 @@ gEntity::gEntity( const char* name )
 gEntity::~gEntity()
 {
 	deleteAnimators();
+	if (m_pMaterial)
+		m_pMaterial->release();
 }
 
 const char* gEntity::getName() const
@@ -53,6 +55,8 @@ void gEntity::setRenderable( gRenderable* renderable )
 	m_pRenderable = renderable;
 	if (m_pRenderable != 0)
 	{
+		m_pRenderable->addRef();
+
 		if ( m_pRenderable->getGroup() == GRESGROUP_SKINNEDMESH )
 			m_animators[GANIMATOR_SKINNED] = new gSkinnedMeshAnimator(this);
 		//((gSkinnedMeshAnimator*)m_animators[GANIMATOR_SKINNED])->getWordBonesMatrixes();
@@ -61,9 +65,6 @@ void gEntity::setRenderable( gRenderable* renderable )
 
 const gRenderable* gEntity::getRenderable() const
 {
-	if (m_pRenderable)
-		m_pRenderable->addRef(); // точно const??? )
-
 	return m_pRenderable;
 }
 
@@ -111,7 +112,12 @@ gAnimator* gEntity::getAnimator( GANIMATOR_TYPE type ) const
 
 void gEntity::setMaterial(gMaterial* material)
 {
+	if (m_pMaterial)
+		m_pMaterial->release();
+
 	m_pMaterial = material;
+	if (m_pMaterial)
+		m_pMaterial->addRef();
 }
 
 gMaterial* gEntity::getMaterial() const
@@ -506,18 +512,21 @@ void gSceneNode::drawAABB()
 //
 //-----------------------------------------------
 
-gSceneManager::gSceneManager( gResourceManager* rmgr ) : m_rootNode( "root", this, 0 )
+gSceneManager::gSceneManager( gResourceManager* rmgr, gMaterialFactory* mfactory ) : m_rootNode( "root", this, 0 )
 {
 	m_pResMgr = rmgr;
 	m_activeCam = 0;
 	m_entsInFrustum = 0;
 	m_nodesInFrustum = 0;
 
-	m_matFactory.createMaterial("default");
-	m_matFactory.createMaterial("default1");
-	m_matFactory.createMaterial("default2");
-	m_matFactory.createMaterial("default3");
-	m_matFactory.createMaterial("default4");
+	m_pMatFactory = mfactory;
+
+	//test
+	//m_pMatFactory->createMaterial("default");
+	//m_pMatFactory->createMaterial("default1");
+	//m_pMatFactory->createMaterial("default2");
+	//m_pMatFactory->createMaterial("default3");
+	//m_pMatFactory->createMaterial("default4");
 }
 
 gSceneManager::~gSceneManager()
@@ -525,7 +534,12 @@ gSceneManager::~gSceneManager()
 
 }
 
-const gResourceManager* gSceneManager::getResourseManager() const
+gMaterialFactory* gSceneManager::getMaterialFactory() const
+{
+	return m_pMatFactory;
+}
+
+gResourceManager* gSceneManager::getResourseManager() const
 {
 	return m_pResMgr;
 }
@@ -576,7 +590,8 @@ gEntity* gSceneManager::createEntity( const char* name )
 		return (gEntity*)0;
 	gEntity* pEnt = new gEntity(name);
 
-	pEnt->setMaterial(m_matFactory.getMaterial("default"));
+	//test
+	//pEnt->setMaterial(m_pMatFactory->getMaterial("default"));
 
 	m_entList[name] = pEnt;
 	return pEnt;
@@ -651,6 +666,13 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 	}
 
 	queue.sort();
+
+	gRenderElement* pElement = 0;
+	int counter = 0;
+	while (queue.popBack(&pElement))
+	{
+		counter++;
+	}
 }
 
 void gSceneManager::frameMove(float delta)

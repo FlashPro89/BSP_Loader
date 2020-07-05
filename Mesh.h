@@ -135,6 +135,13 @@ public:
 	int m_offset;
 };
 
+struct gSkinBoneGroup
+{
+	unsigned short firstTriangle;
+	unsigned short TrianglesNum;
+	std::map<unsigned char, unsigned char> remappedBones; //пока что одна кость на вершину
+};
+
 class gResourceSkinnedMesh : public gRenderable
 {
 public:
@@ -145,12 +152,16 @@ public:
 	bool load(); //загрузка видеоданных POOL_DEFAULT
 	void unload(); //данные, загруженые preload() в этой функции не изменяются
 
-	void onFrameRender(const D3DXMATRIX& transform) const;
+	//void onFrameRender(const D3DXMATRIX& transform) const;
+	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
 
 	bool addAnimation( const char* filename, const char* name );
 	gResourceSkinAnimation* getAnimation( const char* name ) const; 
 
-	D3DXMATRIX* getInvertedMatrixes() const;
+	const D3DXMATRIX* getInvertedMatrixes() const;
+	void setMatrixPalete( const D3DXMATRIX* palete );
+	const D3DXMATRIX* getMatrixPalete() const;
+
 	gSkinBone* getNullFrame() const;
 
 	unsigned int getBonesNum() const;
@@ -158,12 +169,19 @@ public:
 	GVERTEXFORMAT getVertexFormat();
 	const char* getDefaultMaterialName();
 
+	void* getVBuffer();
+	void* getIBuffer();
+
+	bool isUseUserMemoryPointer();
+
 	//for debug anim
 	float _time;
+	void _skeleton(const gSkinBone* frame, int b1) const;
+	void _transform_to_world(gSkinBone* bones, int bone);
 
 protected:
-	void _skeleton( const gSkinBone* frame, int b1 ) const;
-	void _transform_to_world( gSkinBone* bones, int bone );
+
+
 
 	gMaterial* m_pMaterial;
 	gResource2DTexture* m_pAtlasTexture;
@@ -182,9 +200,12 @@ protected:
 	int m_time0_blockpos;
 	int m_tris_blockpos;
 
+	std::vector<gSkinBoneGroup> m_skinBoneGroups;
+
 	gTrisGroupCacher m_trisCacher;
 	gSkinBone* m_pBones;
 	D3DXMATRIX* m_pMatInverted;
+	const D3DXMATRIX* m_pMatPalete; // абсолютные матрицы в мировых координатах
 
 	gSkinAnimMap m_animMap;
 
@@ -205,9 +226,15 @@ public:
 	bool load(); //загрузка видеоданных POOL_DEFAULT
 	void unload(); //данные, загруженые preload() в этой функции не изменяются
 
-	void onFrameRender(const D3DXMATRIX& transform) const;
+	//void onFrameRender(const D3DXMATRIX& transform) const;
+	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
 
 	GVERTEXFORMAT getVertexFormat();
+
+	void* getVBuffer();
+	void* getIBuffer();
+
+	bool isUseUserMemoryPointer();
 
 protected:
 

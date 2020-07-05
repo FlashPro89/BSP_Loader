@@ -168,7 +168,7 @@ void gResourceTerrain::unload()
 	m_isLoaded = false;
 }
 
-void gResourceTerrain::onFrameRender(const D3DXMATRIX& transform) const
+void gResourceTerrain::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
 {
 	if (!m_isLoaded)
 		return;
@@ -177,7 +177,7 @@ void gResourceTerrain::onFrameRender(const D3DXMATRIX& transform) const
 	if (!pD3DDev)
 		return;
 	
-	pD3DDev->SetTransform( D3DTS_WORLD, &transform );
+	pD3DDev->SetTransform( D3DTS_WORLD, &matrixes[0] );
 	if (m_pTex)
 		pD3DDev->SetTexture(0, m_pTex->getTexture());
 	if(m_pTexDetail)
@@ -215,6 +215,21 @@ void gResourceTerrain::onFrameRender(const D3DXMATRIX& transform) const
 GVERTEXFORMAT gResourceTerrain::getVertexFormat()
 {
 	return GVF_LEVEL;
+}
+
+void* gResourceTerrain::getVBuffer()
+{
+	return m_pVertexBuffer;
+}
+
+void* gResourceTerrain::getIBuffer()
+{
+	return m_pIndexBuffer;
+}
+
+bool gResourceTerrain::isUseUserMemoryPointer()
+{
+	return false;
 }
 
 void gResourceTerrain::drawNormals() const

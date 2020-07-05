@@ -82,11 +82,20 @@ void gEntity::onFrameRender( gRenderQueue& queue ) const
 	if ( m_pRenderable && m_pHoldingNode )
 	{
 		if (m_pRenderable->isRenderable())
-		{			
-				queue.pushBack( gRenderElement( m_pRenderable, m_pMaterial, 0 ) );
-
-				//applyWorldMatrixesToRenderSystem( m_pHoldingNode->getAbsoluteMatrix() );
-				m_pRenderable->onFrameRender( m_pHoldingNode->getAbsoluteMatrix() );	
+		{		
+			//applyWorldMatrixesToRenderSystem
+			if (m_pRenderable->getGroup() == GRESGROUP_SKINNEDMESH)
+			{
+				gResourceSkinnedMesh* pMesh = (gResourceSkinnedMesh*)m_pRenderable;
+				gSkinnedMeshAnimator* pAnimator = (gSkinnedMeshAnimator*)m_animators[GANIMATOR_SKINNED];
+				
+				//TODO: delete setMatrixPalete()
+				//pMesh->setMatrixPalete( pAnimator->getWordBonesMatrixes() );
+				m_pRenderable->onFrameRender(&queue, pAnimator->getWordBonesMatrixes());
+				pMesh->_skeleton(pAnimator->getMixedFrame(), 0);
+			}
+			else
+				m_pRenderable->onFrameRender( &queue, &m_pHoldingNode->getAbsoluteMatrix() );
 		}
 	}
 }

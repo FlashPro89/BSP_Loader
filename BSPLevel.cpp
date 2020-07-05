@@ -26,8 +26,23 @@ void gResourceBSPLevel::unload() //данные, загруженые preload() в этой функции н
 	
 }
 
-void gResourceBSPLevel::onFrameRender(const D3DXMATRIX& transform) const
+void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
 {
 
+}
+
+void* gResourceBSPLevel::getVBuffer()
+{
+	return 0;
+}
+
+void* gResourceBSPLevel::getIBuffer()
+{
+	return 0;
+}
+
+bool gResourceBSPLevel::isUseUserMemoryPointer()
+{
+	return false;
 }
 

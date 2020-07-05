@@ -43,24 +43,43 @@ class gMaterial;
 
 typedef unsigned __int64 GRQSORTINGKEY;
 
+struct D3DXMATRIX;
+
+enum gRenderPrimitiveType
+{
+	GRP_LINELIST,
+	GPR_TRIANGLELIST
+};
+
 class gRenderElement
 {
 public:
 	//gRenderElement(gRenderElement& other);
 	gRenderElement();
-	gRenderElement( gRenderable* renderable, gMaterial* material, float distance );
+	gRenderElement( const gRenderable* renderable, const gMaterial* material, float distance, unsigned char matrixPaleteSize, 
+		const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount );
 	~gRenderElement();
 
 	GRQSORTINGKEY getKey() const;
+
+	const gRenderable* getRenderable() const;
+	const gMaterial* getMaterial() const;
+	const D3DXMATRIX* getMatrixPalete() const;
+	unsigned char getMatrixPaleteSize() const;
 
 protected:
 	GRQSORTINGKEY m_key;
 
 	void _buildKey();
 
-	gRenderable* m_pRenderable;
-	gMaterial* m_pMaterial;
+	const gRenderable* m_pRenderable;
+	const gMaterial* m_pMaterial;
 	unsigned short m_distance;
+	const D3DXMATRIX* m_pMatPalete; // world matrixes
+	unsigned char m_paleteSize; // num of world matrixes
+	unsigned int m_startBufferIndex;
+	unsigned int m_primitiveCount;
+
 };
 
 class gRenderQueue

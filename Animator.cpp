@@ -101,6 +101,8 @@ void gSkinnedMeshAnimator::tick(float delta)
 		D3DXMatrixRotationQuaternion(&mAbs, &q);
 		mAbs._41 = v.x; mAbs._42 = v.y; mAbs._43 = v.z;
 		D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &mInverted[i], &mAbs );
+		D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &m_worldBonesMatrixes[i], 
+			&m_pEntity->getHoldingNode()->getAbsoluteMatrix() ); 
 		
 	}
 }

@@ -643,7 +643,6 @@ void loadScene( const char* mapname )
 		gResourceSkinnedMesh* pSMesh2 =
 			(gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/zombie/Zom3_Template_Biped(White_Suit)1.smd", "zombie");
 		pSMesh2->addAnimation( "../data/models/zombie/idle1.smd", "idle1" );
-		//pSMesh->load();
 
 		ent = smgr.createEntity("ent__skinning2");
 		ent->setRenderable(pSMesh2);
@@ -1558,7 +1557,7 @@ void renderFaces()
 
 	pD3DDev9->SetStreamSource(0, m_VB, 0, sizeof(D3DVertex));
 	pD3DDev9->SetIndices(m_IB);
-	pD3DDev9->SetFVF( getFVF(GVF_LEVEL) );
+	pD3DDev9->SetFVF( getFVF(GVERTEXFORMAT::GVF_LEVEL) );
 
 	//LPDIRECT3DTEXTURE9 lmap = ((gResource2DTexture*)rmgr.getResource("lmap", GRESGROUP_2DTEXTURE))->getTexture();
 	 

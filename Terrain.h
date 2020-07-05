@@ -40,9 +40,15 @@ public:
 	bool load(); //загрузка видеоданных POOL_DEFAULT
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
-	void onFrameRender(const D3DXMATRIX& transform) const;
+	//void onFrameRender(const D3DXMATRIX& transform) const;
+	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
 
 	GVERTEXFORMAT getVertexFormat();
+
+	void* getVBuffer();
+	void* getIBuffer();
+
+	bool isUseUserMemoryPointer();
 
 protected:
 	gResourceTerrain();

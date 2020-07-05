@@ -593,6 +593,7 @@ gResourceSkinnedMesh::gResourceSkinnedMesh(gResourceManager* mgr, GRESOURCEGROUP
 
 	m_pBones = 0;
 	m_pMatInverted = 0;
+	m_pMatPalete = 0;
 
 	m_pTransformedBones = 0;
 	//m_pTransformedBonesByQuat = 0;
@@ -751,52 +752,60 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 	fclose(f);
 
 
-	//optimize textures to atlas
-	m_atlas.beginAtlas(m_trisCacher.size());
-
-	auto it = m_trisCacher.begin();
-	while (it != m_trisCacher.end())
+	if (m_trisCacher.size() > 1)
 	{
-		m_atlas.pushTexture( it->second.bitmap->getWidth(), it->second.bitmap->getHeight(), &it->second );
-		it++;
+
+		//optimize textures to atlas
+		m_atlas.beginAtlas(m_trisCacher.size());
+
+		auto it = m_trisCacher.begin();
+		while (it != m_trisCacher.end())
+		{
+			m_atlas.pushTexture(it->second.bitmap->getWidth(), it->second.bitmap->getHeight(), &it->second);
+			it++;
+		}
+		m_atlas.mergeTexturesToAtlas(4096, 4096, 0);
+
+		char atlasFileName[MAX_PATH];
+
+		memcpy(atlasFileName, m_fileName.c_str(), m_fileName.length() - 4);
+		atlasFileName[m_fileName.length() - 4] = 0;
+
+		sprintf_s(atlasFileName, MAX_PATH, "%s%s", atlasFileName, "_atlas.bmp");
+
+		gBMPFile outAtlas;
+		outAtlas.createBitMap(m_atlas.getAtlasWidth(), m_atlas.getAtlasHeight());
+		gFileImpl* file = new gFileImpl(atlasFileName, true, true);
+
+		unsigned short baseIndex = 0; // ??
+
+		for (unsigned int i = 0; i < m_trisCacher.size(); i++)
+		{
+			gTrisGroup* tg = (gTrisGroup*)m_atlas.getUserDataBySortedIndex(i);
+
+			tg->remappedX = m_atlas.getTextureRemapedXPosBySortedOrder(i);
+			tg->remappedY = m_atlas.getTextureRemapedYPosBySortedOrder(i);
+			tg->texWidth = m_atlas.getTextureWidthBySortedOrder(i);
+			tg->texHeight = m_atlas.getTextureHeightBySortedOrder(i);
+
+			if (tg->bitmap != 0)
+				outAtlas.overlapOther(*(tg->bitmap), tg->remappedX, tg->remappedY);
+
+			//free bitmap memory
+			delete tg->bitmap;
+			tg->bitmap = 0;
+		}
+
+		//outAtlas.verticalFlip();
+		outAtlas.saveToFile(file);
+		delete file;
+
+		m_pAtlasTexture = (gResource2DTexture*)m_pResMgr->loadTexture2D(atlasFileName);
 	}
-	m_atlas.mergeTexturesToAtlas( 4096, 4096, 0 );
-
-	char atlasFileName[MAX_PATH];
-
-	memcpy(atlasFileName, m_fileName.c_str(), m_fileName.length() - 4 );
-	atlasFileName[m_fileName.length() - 4] = 0;
-
-	sprintf_s( atlasFileName, MAX_PATH, "%s%s", atlasFileName, "_atlas.bmp");
-
-	gBMPFile outAtlas;
-	outAtlas.createBitMap(m_atlas.getAtlasWidth(), m_atlas.getAtlasHeight());
-	gFileImpl* file = new gFileImpl( atlasFileName, true, true );
-
-	unsigned short baseIndex = 0; // ??
-
-	for (unsigned int i = 0; i < m_trisCacher.size(); i++)
+	else
 	{
-		gTrisGroup* tg = (gTrisGroup*)m_atlas.getUserDataBySortedIndex(i);
-
-		tg->remappedX = m_atlas.getTextureRemapedXPosBySortedOrder(i);
-		tg->remappedY = m_atlas.getTextureRemapedYPosBySortedOrder(i);
-		tg->texWidth = m_atlas.getTextureWidthBySortedOrder(i);
-		tg->texHeight = m_atlas.getTextureHeightBySortedOrder(i);
-
-		if( tg->bitmap!=0 )
-			outAtlas.overlapOther( *(tg->bitmap), tg->remappedX, tg->remappedY);
-
-		//free bitmap memory
-		delete tg->bitmap;
-		tg->bitmap = 0;
+		m_pAtlasTexture = (gResource2DTexture*)m_pResMgr->loadTexture2D( fullFileName ); //load texture in first trisGroup
 	}
-
-	//outAtlas.verticalFlip();
-	outAtlas.saveToFile(file);
-	delete file;
-
-	m_pAtlasTexture = (gResource2DTexture*) m_pResMgr->loadTexture2D( atlasFileName );
 
 	gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial( getDefaultMaterialName() );
 	if (!pMaterial)
@@ -804,6 +813,31 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 	pMaterial->setTexture( 0, m_pAtlasTexture );
 
 	return true;
+}
+
+int compareVData( const void* i, const void* j )
+{
+	const gSkinVertex* tr0 = (gSkinVertex*)i; //triangle sz = vert size * 3
+	const gSkinVertex* tr1 = (gSkinVertex*)j;
+
+	DWORD d0 = tr0[2].MatrixIndices | (tr0[1].MatrixIndices << 8) | (tr0[0].MatrixIndices << 16 );
+	DWORD d1 = tr1[2].MatrixIndices | (tr1[1].MatrixIndices << 8) | (tr1[0].MatrixIndices << 16);
+
+	return (int)d0 - (int)d1;
+/*
+	if (tr0[0].MatrixIndices > tr1[0].MatrixIndices)
+	{
+		if (tr0[1].MatrixIndices > tr1[1].MatrixIndices)
+		{
+			if (tr0[2].MatrixIndices > tr1[2].MatrixIndices)
+				return 1;
+			else
+				return -1;
+		}
+		else return -1;
+	}
+	else return -1;
+*/
 }
 
 bool gResourceSkinnedMesh::load()
@@ -863,6 +897,7 @@ bool gResourceSkinnedMesh::load()
 	m_AABB.reset();
 	fseek(f, m_tris_blockpos, SEEK_SET);
 
+	/*
 	if (m_pAtlasTexture == 0)
 	{
 		while (fgets(buffer, BUFSZ, f))
@@ -965,6 +1000,8 @@ bool gResourceSkinnedMesh::load()
 	}
 	else //вариант с текстурным атласом
 	{
+
+	*/
 		float atlasW = m_pAtlasTexture->getTextureWidth();
 		float atlasH = m_pAtlasTexture->getTextureHeight();
 
@@ -1027,7 +1064,7 @@ bool gResourceSkinnedMesh::load()
 					p_vData[vdi + i].tu = pxU * remappedX + p_vData[vdi + i].tu * (float)w / atlasW;
 					p_vData[vdi + i].tv = pxV * remappedY + p_vData[vdi + i].tv * (float)h / atlasH;
 
-					p_vData[vdi + i].MatrixIndices = 0;
+					p_vData[vdi + i].MatrixIndices = tuint;
 
 					p_iData[vdi + i] = vdi + i;
 				}
@@ -1035,7 +1072,52 @@ bool gResourceSkinnedMesh::load()
 				vdi += 3;
 			}
 		}
+	//}
+
+	qsort( p_vData, m_trisNum, sizeof( gSkinVertex ) * 3, compareVData );
+	
+	/*
+	f = 0;
+	err = fopen_s(&f, "out_sorted_vertexes.txt", "wt");
+	for( unsigned int i = 0; i<m_trisNum*3; i+=3 )
+	{
+		fprintf(f, "%u %f %f %f %f %f %f %f %f\n",  //FIX IT!!!
+			p_vData[i].MatrixIndices,
+			p_vData[i].x,
+			p_vData[i].y,
+			p_vData[i].z,
+			p_vData[i].nx,
+			p_vData[i].ny,   // меняем оси z и y
+			p_vData[i].nz,
+			p_vData[i].tu,
+			p_vData[i].tv);
+
+		fprintf(f, "%u %f %f %f %f %f %f %f %f\n",  //FIX IT!!!
+			p_vData[i+1].MatrixIndices,
+			p_vData[i+1].x,
+			p_vData[i+1].y,
+			p_vData[i+1].z,
+			p_vData[i+1].nx,
+			p_vData[i+1].ny,   // меняем оси z и y
+			p_vData[i+1].nz,
+			p_vData[i+1].tu,
+			p_vData[i+1].tv);
+
+		fprintf(f, "%u %f %f %f %f %f %f %f %f\n",  //FIX IT!!!
+			p_vData[i + 2].MatrixIndices,
+			p_vData[i + 2].x,
+			p_vData[i + 2].z,
+			p_vData[i + 2].y,
+			p_vData[i + 2].nx,
+			p_vData[i + 2].ny,   // меняем оси z и y
+			p_vData[i + 2].nz,
+			p_vData[i + 2].tu,
+			p_vData[i + 2].tv);
+
+		fprintf(f,"================================================================\n");
 	}
+	fclose(f);
+	*/
 
 	hr1 = m_pVB->Unlock();
 	hr2 = m_pIB->Unlock();
@@ -1044,6 +1126,84 @@ bool gResourceSkinnedMesh::load()
 		unload();
 		if (f) fclose(f);
 		return false;
+	}
+
+	m_skinBoneGroups.push_back(gSkinBoneGroup());
+
+	auto git = m_skinBoneGroups.begin();
+
+	git->firstTriangle = 0;
+	git->TrianglesNum = 0;
+	
+	const unsigned char maxBonesInGroup = 8;
+	//unsigned char usedIndexes = 0;
+	unsigned int trisCounter = 0;
+
+	for (unsigned int i = 0; i < m_trisNum * 3; i += 3)
+	{
+		//проверяем не будет ли переполнения в BonesGroup
+		unsigned char bonesToAdd;  bool b[3];
+		
+testIndexes:
+		b[0] = b[1] = b[2] = false;
+		bonesToAdd = 0;
+
+		auto it = git->remappedBones.find( (unsigned char)p_vData[i].MatrixIndices );
+		if (it == git->remappedBones.end())
+		{
+			bonesToAdd++; b[0] = true;
+		}
+		it = git->remappedBones.find( (unsigned char)p_vData[i + 1].MatrixIndices);
+		{
+			if (it == git->remappedBones.end())
+			{
+				if (p_vData[i].MatrixIndices != p_vData[i + 1].MatrixIndices)
+				{
+					bonesToAdd++; b[1] = true;
+				}
+			}
+		}
+		it = git->remappedBones.find( (unsigned char)p_vData[i + 2].MatrixIndices);
+		{
+			if (it == git->remappedBones.end())
+			{
+				if ((p_vData[i].MatrixIndices != p_vData[i + 2].MatrixIndices) &&
+					(p_vData[i + 1].MatrixIndices != p_vData[i + 2].MatrixIndices))
+				{
+					bonesToAdd++; b[2] = true;
+				}
+			}
+		}
+
+		if (git->remappedBones.size() + bonesToAdd > maxBonesInGroup )
+		{
+			//создаем новый BonesGroup
+			m_skinBoneGroups.push_back(gSkinBoneGroup());
+			git = --m_skinBoneGroups.end();
+			git->firstTriangle = trisCounter;
+			git->TrianglesNum = 1; //сразу добавляем текущий треугольник
+			//usedIndexes = 0;
+			goto testIndexes;
+		}
+	
+		//индексируем кости для ремапа
+		if (b[0])
+			git->remappedBones[(unsigned char)p_vData[i].MatrixIndices] = (unsigned char)git->remappedBones.size();
+
+		if (b[1])
+			git->remappedBones[(unsigned char)p_vData[i+1].MatrixIndices] = (unsigned char)git->remappedBones.size();
+				
+		if (b[2])
+			git->remappedBones[(unsigned char)p_vData[i+2].MatrixIndices] = (unsigned char)git->remappedBones.size();
+
+		git->TrianglesNum++;
+
+		p_vData[i].MatrixIndices = (git->remappedBones.find((unsigned char)p_vData[i].MatrixIndices))->second;
+		p_vData[i+1].MatrixIndices = (git->remappedBones.find((unsigned char)p_vData[i+1].MatrixIndices))->second;
+		p_vData[i+2].MatrixIndices = (git->remappedBones.find((unsigned char)p_vData[i+2].MatrixIndices))->second;
+
+
+		trisCounter++;
 	}
 
 	//----------------------------------------
@@ -1187,7 +1347,7 @@ void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функци
 	m_isLoaded = false;
 }
 
-void gResourceSkinnedMesh::onFrameRender( const D3DXMATRIX& transform ) const
+void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes) const
 {
 
 	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
@@ -1199,7 +1359,7 @@ void gResourceSkinnedMesh::onFrameRender( const D3DXMATRIX& transform ) const
 	pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
 	
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, true);
-	pD3DDev9->SetTransform( D3DTS_WORLD, &transform );
+	pD3DDev9->SetTransform( D3DTS_WORLD, &matrixes[0] );
 	pD3DDev9->SetFVF( GSKIN_FVF );
 	pD3DDev9->SetStreamSource( 0, m_pVB, 0, sizeof(gSkinVertex) );
 	pD3DDev9->SetIndices( m_pIB );
@@ -1254,11 +1414,34 @@ void gResourceSkinnedMesh::onFrameRender( const D3DXMATRIX& transform ) const
 		it++;
 	}
 */
-
+	D3DXMATRIX mId;
+	D3DXMatrixIdentity(&mId);
 	if (m_pAtlasTexture)
 	{
 		pD3DDev9->SetTexture(0, m_pAtlasTexture->getTexture());
-		pD3DDev9->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 0, m_trisNum);
+
+		auto it = m_skinBoneGroups.begin();
+		while (it != m_skinBoneGroups.end())
+		{
+			auto rit = it->remappedBones.begin();
+		
+			while (rit != it->remappedBones.end())
+			{
+				if( !matrixes )
+					pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &mId);
+				else
+					pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &matrixes[rit->first]);
+				rit++;
+			}
+
+			gRenderElement re( this, m_pMaterial, 0, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum );
+			queue->pushBack(re);
+
+			//позже удалить
+			pD3DDev9->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 
+				it->firstTriangle*3, it->TrianglesNum );
+			it++;
+		}
 	}
 	else
 	{
@@ -1277,11 +1460,13 @@ void gResourceSkinnedMesh::onFrameRender( const D3DXMATRIX& transform ) const
 	pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE );
 	pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, false );
 	 
-	pD3DDev9->SetTransform(D3DTS_WORLD, &transform);
+	pD3DDev9->SetTransform(D3DTS_WORLD, &matrixes[0]);
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, false);
 
+	pD3DDev9->SetRenderState( D3DRS_ZFUNC, D3DCMP_ALWAYS );
 	if (m_pTransformedBones)
 		_skeleton(m_pTransformedBones, 0);
+	pD3DDev9->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
 	//if (m_pTransformedBonesByQuat)
 	//	_skeleton(m_pTransformedBonesByQuat, 0);
 	//if (anim)
@@ -1320,9 +1505,20 @@ gResourceSkinAnimation* gResourceSkinnedMesh::getAnimation(const char* name) con
 		return (gResourceSkinAnimation*)0;
 }
 
-D3DXMATRIX* gResourceSkinnedMesh::getInvertedMatrixes() const
+const D3DXMATRIX* gResourceSkinnedMesh::getInvertedMatrixes() const
 {
 	return m_pMatInverted;
+}
+
+//set before frame render by render queue
+void gResourceSkinnedMesh::setMatrixPalete( const D3DXMATRIX* palete )
+{
+	m_pMatPalete = palete;
+}
+
+const D3DXMATRIX* gResourceSkinnedMesh::getMatrixPalete() const
+{
+	return m_pMatPalete;
 }
 
 gSkinBone* gResourceSkinnedMesh::getNullFrame() const
@@ -1343,6 +1539,21 @@ GVERTEXFORMAT gResourceSkinnedMesh::getVertexFormat()
 const char* gResourceSkinnedMesh::getDefaultMaterialName()
 {
 	return m_resName.c_str();
+}
+
+void* gResourceSkinnedMesh::getVBuffer()
+{
+	return m_pVB;
+}
+
+void* gResourceSkinnedMesh::getIBuffer()
+{
+	return m_pIB;
+}
+
+bool gResourceSkinnedMesh::isUseUserMemoryPointer()
+{
+	return false;
 }
 
 void gResourceSkinnedMesh::_transform_to_world( gSkinBone* frames, int bone )
@@ -1447,7 +1658,7 @@ void gResourceSkinnedMesh::_skeleton( const gSkinBone* frame, int b1 ) const
 		pD3DDev9->GetFVF(&lastFVF);
 		pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
 		pD3DDev9->SetTexture(0, 0);
-		pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
+		//pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
 
 		if ( parent == b1)
 		{	
@@ -1461,7 +1672,7 @@ void gResourceSkinnedMesh::_skeleton( const gSkinBone* frame, int b1 ) const
 			_skeleton( frame, i );
 		}
 		pD3DDev9->SetFVF(lastFVF);
-		pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
+		//pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 	}
 }
 
@@ -1746,18 +1957,33 @@ GVERTEXFORMAT gResourceStaticMesh::getVertexFormat()
 	return GVF_STATICMESH;
 }
 
-void gResourceStaticMesh::onFrameRender(const D3DXMATRIX& transform) const
+void* gResourceStaticMesh::getVBuffer()
+{
+	return m_pVB;
+}
+
+void* gResourceStaticMesh::getIBuffer()
+{
+	return m_pIB;
+}
+
+bool gResourceStaticMesh::isUseUserMemoryPointer()
+{
+	return false;
+}
+
+void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
 {
 	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9)
 		return;
 
-	pD3DDev9->SetTransform(D3DTS_WORLD, &transform);
+	pD3DDev9->SetTransform(D3DTS_WORLD, &matrixes[0]);
 	pD3DDev9->SetFVF(GSTATIC_FVF);
 	pD3DDev9->SetStreamSource(0, m_pVB, 0, sizeof(gStaticVertex));
 	pD3DDev9->SetIndices(m_pIB);
 
-	pD3DDev9->SetTransform(D3DTS_WORLD, &transform);
+	pD3DDev9->SetTransform(D3DTS_WORLD, &matrixes[0]);
 
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())

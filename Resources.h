@@ -12,7 +12,7 @@
 #include "RefCounter.h"
 
 
-enum GVERTEXFORMAT
+enum  GVERTEXFORMAT
 {
 	GVF_RHW, // 2D overlay D3DFVF_XYZRHW | D3DFVF_TEX1
 
@@ -134,13 +134,16 @@ protected:
 
 class gMaterial;
 
+class gRenderQueue;
+
 class gRenderable : public gResource
 {
 public:
 	gRenderable( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
 	virtual ~gRenderable() {};
 
-	virtual void onFrameRender( const D3DXMATRIX& transform ) const {};
+	//virtual void onFrameRender( const D3DXMATRIX& transform ) const {};
+	virtual void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const = 0;
 	virtual void onFrameMove(float delta) {};
 
 	bool isVisible() const;
@@ -149,6 +152,11 @@ public:
 	const gAABB& getAABB();
 	virtual GVERTEXFORMAT getVertexFormat() = 0;
 	virtual const char* getDefaultMaterialName(){ return 0; }
+
+	virtual void* getVBuffer() = 0;
+	virtual void* getIBuffer() = 0;
+
+	virtual bool isUseUserMemoryPointer() = 0;
 	
 protected:
 	bool m_isVisible;
@@ -189,11 +197,17 @@ public:
 	bool load();
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
-	void onFrameRender( const D3DXMATRIX& transform ) const;
+	//void onFrameRender( const D3DXMATRIX& transform ) const;
+	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
 
 	LPD3DXMESH getMesh();
 
 	void setSizes( float height, float width, float depth, float r1, float r2 );
+
+	void* getVBuffer();
+	void* getIBuffer();
+
+	bool isUseUserMemoryPointer();
 
 	GVERTEXFORMAT getVertexFormat();
 

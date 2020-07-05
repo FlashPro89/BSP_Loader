@@ -495,16 +495,31 @@ void gResourceShape::setSizes(float height, float width, float depth, float r1, 
 	m_r2 = r2;
 }
 
+void* gResourceShape::getVBuffer()
+{
+	return 0;
+}
+
+void* gResourceShape::getIBuffer()
+{
+	return 0;
+}
+
+bool gResourceShape::isUseUserMemoryPointer()
+{
+	return false;
+}
+
 GVERTEXFORMAT gResourceShape::getVertexFormat()
 {
 	return GVF_SHAPE;
 }
 
-void gResourceShape::onFrameRender( const D3DXMATRIX& transform ) const
+void gResourceShape::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
 {
 	if ( m_pMesh!=0 && m_pResMgr->getDevice()!=0 )
 	{
-		m_pResMgr->getDevice()->SetTransform( D3DTS_WORLD, &transform );
+		m_pResMgr->getDevice()->SetTransform( D3DTS_WORLD, matrixes );
 		m_pMesh->DrawSubset(0);
 	}
 }

@@ -24,9 +24,14 @@ gRenderElement::gRenderElement()
 	m_pRenderable = 0;
 	m_pMaterial = 0;
 	m_distance = 0;
+	m_pMatPalete = 0;
+	m_paleteSize = 0;
+	m_startBufferIndex = 0;
+	m_primitiveCount = 0;
 }
 
-gRenderElement::gRenderElement( gRenderable* renderable, gMaterial* material, float distance )
+gRenderElement::gRenderElement(const gRenderable* renderable, const gMaterial* material, float distance, unsigned char matrixPaleteSize,
+	const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount)
 {
 	if (!renderable)
 		throw("Null renderable pointer!");
@@ -34,6 +39,12 @@ gRenderElement::gRenderElement( gRenderable* renderable, gMaterial* material, fl
 	m_pRenderable = renderable;
 	m_pMaterial = material;
 	m_distance = distance * 0xFFFF; //distance 0.f ... 1.f 
+	m_pMatPalete = matrixPalete;
+	m_paleteSize = matrixPaleteSize;
+
+	m_startBufferIndex = startIndex;
+	m_primitiveCount = primitiveCount;
+
 	_buildKey();
 }
 

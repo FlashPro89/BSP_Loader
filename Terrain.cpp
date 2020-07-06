@@ -21,7 +21,7 @@ gResourceTerrain::gResourceTerrain( gResourceManager* mgr, GRESOURCEGROUP group,
 
 	m_vertexesNum = 0;
 	m_indexesNum = 0;
-	m_materialsNum = 0;
+	m_pMaterialsNum = 0;
 	m_trisNum = 0;
 	m_pTex = 0;
 	m_pTexDetail = 0;
@@ -127,10 +127,10 @@ bool gResourceTerrain::preload() //загрузка статических данных
 	//load textures
 	char fullFileName[FBUFFSZ];
 	sprintf_s(fullFileName, FBUFFSZ, "%s%s", dirName, texFileName);
-	m_pTex = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName, "terrainTex");
+	m_pTex = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName, "terrainTex");
 	
 	sprintf_s(fullFileName, FBUFFSZ, "%s%s", dirName, texDetailFileName);
-	m_pTexDetail = (gResource2DTexture*)m_rmgr->loadTexture2D(fullFileName, "terrainDetailTex");
+	m_pTexDetail = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName, "terrainDetailTex");
 
 	m_hMapFilename = dirName;
 	m_hMapFilename+= hMapFilename;
@@ -168,16 +168,16 @@ void gResourceTerrain::unload()
 	m_isLoaded = false;
 }
 
-void gResourceTerrain::onFrameRender(const D3DXMATRIX& transform) const
+void gResourceTerrain::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
 {
 	if (!m_isLoaded)
 		return;
 
-	LPDIRECT3DDEVICE9 pD3DDev = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev = m_pResMgr->getDevice();
 	if (!pD3DDev)
 		return;
 	
-	pD3DDev->SetTransform( D3DTS_WORLD, &transform );
+	pD3DDev->SetTransform( D3DTS_WORLD, &matrixes[0] );
 	if (m_pTex)
 		pD3DDev->SetTexture(0, m_pTex->getTexture());
 	if(m_pTexDetail)
@@ -212,12 +212,32 @@ void gResourceTerrain::onFrameRender(const D3DXMATRIX& transform) const
 	//drawNormals();
 }
 
+GVERTEXFORMAT gResourceTerrain::getVertexFormat()
+{
+	return GVF_LEVEL;
+}
+
+void* gResourceTerrain::getVBuffer()
+{
+	return m_pVertexBuffer;
+}
+
+void* gResourceTerrain::getIBuffer()
+{
+	return m_pIndexBuffer;
+}
+
+bool gResourceTerrain::isUseUserMemoryPointer()
+{
+	return false;
+}
+
 void gResourceTerrain::drawNormals() const
 {
 	if (!m_normals)
 		return;
 
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9)
 		return;
 
@@ -268,7 +288,7 @@ bool gResourceTerrain::loadHeightMap()
 
 bool gResourceTerrain::fillBuffers()
 {
-	LPDIRECT3DDEVICE9 pDev = m_rmgr->getDevice();
+	LPDIRECT3DDEVICE9 pDev = m_pResMgr->getDevice();
 	if (!pDev)
 		return false;
 

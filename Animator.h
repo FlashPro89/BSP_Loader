@@ -81,6 +81,7 @@ protected:
 	//gResourceSkinnedMesh* m_pMesh;
 	gSkinBone* m_mixedFrame;
 	D3DXMATRIX* m_worldBonesMatrixes;
+	unsigned char m_bonesNum;
 };
 
 class gSkinnedMeshAnimationTrack

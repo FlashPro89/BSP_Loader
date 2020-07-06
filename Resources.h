@@ -9,7 +9,27 @@
 #include <string>
 #include "ColDet.h"
 #include "WADFile.h"
+#include "RefCounter.h"
 
+
+enum  GVERTEXFORMAT
+{
+	GVF_RHW, // 2D overlay D3DFVF_XYZRHW | D3DFVF_TEX1
+
+	//GVF_LIGHTMAPPED, // D3DFVF_XYZ| D3DFVF_NORMAL|D3DFVF_TEX2
+	//GVF_TERRAIN,     // D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2  // same as bsp level?!?!?
+
+	GVF_LEVEL,
+	GVF_LINE,			// D3DFVF_XYZ | D3DFVF_DIFFUSE 
+	GVF_STATICMESH,		 // D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX1
+	GVF_SHAPE,
+	GVF_SKINNED0WEIGHTS, // D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1 
+	GVF_RESERVED0,
+	GVF_RESERVED1,
+	GVF_NUM
+};
+
+DWORD getFVF( GVERTEXFORMAT fmt );
 void toUpper(char* str);
 
 struct gFontParameters
@@ -26,18 +46,19 @@ struct gFontParameters
 
 class gEntity;
 class gResourceSkinnedMesh;
+class gResource2DTexture;
 
 enum GRESOURCEGROUP
 {
-	GRESGROUP_2DTEXTURE,
-	GRESGROUP_CUBETEXTURE,
+	GRESGROUP_TERRAIN,
 	GRESGROUP_SHAPE,
-	GRESGROUP_SHADERSET,
 	GRESGROUP_STATICMESH,
 	GRESGROUP_SKINNEDMESH,
 	GRESGROUP_SKINEDANIMATION,
-	GRESGROUP_TERRAIN,
 	GRESGROUP_TEXTDRAWER,
+	GRESGROUP_CUBETEXTURE,
+	GRESGROUP_2DTEXTURE,
+	GRESGROUP_SHADERSET,
 	GRESGROUP_RESERVED_1,
 	GRESGROUP_RESERVED_2,
 	GRESGROUP_RESERVED_3,
@@ -55,11 +76,15 @@ enum gShapeType
 
 class gResourceManager;
 
-class gResource
+class gResource : public gReferenceCounter
 {
 public:
 	gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
 	virtual ~gResource() {}
+
+	unsigned int getId() const;
+
+	void release();
 
 	virtual bool preload() { return true; } //загрузка статических данных
 	virtual bool load() = 0;
@@ -79,15 +104,18 @@ public:
 
 protected:
 	GRESOURCEGROUP m_group;
-	gResourceManager* m_rmgr;
+	gResourceManager* m_pResMgr;
 	bool m_isManaged;
 	bool m_isRenderable;
 	std::string m_resName;
 	std::string m_fileName;
 	bool m_isLoaded;
+
+	//unsigned char m_refCounter;
+	unsigned int m_resourceId;
 };
 
-// ????
+
 class gRenderableSettings
 {
 public:
@@ -104,20 +132,32 @@ protected:
 	unsigned int m_worldMarixesNum; //int or char??
 };
 
+class gMaterial;
+
+class gRenderQueue;
+
 class gRenderable : public gResource
 {
 public:
 	gRenderable( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
 	virtual ~gRenderable() {};
 
-	virtual void onFrameRender( const D3DXMATRIX& transform ) const {};
+	//virtual void onFrameRender( const D3DXMATRIX& transform ) const {};
+	virtual void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const = 0;
 	virtual void onFrameMove(float delta) {};
 
 	bool isVisible() const;
 	void setVisible(bool visible);
 
 	const gAABB& getAABB();
+	virtual GVERTEXFORMAT getVertexFormat() = 0;
+	virtual const char* getDefaultMaterialName(){ return 0; }
 
+	virtual void* getVBuffer() = 0;
+	virtual void* getIBuffer() = 0;
+
+	virtual bool isUseUserMemoryPointer() = 0;
+	
 protected:
 	bool m_isVisible;
 	gAABB m_AABB;
@@ -157,11 +197,19 @@ public:
 	bool load();
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
-	void onFrameRender( const D3DXMATRIX& transform ) const;
+	//void onFrameRender( const D3DXMATRIX& transform ) const;
+	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
 
 	LPD3DXMESH getMesh();
 
 	void setSizes( float height, float width, float depth, float r1, float r2 );
+
+	void* getVBuffer();
+	void* getIBuffer();
+
+	bool isUseUserMemoryPointer();
+
+	GVERTEXFORMAT getVertexFormat();
 
 protected:
 	LPD3DXMESH m_pMesh;
@@ -202,10 +250,12 @@ protected:
 	gFontParameters m_fontParams;
 };
 
+class gMaterialFactory;
+
 class gResourceManager
 {
 public:
-	gResourceManager( LPDIRECT3DDEVICE9* pDev );
+	gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* pMaterialFactory );
 	~gResourceManager();
 
 	void onRenderDeviceLost();
@@ -226,21 +276,26 @@ public:
 
 	const LPDIRECT3DDEVICE9 getDevice() const;
 	const gResource* getResource(const char* name, GRESOURCEGROUP group) const;
+	gMaterialFactory* getMaterialFactory() const;
 	
 	bool destroyResource(const char* name, GRESOURCEGROUP group);
-
 	void unloadAllResources();
+
+	unsigned int _incrementResourceIdCounter();
 
 protected:
 
 	void _clearWADFilesList();
 	bool _loadWADFileHeader( const char* filename );
 
+	gMaterialFactory* m_pMatFactory;
 	std::string m_wadFolder;
 	LPDIRECT3DDEVICE9* m_ppDev;
 	std::map < std::string, gResource* > m_resources[ GRESGROUP_NUM ];
 	gResourceLineDrawer* m_pLineDrawer;
 	std::map < std::string, WADFile* > m_wadFiles;
+
+	unsigned int m_nextResourceId;
 };
 
 #endif

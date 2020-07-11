@@ -31,7 +31,7 @@ void gBMPFile::createBitMap(unsigned int width, unsigned int height)
 bool gBMPFile::loadFromFile( gFile* file, bool useVerticalFlip )
 {
     tagBITMAPINFOHEADER inf;
-    tagBITMAPFILEHEADER header;
+    tagBITMAPFILEHEADER head
     tagRGBQUAD palete[256];
     unsigned char* bitmap = 0;
 

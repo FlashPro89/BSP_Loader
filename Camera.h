@@ -76,6 +76,9 @@ public:
 	void projPointToScreen( const D3DXVECTOR3& point, 
 		D3DXVECTOR3& outPoint, const D3DVIEWPORT9& viewport ) const;
 
+	float getDistanceToPointF(const D3DXVECTOR3& vec) const;
+	unsigned short getDistanceToPointUS(const D3DXVECTOR3& vec) const;
+
 protected:
 	
 	void recompMatrices();

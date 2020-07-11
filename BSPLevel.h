@@ -17,7 +17,7 @@ public:
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
 	//void onFrameRender(const D3DXMATRIX& transform) const;
-	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
+	void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const;
 
 	void* getVBuffer();
 	void* getIBuffer();

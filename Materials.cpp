@@ -24,6 +24,7 @@ gMaterial* gMaterialFactory::createMaterial(const char* name)
 
 	gMaterial* material = new gMaterial(this, name, m_idCounter++);
 	m_pMaterialsMap[name] = material;
+	material->addRef();
 	return material;
 }
 
@@ -181,3 +182,7 @@ unsigned short gMaterial::getId() const
 	return m_pMaterialId;
 }
 
+const char* gMaterial::getName() const
+{
+	return m_name;
+}

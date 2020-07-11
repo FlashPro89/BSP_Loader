@@ -93,10 +93,10 @@ public:
 	//void setResourceName( const char* name );
 	//void setFileName( const char* name );
 	
-	const char* getResourceName();
-	const char* getFileName();
+	const char* getResourceName() const;
+	const char* getFileName() const;
 
-	GRESOURCEGROUP getGroup();
+	GRESOURCEGROUP getGroup() const;
 	bool isManaged() const;
 	bool isRenderable() const;
 
@@ -133,8 +133,8 @@ protected:
 };
 
 class gMaterial;
-
 class gRenderQueue;
+class gCamera;
 
 class gRenderable : public gResource
 {
@@ -143,7 +143,7 @@ public:
 	virtual ~gRenderable() {};
 
 	//virtual void onFrameRender( const D3DXMATRIX& transform ) const {};
-	virtual void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const = 0;
+	virtual void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* camera ) const = 0;
 	virtual void onFrameMove(float delta) {};
 
 	bool isVisible() const;
@@ -198,7 +198,7 @@ public:
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
 	//void onFrameRender( const D3DXMATRIX& transform ) const;
-	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
+	void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam) const;
 
 	LPD3DXMESH getMesh();
 

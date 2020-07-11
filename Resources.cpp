@@ -141,17 +141,17 @@ void gResource::release()
 		m_refCounter--;
 }
 
-const char* gResource::getResourceName()
+const char* gResource::getResourceName() const
 {
 	return m_resName.c_str();
 }
 
-const char* gResource::getFileName()
+const char* gResource::getFileName() const
 {
 	return m_fileName.c_str();
 }
 
-GRESOURCEGROUP gResource::getGroup()
+GRESOURCEGROUP gResource::getGroup() const
 {
 	return m_group;
 }
@@ -515,11 +515,11 @@ GVERTEXFORMAT gResourceShape::getVertexFormat()
 	return GVF_SHAPE;
 }
 
-void gResourceShape::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
+void gResourceShape::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const
 {
 	if ( m_pMesh!=0 && m_pResMgr->getDevice()!=0 )
 	{
-		m_pResMgr->getDevice()->SetTransform( D3DTS_WORLD, matrixes );
+		m_pResMgr->getDevice()->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
 		m_pMesh->DrawSubset(0);
 	}
 }

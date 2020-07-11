@@ -54,6 +54,8 @@ public:
 	
 	unsigned short getId() const;
 
+	const char* getName() const;
+
 protected:
 
 	gMaterial(gMaterial&) {}

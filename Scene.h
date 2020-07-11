@@ -43,7 +43,7 @@ public:
 	const gRenderable* getRenderable() const;
 
 	void onFrameMove( float delta );
-	void onFrameRender( gRenderQueue& queue ) const;
+	void onFrameRender( gRenderQueue& queue, const gCamera* camera ) const;
 
 	const gAABB& getAABB();
 	gAnimator* getAnimator( GANIMATOR_TYPE type ) const;
@@ -75,9 +75,14 @@ public:
 	~gSceneNode();
 
 	const char* getName() const;
-	const D3DXVECTOR3&		getScale() const;
-	const D3DXVECTOR3&		getPosition() const;
-	const D3DXQUATERNION&	getOrientation() const;
+	const D3DXVECTOR3&		getRelativeScale() const;
+	const D3DXVECTOR3&		getRelativePosition() const;
+	const D3DXQUATERNION&	getRelativeOrientation() const;
+
+	const D3DXVECTOR3&		getAbsoluteScale() const;
+	const D3DXVECTOR3&		getAbsolutePosition() const;
+	const D3DXQUATERNION&	getAbsoluteOrientation() const;
+
 	const D3DXMATRIX&		getAbsoluteMatrix() const;
 	const D3DXMATRIX&		getRelativeMatrix() const;
 	const gAABB&			getAABB() const;
@@ -90,16 +95,20 @@ public:
 	void detachEntity( gEntity* entity );
 	void detachAllEntities();
 
-	void setScale( const D3DXVECTOR3 scale );
-	void setPosition( const D3DXVECTOR3& position );
-	void setOrientation( const D3DXQUATERNION& orientation );
+	void setRelativeScale( const D3DXVECTOR3 scale );
+	void setRelativePosition( const D3DXVECTOR3& position );
+	void setRelativeOrientation( const D3DXQUATERNION& orientation );
+
+	void setAbsoluteScale(const D3DXVECTOR3 scale);
+	void setAbsolutePosition(const D3DXVECTOR3& position);
+	void setAbsoluteOrientation(const D3DXQUATERNION& orientation);
 
 	void needTransformParentAABB(); //set flag only
 	void needTransformChildren();  //set flag only
 	void computeTransform();
 
 	void onFrameMove(float delta);
-	void onFrameRender( gRenderQueue& queue );
+	void onFrameRender( gRenderQueue& queue, const gCamera* camera );
 
 protected:
 
@@ -113,11 +122,18 @@ protected:
 	bool			m_isAABBVisible;
 	bool			m_isTransformed;
 	bool			m_isAABBChanged;
+
 	D3DXMATRIX		m_absoluteMatrix;
 	D3DXMATRIX		m_relativeMatrix;
-	D3DXVECTOR3		m_scale;
-	D3DXVECTOR3		m_position;
-	D3DXQUATERNION	m_orientation;
+
+	D3DXVECTOR3		m_relScale;
+	D3DXVECTOR3		m_relPosition;
+	D3DXQUATERNION	m_relOrientation;
+
+	D3DXVECTOR3		m_absScale;
+	D3DXVECTOR3		m_absPosition;
+	D3DXQUATERNION	m_absOrientation;
+
 	char			m_name[NAME_LENGHT];
 	gAABB			m_AABB;
 

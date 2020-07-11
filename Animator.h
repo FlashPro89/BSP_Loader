@@ -68,7 +68,7 @@ public:
 	unsigned char getTracksNum() const;
 
 	bool removeTrack( const char* name );
-	const gSkinnedMeshAnimationTrack* getTrack( const char* name ) const;
+	gSkinnedMeshAnimationTrack* getTrack( const char* name ) const;
 	gSkinnedMeshAnimationTrack* addTrack( const char* name,
 		GSKINANIM_TYPE type = GSKINANIM_LOOP);
 

@@ -3,6 +3,7 @@
 #include "Terrain.h"
 #include "gmath.h"
 #include "FileSystem.h"
+#include "Camera.h"
 
 #define BUFSZ 2048
 
@@ -29,7 +30,7 @@ struct gStaticVertex
 struct gBonePoint
 {
 	D3DXVECTOR3 v;
-	unsigned int color;
+	unsigned long color;
 };
 
 FILE* fd = 0;
@@ -604,8 +605,23 @@ gResourceSkinnedMesh::gResourceSkinnedMesh(gResourceManager* mgr, GRESOURCEGROUP
 
 gResourceSkinnedMesh::~gResourceSkinnedMesh()
 {
-	if (m_pAtlasTexture)
-		m_pAtlasTexture->release();
+	if (m_pMatInverted)
+		delete[]  m_pMatInverted;
+	m_pMatInverted = 0;
+
+	if (m_pBones)
+		delete[] m_pBones;
+	m_pBones = 0;
+
+	if (m_pTransformedBones)
+		delete[] m_pTransformedBones;
+	m_pTransformedBones = 0;
+
+	if (m_pMaterial)
+		m_pMaterial->release();
+
+	//if (m_pAtlasTexture)
+	//	m_pAtlasTexture->release();
 	
 	m_trisCacher.clear(); // ??
 
@@ -630,30 +646,48 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 	if ( err !=0 )
 		return false;
 
-
 	//find nodes block
 	while ( fgets(buffer, BUFSZ, f) )
 	{
 		if (!strncmp(buffer, "nodes", 5))
-		{
-			m_nodes_blockpos = ftell(f);
-			while (fgets(buffer, BUFSZ, f))
-			{
-				if (!strncmp("end", buffer, 3))
-					break;
-				m_bonesNum++;
-			}
 			break;
-		}
 	}
 
-	//find skeleton block
-	while ( fgets(buffer, BUFSZ, f) )
+	m_nodes_blockpos = ftell(f);
+
+	while (fgets(buffer, BUFSZ, f))
 	{
-		if (!strncmp(buffer, "skeleton", 8))
-		{
+		if (!strncmp("end", buffer, 3))
 			break;
-		}
+		m_bonesNum++;
+	}
+
+	//----------------------------------------
+	//	загрузим данные о костях
+	//----------------------------------------
+
+	//загрузим иерархию костей специально для Skinned аниматора
+
+	unsigned int unodes = 0;
+	m_pBones = new gSkinBone[m_bonesNum];
+	fseek(f, m_nodes_blockpos, SEEK_SET);
+	while ((fgets(buffer, BUFSZ, f)) && (unodes < m_bonesNum))
+	{
+		if (!strncmp(buffer, "end", 3))
+			break;
+
+		int sl = strlen(buffer); // ???
+		if (sl > 0)
+			buffer[sl - 1] = 0;
+
+		int itmp = 0, parent = 0;
+		char tmpstr[256] = "";
+		char fmt[] = "%i \"%[^\"]\" %i";
+
+		sscanf_s(buffer, fmt, &itmp, tmpstr, 255, &parent);
+		m_pBones[unodes].setName(tmpstr);
+		m_pBones[unodes].setParentId(parent);
+		unodes++;
 	}
 
 	//find time 0 block
@@ -670,6 +704,80 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 			break;
 		}
 	}
+
+	//загружаем позицию и ориентацию костей
+	unodes = 0;
+	fseek(f, m_time0_blockpos, SEEK_SET);
+	while ((fgets(buffer, BUFSZ, f)) && (unodes < m_bonesNum))
+	{
+		if (unodes > m_bonesNum)
+			throw("Invalid skeleton bones num!"); // ??
+
+		if (!strncmp(buffer, "end", 3))
+			break;
+
+		int sl = strlen(buffer);
+		if (sl > 0)
+			buffer[sl - 1] = 0;
+
+		D3DXVECTOR3 pos, rot;
+		int itmp;
+		sscanf_s(buffer, "%d %f %f %f %f %f %f", &itmp,
+			&pos.x, &pos.z, &pos.y, 						// меняем ось Z на ось Y!!!
+			&rot.x, &rot.y, &rot.z);
+
+		// TODO: optimize: use func euler_to_quat
+		D3DXMATRIX mrot;
+		D3DXMATRIX mrot_x;
+		D3DXMATRIX mrot_y;
+		D3DXMATRIX mrot_z;
+
+		D3DXMatrixRotationX(&mrot_x, rot.x);
+		D3DXMatrixRotationY(&mrot_y, rot.y);
+		D3DXMatrixRotationZ(&mrot_z, rot.z);
+
+		D3DXMatrixMultiply(&mrot, &mrot_x, &mrot_y);
+		D3DXMatrixMultiply(&mrot, &mrot, &mrot_z);
+
+		mrot = mrot_x * mrot_y * mrot_z;
+
+		D3DXQUATERNION q;
+		D3DXQuaternionRotationMatrix(&q, &mrot);
+		q = D3DXQUATERNION(-q.x, -q.z, -q.y, q.w); 	// меняем ось Z на ось Y!!!
+
+		m_pBones[unodes].setOrientation(q);
+		m_pBones[unodes].setPosition(pos);
+
+		unodes++;
+	}
+
+	m_pTransformedBones = new gSkinBone[m_bonesNum];
+	for (unsigned int i = 0; i < m_bonesNum; i++)
+	{
+		m_pTransformedBones[i].setName( m_pBones[i].getName() );
+		m_pTransformedBones[i].setParentId( m_pBones[i].getParentId() );
+		m_pTransformedBones[i].setPosition( m_pBones[i].getPosition() );
+		m_pTransformedBones[i].setOrientation( m_pBones[i].getOrientation() );
+	}
+	_transform_to_world(m_pTransformedBones, -1);
+
+	//приготовим инверсные матрицы начального положения
+	m_pMatInverted = new D3DXMATRIX[m_bonesNum];
+	for (unsigned int i = 0; i < m_bonesNum; i++)
+	{
+		D3DXMATRIX mRot;
+		D3DXMATRIX mTrans;
+		D3DXMATRIX mAbs;
+
+		D3DXVECTOR3 v = m_pTransformedBones[i].getPosition();
+		D3DXQUATERNION q = m_pTransformedBones[i].getOrientation();
+
+		D3DXMatrixTranslation(&mTrans, v.x, v.y, v.z);
+		D3DXMatrixRotationQuaternion(&mRot, &q);
+		D3DXMatrixMultiply(&mAbs, &mRot, &mTrans);
+		D3DXMatrixInverse(&m_pMatInverted[i], 0, &mAbs);
+	}
+	//-----------------------------------------------------------------------
 
 	gTrisGroupCacherIterator cit;
 	
@@ -807,10 +915,10 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 		m_pAtlasTexture = (gResource2DTexture*)m_pResMgr->loadTexture2D( fullFileName ); //load texture in first trisGroup
 	}
 
-	gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial( getDefaultMaterialName() );
-	if (!pMaterial)
+	m_pMaterial = m_pResMgr->getMaterialFactory()->getMaterial( getDefaultMaterialName() );
+	if (!m_pMaterial)
 		m_pResMgr->getMaterialFactory()->createMaterial( getDefaultMaterialName() );
-	pMaterial->setTexture( 0, m_pAtlasTexture );
+	m_pMaterial->setTexture( 0, m_pAtlasTexture );
 
 	return true;
 }
@@ -1181,7 +1289,7 @@ testIndexes:
 			m_skinBoneGroups.push_back(gSkinBoneGroup());
 			git = --m_skinBoneGroups.end();
 			git->firstTriangle = trisCounter;
-			git->TrianglesNum = 1; //сразу добавляем текущий треугольник
+			git->TrianglesNum = 0;
 			//usedIndexes = 0;
 			goto testIndexes;
 		}
@@ -1206,109 +1314,7 @@ testIndexes:
 		trisCounter++;
 	}
 
-	//----------------------------------------
-	//	загрузим данные о костях
-	//----------------------------------------
-
-	//иерархия костей
-	unsigned int unodes = 0;
-	m_pBones = new gSkinBone[m_bonesNum];
-	fseek(f, m_nodes_blockpos, SEEK_SET);
-	while ((fgets(buffer, BUFSZ, f)) && (unodes < m_bonesNum))
-	{
-		if (!strncmp(buffer, "end", 3))
-			break;
-
-		int sl = strlen(buffer); // ???
-		if (sl > 0)
-			buffer[sl - 1] = 0;
-
-		int itmp = 0, parent = 0;
-		char tmpstr[256] = "";
-		char fmt[] = "%i \"%[^\"]\" %i";
-
-		sscanf_s(buffer, fmt, &itmp, tmpstr, 255, &parent);
-		m_pBones[unodes].setName(tmpstr);
-		m_pBones[unodes].setParentId(parent);
-		unodes++;
-	}
-
-
-	//позиция и ориентация костей
-	unodes = 0;
-
-	fseek(f, m_time0_blockpos, SEEK_SET);
-	while ( (fgets(buffer, BUFSZ, f) ) && (unodes < m_bonesNum) )
-	{
-		if (!strncmp(buffer, "end", 3))
-			break;
-
-		int sl = strlen(buffer);
-		if (sl > 0)
-			buffer[sl - 1] = 0;
-
-		D3DXVECTOR3 pos, rot;
-		int itmp;
-		sscanf_s( buffer, "%d %f %f %f %f %f %f", &itmp,
-			&pos.x, &pos.z, &pos.y, 						// меняем ось Z на ось Y!!!
-			&rot.x, &rot.y, &rot.z);
-
-		// TODO: optimize: use func euler_to_quat
-		D3DXMATRIX mrot;
-		D3DXMATRIX mrot_x;
-		D3DXMATRIX mrot_y;
-		D3DXMATRIX mrot_z;
-
-		D3DXMatrixRotationX(&mrot_x, rot.x);
-		D3DXMatrixRotationY(&mrot_y, rot.y);
-		D3DXMatrixRotationZ(&mrot_z, rot.z);
-		
-		D3DXMatrixMultiply(&mrot, &mrot_x, &mrot_y);
-		D3DXMatrixMultiply(&mrot, &mrot, &mrot_z);
-
-		mrot = mrot_x * mrot_y * mrot_z;
-
-		D3DXQUATERNION q;
-		D3DXQuaternionRotationMatrix( &q, &mrot );
-		q = D3DXQUATERNION( -q.x, -q.z, -q.y, q.w ); 	// меняем ось Z на ось Y!!!
-
-		m_pBones[unodes].setOrientation( q );
-		m_pBones[unodes].setPosition( pos );
-
-		unodes++;
-	}
-
-	if( f ) fclose( f );
-
-	m_pTransformedBones = new gSkinBone[ m_bonesNum ];
-	//m_pTransformedBonesByQuat = new gSkinBone[ m_bonesNum ];
-	for( unsigned int i = 0; i < m_bonesNum; i++ )
-	{
-		m_pTransformedBones[i] = m_pBones[i];
-		//m_pTransformedBonesByQuat[i] = m_pBones[i];
-	}
-
-	// DEBUG OUTPUT
-	//fopen_s(&fd, "out_transformed_bones.txt", "wt");
-	_transform_to_world( m_pTransformedBones, -1 );
-	//fclose(fd);
-
-	//приготовим инверсные матрицы начального положения
-	m_pMatInverted = new D3DXMATRIX[ m_bonesNum ];
-	for( unsigned int i = 0; i < m_bonesNum; i++ )
-	{
-		D3DXMATRIX mRot;
-		D3DXMATRIX mTrans;
-		D3DXMATRIX mAbs;
-
-		D3DXVECTOR3 v = m_pTransformedBones[i].getPosition();
-		D3DXQUATERNION q = m_pTransformedBones[i].getOrientation();
-
-		D3DXMatrixTranslation( &mTrans,v.x, v.y, v.z );
-		D3DXMatrixRotationQuaternion( &mRot, &q );
-		D3DXMatrixMultiply( &mAbs, &mRot, &mTrans );
-		D3DXMatrixInverse( &m_pMatInverted[i], 0, &mAbs );
-	}
+	if (f) fclose(f);
 
 	m_isLoaded = true;
 	return m_isLoaded;
@@ -1316,17 +1322,7 @@ testIndexes:
 
 void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функции не изменяются
 {
-	//TODO: need to delete texture resources
-
 	m_AABB.reset();
-	
-	if ( m_pMatInverted )
-		delete[]  m_pMatInverted;
-	m_pMatInverted = 0;
-
-	if (m_pBones)
-		delete[] m_pBones;
-	m_pBones = 0;
 	
 	if (m_pIB)
 		m_pIB->Release();
@@ -1336,20 +1332,11 @@ void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функци
 		m_pVB->Release();
 	m_pVB = 0;
 
-	if (m_pTransformedBones)
-		delete[] m_pTransformedBones;
-	m_pTransformedBones = 0;
-
-	//if (m_pTransformedBonesByQuat)
-	//	delete[] m_pTransformedBonesByQuat;
-	//m_pTransformedBonesByQuat = 0;
-
 	m_isLoaded = false;
 }
 
-void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes) const
+void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const
 {
-
 	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9) 
 		return;
@@ -1359,13 +1346,17 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const D3DXMATRIX*
 	pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
 	
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, true);
-	pD3DDev9->SetTransform( D3DTS_WORLD, &matrixes[0] );
+	//pD3DDev9->SetTransform( D3DTS_WORLD, &matrixes[0] );
 	pD3DDev9->SetFVF( GSKIN_FVF );
 	pD3DDev9->SetStreamSource( 0, m_pVB, 0, sizeof(gSkinVertex) );
 	pD3DDev9->SetIndices( m_pIB );
 
 	pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE );
 	pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS );
+
+	gSkinnedMeshAnimator* animator = (gSkinnedMeshAnimator*)entity->getAnimator(GANIMATOR_SKINNED);
+	const D3DXMATRIX* matrixes = animator->getWordBonesMatrixes();
+
 /*
 	auto ait = m_animMap.find("idle1");
 	gResourceSkinAnimation* anim = ait->second;
@@ -1414,6 +1405,7 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const D3DXMATRIX*
 		it++;
 	}
 */
+
 	D3DXMATRIX mId;
 	D3DXMatrixIdentity(&mId);
 	if (m_pAtlasTexture)
@@ -1434,7 +1426,8 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const D3DXMATRIX*
 				rit++;
 			}
 
-			gRenderElement re( this, m_pMaterial, 0, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum );
+			unsigned short distance = cam->getDistanceToPointUS( D3DXVECTOR3( matrixes[0]._41, matrixes[0]._42, matrixes[0]._43) );
+			gRenderElement re( this, entity->getMaterial(), distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, &(*it) );
 			queue->pushBack(re);
 
 			//позже удалить
@@ -1460,18 +1453,9 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const D3DXMATRIX*
 	pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE );
 	pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, false );
 	 
-	pD3DDev9->SetTransform(D3DTS_WORLD, &matrixes[0]);
-	pD3DDev9->SetRenderState(D3DRS_LIGHTING, false);
-
-	pD3DDev9->SetRenderState( D3DRS_ZFUNC, D3DCMP_ALWAYS );
 	if (m_pTransformedBones)
-		_skeleton(m_pTransformedBones, 0);
-	pD3DDev9->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-	//if (m_pTransformedBonesByQuat)
-	//	_skeleton(m_pTransformedBonesByQuat, 0);
-	//if (anim)
-	//	_skeleton(anim->getCurrentFrame(), 0);
-
+		drawSkeleton(m_pTransformedBones, &matrixes[0], 0, 0xFF00FFFF );
+	
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
 }
 
@@ -1639,7 +1623,32 @@ void gResourceSkinnedMesh::_transform_to_world( gSkinBone* frames, int bone )
 
 }
 
-void gResourceSkinnedMesh::_skeleton( const gSkinBone* frame, int b1 ) const
+void gResourceSkinnedMesh::drawSkeleton(const gSkinBone* frame, const D3DXMATRIX* mWorld, 
+	int b1, DWORD color) const
+{
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
+	if (!pD3DDev9)
+		return;
+
+	DWORD oldLightingState;
+	pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
+	pD3DDev9->SetRenderState(D3DRS_LIGHTING, false);
+	pD3DDev9->SetTransform(D3DTS_WORLD, mWorld);
+	pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
+
+	DWORD lastFVF;
+	pD3DDev9->GetFVF(&lastFVF);
+	pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+	pD3DDev9->SetTexture(0, 0);
+
+	_skeleton(frame, b1, color);
+
+	pD3DDev9->SetFVF(lastFVF);
+	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
+	pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
+}
+
+void gResourceSkinnedMesh::_skeleton( const gSkinBone* frame, int b1, DWORD color ) const
 {
 	if (frame == 0)
 		return;
@@ -1654,25 +1663,17 @@ void gResourceSkinnedMesh::_skeleton( const gSkinBone* frame, int b1 ) const
 	{
 		parent = frame[i].getParentId();
 
-		DWORD lastFVF;
-		pD3DDev9->GetFVF(&lastFVF);
-		pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
-		pD3DDev9->SetTexture(0, 0);
-		//pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
-
 		if ( parent == b1)
 		{	
 			gBonePoint p[2];
 
 			p[0].v = frame[i].getPosition();
 			p[1].v = frame[parent].getPosition();
-			p[0].color = p[1].color = 0xFF00FFFF;
+			p[0].color = p[1].color = color;
 
-			pD3DDev9->DrawPrimitiveUP(D3DPT_LINELIST, 2, (void*)&p, 16 );
-			_skeleton( frame, i );
+			pD3DDev9->DrawPrimitiveUP(D3DPT_LINELIST, 1, (void*)&p, sizeof(gBonePoint) );
+			_skeleton( frame, i, color );
 		}
-		pD3DDev9->SetFVF(lastFVF);
-		//pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 	}
 }
 
@@ -1972,18 +1973,16 @@ bool gResourceStaticMesh::isUseUserMemoryPointer()
 	return false;
 }
 
-void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
+void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* cam) const
 {
 	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9)
 		return;
 
-	pD3DDev9->SetTransform(D3DTS_WORLD, &matrixes[0]);
+	pD3DDev9->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
 	pD3DDev9->SetFVF(GSTATIC_FVF);
 	pD3DDev9->SetStreamSource(0, m_pVB, 0, sizeof(gStaticVertex));
 	pD3DDev9->SetIndices(m_pIB);
-
-	pD3DDev9->SetTransform(D3DTS_WORLD, &matrixes[0]);
 
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())

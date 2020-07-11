@@ -1,4 +1,5 @@
 #include "Terrain.h"
+#include "Scene.h"
 #include <stdio.h>
 
 
@@ -168,7 +169,7 @@ void gResourceTerrain::unload()
 	m_isLoaded = false;
 }
 
-void gResourceTerrain::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
+void gResourceTerrain::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* cam) const
 {
 	if (!m_isLoaded)
 		return;
@@ -177,7 +178,7 @@ void gResourceTerrain::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matr
 	if (!pD3DDev)
 		return;
 	
-	pD3DDev->SetTransform( D3DTS_WORLD, &matrixes[0] );
+	pD3DDev->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
 	if (m_pTex)
 		pD3DDev->SetTexture(0, m_pTex->getTexture());
 	if(m_pTexDetail)

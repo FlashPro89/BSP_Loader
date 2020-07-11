@@ -26,7 +26,7 @@ void gResourceBSPLevel::unload() //данные, загруженые preload() в этой функции н
 	
 }
 
-void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const D3DXMATRIX* matrixes) const
+void gResourceBSPLevel::onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const
 {
 
 }

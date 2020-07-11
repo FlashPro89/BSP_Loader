@@ -26,9 +26,11 @@ gSkinnedMeshAnimator::gSkinnedMeshAnimator( gEntity* entity )
 
 	gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)m_pEntity->getRenderable();
 	m_bonesNum = pSMesh->getBonesNum();
-	pSMesh->release();
 
 	m_mixedFrame = new gSkinBone[m_bonesNum];
+	for (unsigned char i = 0; i < m_bonesNum; i++)
+		m_mixedFrame[i].setParentId( pSMesh->getNullFrame()[i].getParentId() );
+
 	m_worldBonesMatrixes = new D3DXMATRIX[m_bonesNum];
 	m_type = GANIMATOR_SKINNED;
 }
@@ -63,10 +65,19 @@ void gSkinnedMeshAnimator::tick(float delta)
 	//вычисление смешанного ADD кадра
 	it = m_tracks.begin();
 
-	for (int i = 0; i < m_bonesNum; i++)
+	if (m_tracks.size() == 0)
 	{
-		m_mixedFrame[i].setPosition( D3DXVECTOR3(0.f, 0.f, 0.f) );
-		m_mixedFrame[i].setOrientation(D3DXQUATERNION(0.f, 0.f, 0.f, 1.f)); // Id
+		gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)m_pEntity->getRenderable();
+		for( unsigned char i = 0; i<m_bonesNum; i++ )
+			m_mixedFrame[i] = pSMesh->getNullFrame()[i];
+	}
+	else
+	{
+		for (int i = 0; i < m_bonesNum; i++)
+		{
+			m_mixedFrame[i].setPosition(D3DXVECTOR3(0.f, 0.f, 0.f));
+			m_mixedFrame[i].setOrientation(D3DXQUATERNION(0.f, 0.f, 0.f, 1.f)); // Id
+		}
 	}
 
 	while (it != m_tracks.end())
@@ -77,6 +88,16 @@ void gSkinnedMeshAnimator::tick(float delta)
 			m_mixedFrame[i].rotate(it->second->getCurrentFrame()[i].getOrientation());
 		}
 		it++;
+	}
+
+	//apply node transform
+	for (int i = 0; i < m_bonesNum; i++)
+	{
+		if (m_mixedFrame[i].getParentId() == -1)
+		{
+			m_mixedFrame[i].setPosition( m_pEntity->getHoldingNode()->getAbsolutePosition() );
+			m_mixedFrame[i].setOrientation( m_pEntity->getHoldingNode()->getAbsoluteOrientation() );
+		}
 	}
 
 	//переводим в мировую систему координат ( трансформация по иерархии костей )
@@ -101,10 +122,11 @@ void gSkinnedMeshAnimator::tick(float delta)
 		D3DXMatrixRotationQuaternion(&mAbs, &q);
 		mAbs._41 = v.x; mAbs._42 = v.y; mAbs._43 = v.z;
 		D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &mInverted[i], &mAbs );
-		D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &m_worldBonesMatrixes[i], 
-			&m_pEntity->getHoldingNode()->getAbsoluteMatrix() ); 
-		
+		//D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &m_worldBonesMatrixes[i], 
+		//	&m_pEntity->getHoldingNode()->getAbsoluteMatrix() ); 
 	}
+
+	//m_worldBonesMatrixes[m_bonesNum] = m_pEntity->getHoldingNode()->getAbsoluteMatrix(); // HACK
 }
 
 void gSkinnedMeshAnimator::clear()
@@ -154,7 +176,7 @@ bool gSkinnedMeshAnimator::removeTrack(const char* name)
 		return false;
 }
 
-const gSkinnedMeshAnimationTrack* gSkinnedMeshAnimator::getTrack(const char* name) const
+gSkinnedMeshAnimationTrack* gSkinnedMeshAnimator::getTrack(const char* name) const
 {
 	auto it = m_tracks.find(name);
 	if (it != m_tracks.end())
@@ -240,7 +262,7 @@ GSKINANIM_TYPE gSkinnedMeshAnimationTrack::getAnimationType() const
 	return m_animType;
 }
 
-void gSkinnedMeshAnimationTrack::setFPS(float fps)
+void gSkinnedMeshAnimationTrack::setFPS(float fps) 
 {
 	m_FPS = fps;
 }

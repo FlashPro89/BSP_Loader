@@ -153,7 +153,7 @@ public:
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
 	//void onFrameRender(const D3DXMATRIX& transform) const;
-	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
+	void onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const;
 
 	bool addAnimation( const char* filename, const char* name );
 	gResourceSkinAnimation* getAnimation( const char* name ) const; 
@@ -176,14 +176,15 @@ public:
 
 	//for debug anim
 	float _time;
-	void _skeleton(const gSkinBone* frame, int b1) const;
 	void _transform_to_world(gSkinBone* bones, int bone);
+
+	void drawSkeleton( const gSkinBone* frame, const D3DXMATRIX* mWorld, int b1, DWORD color = 0xFF7FFF00 ) const;
 
 protected:
 
+	void _skeleton(const gSkinBone* frame, int b1, DWORD color = 0xFF7FFF00) const;
 
-
-	gMaterial* m_pMaterial;
+	gMaterial* m_pMaterial; // нужно ли это хранить?
 	gResource2DTexture* m_pAtlasTexture;
 	gTextureAtlas m_atlas;
 
@@ -227,7 +228,7 @@ public:
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
 	//void onFrameRender(const D3DXMATRIX& transform) const;
-	void onFrameRender( gRenderQueue* queue, const D3DXMATRIX* matrixes ) const;
+	void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam = 0 ) const;
 
 	GVERTEXFORMAT getVertexFormat();
 

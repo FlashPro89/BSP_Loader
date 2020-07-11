@@ -51,13 +51,15 @@ enum gRenderPrimitiveType
 	GPR_TRIANGLELIST
 };
 
+struct gSkinBoneGroup;
+
 class gRenderElement
 {
 public:
 	//gRenderElement(gRenderElement& other);
 	gRenderElement();
-	gRenderElement( const gRenderable* renderable, const gMaterial* material, float distance, unsigned char matrixPaleteSize, 
-		const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount );
+	gRenderElement( const gRenderable* renderable, const gMaterial* material, unsigned short distance, unsigned char matrixPaleteSize, 
+		const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount, const gSkinBoneGroup* remapedBones = 0 );
 	~gRenderElement();
 
 	GRQSORTINGKEY getKey() const;
@@ -66,6 +68,8 @@ public:
 	const gMaterial* getMaterial() const;
 	const D3DXMATRIX* getMatrixPalete() const;
 	unsigned char getMatrixPaleteSize() const;
+
+	unsigned short getDistance() const;
 
 protected:
 	GRQSORTINGKEY m_key;
@@ -79,6 +83,7 @@ protected:
 	unsigned char m_paleteSize; // num of world matrixes
 	unsigned int m_startBufferIndex;
 	unsigned int m_primitiveCount;
+	const gSkinBoneGroup* m_pSkinBoneGroup;
 
 };
 
@@ -93,6 +98,9 @@ public:
 	bool pushBack( const gRenderElement& element );
 	bool popBack( gRenderElement** element );
 	void clear();
+
+	//DEBUG
+	void _debugOut( const char* fname );
 
 protected:
 	gRenderQueue(gRenderQueue&) {};

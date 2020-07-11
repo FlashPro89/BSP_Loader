@@ -77,7 +77,7 @@ void gEntity::onFrameMove( float delta )
 	}
 }
 
-void gEntity::onFrameRender( gRenderQueue& queue ) const
+void gEntity::onFrameRender( gRenderQueue& queue, const gCamera* camera ) const
 {
 	if ( m_pRenderable && m_pHoldingNode )
 	{
@@ -89,21 +89,17 @@ void gEntity::onFrameRender( gRenderQueue& queue ) const
 				gResourceSkinnedMesh* pMesh = (gResourceSkinnedMesh*)m_pRenderable;
 				gSkinnedMeshAnimator* pAnimator = (gSkinnedMeshAnimator*)m_animators[GANIMATOR_SKINNED];
 				
-				//TODO: delete setMatrixPalete()
-				//pMesh->setMatrixPalete( pAnimator->getWordBonesMatrixes() );
-				m_pRenderable->onFrameRender(&queue, pAnimator->getWordBonesMatrixes());
-				pMesh->_skeleton(pAnimator->getMixedFrame(), 0);
+				m_pRenderable->onFrameRender( &queue, this, camera );
+
+				D3DXMATRIX mId;
+				D3DXMatrixIdentity(&mId);
+				if (pAnimator->getMixedFrame())
+					pMesh->drawSkeleton(pAnimator->getMixedFrame(), &mId, 0, 0xFFFF0000);
 			}
 			else
-				m_pRenderable->onFrameRender( &queue, &m_pHoldingNode->getAbsoluteMatrix() );
+				m_pRenderable->onFrameRender( &queue, this, camera );
 		}
 	}
-}
-
-void gEntity::applyWorldMatrixesToRenderSystem( const D3DXMATRIX& transform, LPDIRECT3DDEVICE9 pDevice ) const
-{
-	//pDevice
-	//for( unsigned int i = 0; i<)
 }
 
 const gAABB& gEntity::getAABB()
@@ -152,18 +148,21 @@ void gEntity::deleteAnimators()
 //
 //-----------------------------------------------
 
-gSceneNode::gSceneNode( const char* name, gSceneManager* mgr, gSceneNode* parent ) : m_position( 0.f, 0.f, 0.f ),
-										     m_scale( 1.f, 1.f, 1.f )
+gSceneNode::gSceneNode( const char* name, gSceneManager* mgr, gSceneNode* parent ) : 
+	m_relPosition( 0.f, 0.f, 0.f ), m_relScale( 1.f, 1.f, 1.f ), 
+	m_absPosition( 0.f, 0.f, 0.f ), m_absScale( 1.f, 1.f, 1.f )
 {
 	strcpy_s(m_name, NAME_LENGHT-1, name);
 	m_name[NAME_LENGHT - 1] = 0;
 	m_parent = parent;
 	m_isTransformed = true;
-	m_isAABBVisible = true; // false need
+	m_isAABBVisible = false; // false need
 	m_isAABBChanged = false; // при создании узел не изменяет AABB предка
 
-	D3DXQuaternionIdentity( &m_orientation );
+	D3DXQuaternionIdentity( &m_relOrientation );
+	D3DXQuaternionIdentity(&m_absOrientation);
 	D3DXMatrixIdentity( &m_absoluteMatrix );
+	D3DXMatrixIdentity(&m_relativeMatrix);
 	m_sceneManager = mgr;
 }
 
@@ -179,19 +178,34 @@ const char* gSceneNode::getName() const
 	return m_name;
 }
 
-const D3DXVECTOR3& gSceneNode::getScale() const
+const D3DXVECTOR3& gSceneNode::getRelativeScale() const
 {
-	return m_scale;
+	return m_relScale;
 }
 
-const D3DXVECTOR3& gSceneNode::getPosition() const
+const D3DXVECTOR3& gSceneNode::getRelativePosition() const
 {
-	return m_position;
+	return m_relPosition;
 }
 
-const D3DXQUATERNION& gSceneNode::getOrientation() const
+const D3DXQUATERNION& gSceneNode::getRelativeOrientation() const
 {
-	return m_orientation;
+	return m_relOrientation;
+}
+
+const D3DXVECTOR3& gSceneNode::getAbsoluteScale() const
+{
+	return m_absScale;
+}
+
+const D3DXVECTOR3& gSceneNode::getAbsolutePosition() const
+{
+	return m_absPosition;
+}
+
+const D3DXQUATERNION& gSceneNode::getAbsoluteOrientation() const
+{
+	return m_absOrientation;
 }
 
 const D3DXMATRIX& gSceneNode::getAbsoluteMatrix() const
@@ -268,26 +282,43 @@ void gSceneNode::detachAllEntities()
 	needTransformParentAABB();
 }
 
-void gSceneNode::setScale(const D3DXVECTOR3 scale)
+void gSceneNode::setRelativeScale(const D3DXVECTOR3 scale)
 {	
-	m_scale = scale;
+	m_relScale = scale;
 	needTransformChildren();
 	needTransformParentAABB();
 }
 
-void gSceneNode::setPosition(const D3DXVECTOR3& position)
+void gSceneNode::setRelativePosition(const D3DXVECTOR3& position)
 {
-	m_position = position;
+	m_relPosition = position;
 	needTransformChildren();
 	needTransformParentAABB();
 }
 
-void gSceneNode::setOrientation(const D3DXQUATERNION& orientation)
+void gSceneNode::setRelativeOrientation(const D3DXQUATERNION& orientation)
 {
-	m_orientation = orientation;
+	m_relOrientation = orientation;
 	needTransformChildren();
 	needTransformParentAABB();
 }
+
+
+void gSceneNode::setAbsoluteScale(const D3DXVECTOR3 scale)
+{
+	throw("not impl");
+}
+
+void gSceneNode::setAbsolutePosition(const D3DXVECTOR3& position)
+{
+	throw("not impl");
+}
+
+void gSceneNode::setAbsoluteOrientation(const D3DXQUATERNION& orientation)
+{
+	throw("not impl");
+}
+
 
 void gSceneNode::needTransformParentAABB()
 {
@@ -313,9 +344,9 @@ void gSceneNode::computeTransform()
 	D3DXMATRIX scale, pos, tmp, rot;
 	if (m_isTransformed)
 	{
-		D3DXMatrixScaling(&scale, m_scale.x, m_scale.y, m_scale.z);
-		D3DXMatrixRotationQuaternion(&rot, &m_orientation);
-		D3DXMatrixTranslation(&pos, m_position.x, m_position.y, m_position.z);
+		D3DXMatrixScaling(&scale, m_relScale.x, m_relScale.y, m_relScale.z);
+		D3DXMatrixRotationQuaternion(&rot, &m_relOrientation);
+		D3DXMatrixTranslation(&pos, m_relPosition.x, m_relPosition.y, m_relPosition.z);
 
 		D3DXMatrixMultiply(&tmp, &scale, &rot);
 		D3DXMatrixMultiply(&m_relativeMatrix, &tmp, &pos);
@@ -323,11 +354,21 @@ void gSceneNode::computeTransform()
 		if (m_parent == 0) // ROOT node
 		{
 			m_absoluteMatrix = m_relativeMatrix;
+			m_absPosition = m_relPosition;
+			m_absOrientation = m_relOrientation;
+			m_absScale = m_relScale;
 		}
 		else
 		{
-
 			D3DXMatrixMultiply( &m_absoluteMatrix, &m_relativeMatrix, &m_parent->getAbsoluteMatrix() );
+			m_absPosition = D3DXVECTOR3( m_absoluteMatrix._41, m_absoluteMatrix._42, m_absoluteMatrix._43 );
+			
+			float scaleX = powf((m_absoluteMatrix._11 * m_absoluteMatrix._11 + m_absoluteMatrix._12 * m_absoluteMatrix._12 + m_absoluteMatrix._13 * m_absoluteMatrix._13), 0.5f);
+			float scaleY = powf((m_absoluteMatrix._21 * m_absoluteMatrix._21 + m_absoluteMatrix._22 * m_absoluteMatrix._22 + m_absoluteMatrix._23 * m_absoluteMatrix._23), 0.5f);
+			float scaleZ = powf((m_absoluteMatrix._31 * m_absoluteMatrix._31 + m_absoluteMatrix._32 * m_absoluteMatrix._32 + m_absoluteMatrix._33 * m_absoluteMatrix._33), 0.5f);
+
+			m_absScale = D3DXVECTOR3( scaleX, scaleY, scaleZ );
+			D3DXQuaternionRotationMatrix( &m_absOrientation, &m_absoluteMatrix );
 		}
 		m_isTransformed = false;
 	}
@@ -357,7 +398,7 @@ void gSceneNode::onFrameMove(float delta)
 	}
 }
 
-void gSceneNode::onFrameRender( gRenderQueue& queue ) 
+void gSceneNode::onFrameRender( gRenderQueue& queue, const gCamera* camera )
 {	
 	drawEntityList( queue );
 
@@ -369,15 +410,15 @@ void gSceneNode::onFrameRender( gRenderQueue& queue )
 	{
 		if (it->second)
 		{
-			const gCamera* cam = m_sceneManager->getActiveCamera();
-			if ( (!it->second->getAABB().isEmpty()) && (cam!=0) )
+			//const gCamera* cam = m_sceneManager->getActiveCamera();
+			if ( (!it->second->getAABB().isEmpty()) && (camera!=0) )
 			{
 	
-				if( cam->getViewingFrustum().testAABB( it->second->getAABB() ) )
-					it->second->onFrameRender( queue );
+				if( camera->getViewingFrustum().testAABB( it->second->getAABB() ) )
+					it->second->onFrameRender( queue, camera );
 			}
 			else
-				it->second->onFrameRender(queue);
+				it->second->onFrameRender( queue, camera );
 		}
 		it++;
 	}
@@ -437,7 +478,7 @@ void gSceneNode::drawEntityList( gRenderQueue& queue )
 				if (cam->getViewingFrustum().testAABB(tmp))
 				{
 					m_sceneManager->__statEntDraw();
-					it->second->onFrameRender(queue);
+					it->second->onFrameRender( queue, cam );
 				}
 			}
 		}
@@ -671,10 +712,13 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 		pD3DDev->SetTransform(D3DTS_PROJECTION, &m_activeCam->getProjMatrix());
 
 		if (m_activeCam->getViewingFrustum().testAABB(m_rootNode.getAABB()))
-			m_rootNode.onFrameRender( queue );
+			m_rootNode.onFrameRender( queue, m_activeCam );
 	}
 
+	queue._debugOut("out_queue_not_sorted.txt");
 	queue.sort();
+	queue._debugOut("out_queue_sorted.txt");
+
 
 	gRenderElement* pElement = 0;
 	int counter = 0;
@@ -703,12 +747,12 @@ const gCamera* gSceneManager::getActiveCamera() const
 	return m_activeCam;
 }
 
-void			gSceneManager::__statEntDraw()
+void gSceneManager::__statEntDraw()
 {
 	m_entsInFrustum++;
 }
 
-void			gSceneManager::__statNodeDraw()
+void gSceneManager::__statNodeDraw()
 {
 	m_nodesInFrustum++;
 }

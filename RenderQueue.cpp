@@ -28,10 +28,11 @@ gRenderElement::gRenderElement()
 	m_paleteSize = 0;
 	m_startBufferIndex = 0;
 	m_primitiveCount = 0;
+	m_pSkinBoneGroup = 0;
 }
 
-gRenderElement::gRenderElement(const gRenderable* renderable, const gMaterial* material, float distance, unsigned char matrixPaleteSize,
-	const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount)
+gRenderElement::gRenderElement(const gRenderable* renderable, const gMaterial* material, unsigned short distance, unsigned char matrixPaleteSize,
+	const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount, const gSkinBoneGroup* remapedBones)
 {
 	if (!renderable)
 		throw("Null renderable pointer!");
@@ -44,6 +45,8 @@ gRenderElement::gRenderElement(const gRenderable* renderable, const gMaterial* m
 
 	m_startBufferIndex = startIndex;
 	m_primitiveCount = primitiveCount;
+	m_pSkinBoneGroup = remapedBones;
+	m_distance = distance;
 
 	_buildKey();
 }
@@ -56,6 +59,31 @@ gRenderElement::~gRenderElement()
 GRQSORTINGKEY gRenderElement::getKey() const
 {
 	return m_key;
+}
+
+const gRenderable* gRenderElement::getRenderable() const
+{
+	return m_pRenderable;
+}
+
+const gMaterial* gRenderElement::getMaterial() const
+{
+	return m_pMaterial;
+}
+
+const D3DXMATRIX* gRenderElement::getMatrixPalete() const
+{
+	return m_pMatPalete;
+}
+
+unsigned char gRenderElement::getMatrixPaleteSize() const
+{
+	return m_paleteSize;
+}
+
+unsigned short gRenderElement::getDistance() const
+{
+	return m_distance;
 }
 
 void gRenderElement::_buildKey()
@@ -164,4 +192,29 @@ bool gRenderQueue::popBack(gRenderElement** element)
 void gRenderQueue::clear()
 {
 	m_arrayPos = 0;
+}
+
+void gRenderQueue::_debugOut( const char* fname )
+{
+	FILE* f = 0;
+	errno_t err = fopen_s(&f, fname, "wt");
+	if (err)
+		return;
+
+	for (unsigned int i = 0; i < m_arrayPos; i++)
+	{
+		if (m_elementsPointers[i]->getMaterial() != 0)
+		{
+			fprintf(f, "key: %lli mat: %s res: %s dist:%i\n",
+				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getMaterial()->getName(),
+				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance());
+		}
+		else
+		{
+			fprintf(f, "key: %lli mat: 0 res: %s dist:%i\n",
+				m_elementsPointers[i]->getKey(),
+				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance());
+		}
+	}
+	fclose(f);
 }

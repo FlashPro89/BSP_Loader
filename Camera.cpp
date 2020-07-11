@@ -4,7 +4,7 @@
 #define DEFAULT_CAM_TSPEED 700.f
 #define DEFAULT_CAM_RSPEED 0.4f
 #define DEFAULT_CAM_FOV    D3DX_PI / 4.0f
-#define DEFAULT_CAM_FPLANE 32000.f
+#define DEFAULT_CAM_FPLANE 6800.f
 #define DEFAULT_CAM_NPLANE 1.f
 #define DEFAULT_CAM_ASPECT 1.333f
 #define MOUSE_MAX_MOVEMENT 15
@@ -446,4 +446,19 @@ void gViewingFrustum::updatePlanes()
 	m_bottomPlane.c = Matrix._34 + Matrix._32;
 	m_bottomPlane.d = Matrix._44 + Matrix._42;
 	D3DXPlaneNormalize(&m_bottomPlane, &m_bottomPlane);
+}
+
+float gCamera::getDistanceToPointF( const D3DXVECTOR3& vec) const
+{
+	D3DXVECTOR3 vDist = m_pos - vec;
+	return D3DXVec3Length(&vDist);
+}
+
+unsigned short gCamera::getDistanceToPointUS(const D3DXVECTOR3& vec) const
+{
+	float dist = getDistanceToPointF(vec);
+	if (dist >= m_fPlane)
+		return 0xFFFF;
+	else
+		return unsigned short((dist / m_fPlane) * 0xFFFF);
 }

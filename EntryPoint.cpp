@@ -527,7 +527,7 @@ void loadScene( const char* mapname )
 	input->init();
 	timer = new gTimer();
 	cam.setInput(input);
-	//cam.setPosition(D3DXVECTOR3(0, 0, -3000));
+	//cam.setRelativePosition(D3DXVECTOR3(0, 0, -3000));
 	cam.lookAt( D3DXVECTOR3(0, 0, 0), D3DXVECTOR3(0, 0, -3000) );
 	smgr.setActiveCamera(&cam);
 
@@ -545,6 +545,7 @@ void loadScene( const char* mapname )
 		gSceneNode* node_joint53 = node_joint5->createChild("new_joint53");
 		gSceneNode* node_skin1 = node_centr->createChild("new_skin1");
 		gSceneNode* node_skin2 = node_centr->createChild("new_skin2");
+		gSceneNode* node_skin3 = node_centr->createChild("new_skin3");
 		gSceneNode* node_crystal = node_centr->createChild("new_crystal");
 		gSceneNode* node_terrain = smgr.getRootNode().createChild("new_terrain");
 
@@ -606,20 +607,21 @@ void loadScene( const char* mapname )
 
 		D3DXQUATERNION q;
 		D3DXQuaternionRotationAxis( &q, &D3DXVECTOR3(0, 1.f, 0), D3DX_PI / 16.f );
-		node_centr->setPosition( D3DXVECTOR3(0, 0, 0.f) );
-		node_joint1->setPosition( D3DXVECTOR3(100.f, 0, 0) );
-		node_joint2->setPosition( D3DXVECTOR3(100.f, 0, 0) );
-		node_joint3->setPosition( D3DXVECTOR3(100.f, 0, 0) );
-		node_joint4->setPosition( D3DXVECTOR3(100.f, 0, 0) );
-		node_joint5->setPosition(D3DXVECTOR3(100.f, 0, 0));
-		node_joint51->setPosition(D3DXVECTOR3(50.f, -50.f, 0));
-		node_joint52->setPosition(D3DXVECTOR3(50.f, 0, 0));
-		node_joint53->setPosition(D3DXVECTOR3(50.f, 50.f, 0));
-		node_skin1->setPosition(D3DXVECTOR3(50.f, 50.f, 0));
-		node_skin2->setPosition(D3DXVECTOR3(-50.f, 50.f, 0));
-		node_crystal->setPosition(D3DXVECTOR3(0.f, 100.f, 0));
-		node_crystal->setScale(D3DXVECTOR3(0.25f, 0.25f, 0.25f));
-		node_terrain->setPosition(D3DXVECTOR3(0.f, -500.f, 0.f));
+		node_centr->setRelativePosition( D3DXVECTOR3(0, 0, 0.f) );
+		node_joint1->setRelativePosition( D3DXVECTOR3(100.f, 0.f, 0) );
+		node_joint2->setRelativePosition( D3DXVECTOR3(100.f, 0.f, 0) );
+		node_joint3->setRelativePosition( D3DXVECTOR3(100.f, 0.f, 0) );
+		node_joint4->setRelativePosition( D3DXVECTOR3(100.f, 0.f, 0) );
+		node_joint5->setRelativePosition(D3DXVECTOR3(100.f, 0.f, 0));
+		node_joint51->setRelativePosition(D3DXVECTOR3(50.f, -50.f, 0));
+		node_joint52->setRelativePosition(D3DXVECTOR3(50.f, 0.f, 0));
+		node_joint53->setRelativePosition(D3DXVECTOR3(50.f, 50.f, 0));
+		node_skin1->setRelativePosition(D3DXVECTOR3(50.f, 0.f, 0.f));
+		node_skin2->setRelativePosition(D3DXVECTOR3(-50.f, 0.f, 0.f));
+		node_skin3->setRelativePosition(D3DXVECTOR3(-80.f, 0.f, 0.f));
+		node_crystal->setRelativePosition(D3DXVECTOR3(0.f, 100.f, 0));
+		node_crystal->setRelativeScale(D3DXVECTOR3(0.25f, 0.25f, 0.25f));
+		node_terrain->setRelativePosition(D3DXVECTOR3(0.f, -500.f, 0.f));
 		////////////////////////////////////////////////////////////////////
 
 		//Load skinned mesh
@@ -630,19 +632,22 @@ void loadScene( const char* mapname )
 		pSMesh->addAnimation("../data/models/barney/idle4.smd", "idle4");
 		pSMesh->addAnimation("../data/models/barney/run.smd", "run" );
 		pSMesh->addAnimation("../data/models/barney/walk.smd", "walk" );
-
-
+		pSMesh->addAnimation("../data/models/barney/sit1.smd", "sit1"); 
+		pSMesh->addAnimation("../data/models/barney/fall_loop.smd", "fall_loop");
+		
 		ent = smgr.createEntity("ent__skinning1");
 		ent->setRenderable(pSMesh);
 		ent->setMaterial( matFactory.getMaterial(pSMesh->getDefaultMaterialName() ) );
 		node_skin1->attachEntity( ent );
 
 		gSkinnedMeshAnimator* ctrl = (gSkinnedMeshAnimator * )ent->getAnimator(GANIMATOR_SKINNED);
-		ctrl->addTrack("idle1",GSKINANIM_LOOP)->play();
+		ctrl->addTrack("run",GSKINANIM_LOOP)->play();
+		//ctrl->getTrack("run")->setFPS(30.f);
 
 		gResourceSkinnedMesh* pSMesh2 =
 			(gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/zombie/Zom3_Template_Biped(White_Suit)1.smd", "zombie");
-		pSMesh2->addAnimation( "../data/models/zombie/idle1.smd", "idle1" );
+		pSMesh2->addAnimation( "../data/models/zombie/idle1.smd", "idle1" ); 
+		pSMesh2->addAnimation("../data/models/zombie/eatbody.smd", "eatbody"); 
 
 		ent = smgr.createEntity("ent__skinning2");
 		ent->setRenderable(pSMesh2);
@@ -652,6 +657,13 @@ void loadScene( const char* mapname )
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("idle1", GSKINANIM_LOOP)->play();
 
+		ent = smgr.createEntity("ent__skinning3");
+		ent->setRenderable(pSMesh2);
+		ent->setMaterial(matFactory.getMaterial(pSMesh2->getDefaultMaterialName()));
+		node_skin3->attachEntity(ent);
+		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
+		ctrl->addTrack("eatbody", GSKINANIM_LOOP)->play();
+		ctrl->getTrack("eatbody")->setFPS(40.f);
 		
 		///////////////////////////////////////////////////////////////////
 		// Static mesh test
@@ -1448,8 +1460,6 @@ void drawPlane(int plane, unsigned int color)
 
 	pDev->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
 
-	//pDev->SetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_COLOR1);
-
 	// Set the source blend state.
 	pDev->SetRenderState(D3DRS_SRCBLEND,
 		D3DBLEND_SRCCOLOR);
@@ -1867,27 +1877,27 @@ void frame_move()
 	if (node)
 	{
 		D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 1.5f);
-		node->setOrientation(q);
+		node->setRelativeOrientation(q);
 	}
 
 	node = smgr.getNode("new_joint2");
 	if (node)
 	{
 		D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 5.5f);
-		node->setOrientation(q);
+		node->setRelativeOrientation(q);
 	}
 	node = smgr.getNode("new_joint4");
 	if (node)
 	{
 		D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 10.5f);
-		node->setOrientation(q);
+		node->setRelativeOrientation(q);
 	}
 
 	//node = smgr.getNode("new_joint5");
 	//if (node)
 	//{
 	//	D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 20.5f);
-	//	node->setOrientation(q);
+	//	node->setRelativeOrientation(q);
 	//}
 
 	smgr.getRootNode().computeTransform();
@@ -1896,7 +1906,7 @@ void frame_move()
 	input->update();
 	cam.tick(dt);
 
-	//cam.setPosition(D3DXVECTOR3(-3000, 300, -3000));
+	//cam.setRelativePosition(D3DXVECTOR3(-3000, 300, -3000));
 	//if( cam.getViewingFrustum().testAABB( D3DXVECTOR3( -3000, 300, -3000 ), D3DXVECTOR3( -3010, -300, -3010 ) ) )
 	//	wnd_setTitle("Видимо");
 	//else

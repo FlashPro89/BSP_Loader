@@ -102,12 +102,6 @@ void gEntity::onFrameRender( gRenderQueue& queue, const gCamera* camera ) const
 	}
 }
 
-void gEntity::applyWorldMatrixesToRenderSystem( const D3DXMATRIX& transform, LPDIRECT3DDEVICE9 pDevice ) const
-{
-	//pDevice
-	//for( unsigned int i = 0; i<)
-}
-
 const gAABB& gEntity::getAABB()
 {
 	m_AABB.reset();

@@ -55,7 +55,6 @@ protected:
 	gEntity() { }
 	gEntity( gEntity& ) { }
 
-	void applyWorldMatrixesToRenderSystem( const D3DXMATRIX& transform, LPDIRECT3DDEVICE9 pDevice ) const;
 	void deleteAnimators();
 
 	gMaterial* m_pMaterial;

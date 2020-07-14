@@ -82,8 +82,6 @@ public:
 	gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
 	virtual ~gResource() {}
 
-	unsigned int getId() const;
-
 	void release();
 
 	virtual bool preload() { return true; } //загрузка статических данных
@@ -110,9 +108,6 @@ protected:
 	std::string m_resName;
 	std::string m_fileName;
 	bool m_isLoaded;
-
-	//unsigned char m_refCounter;
-	unsigned int m_resourceId;
 };
 
 
@@ -146,12 +141,14 @@ public:
 	virtual void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* camera ) const = 0;
 	virtual void onFrameMove(float delta) {};
 
+	unsigned short getId() const;
+
 	bool isVisible() const;
 	void setVisible(bool visible);
 
 	const gAABB& getAABB();
 	virtual GVERTEXFORMAT getVertexFormat() = 0;
-	virtual const char* getDefaultMaterialName(){ return 0; }
+	virtual const char* getDefaultMaterialName() { return m_resName.c_str(); }
 
 	virtual void* getVBuffer() = 0;
 	virtual void* getIBuffer() = 0;
@@ -161,7 +158,7 @@ public:
 protected:
 	bool m_isVisible;
 	gAABB m_AABB;
-
+	unsigned short m_resourceId;
 };
 
 class gResource2DTexture : public gResource
@@ -281,7 +278,7 @@ public:
 	bool destroyResource(const char* name, GRESOURCEGROUP group);
 	void unloadAllResources();
 
-	unsigned int _incrementResourceIdCounter();
+	unsigned int _incrementRenderableIdCounter();
 
 protected:
 
@@ -295,7 +292,7 @@ protected:
 	gResourceLineDrawer* m_pLineDrawer;
 	std::map < std::string, WADFile* > m_wadFiles;
 
-	unsigned int m_nextResourceId;
+	unsigned int m_nextRenderableId;
 };
 
 #endif

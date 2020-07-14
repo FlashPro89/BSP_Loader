@@ -88,6 +88,12 @@ gRenderable::gRenderable( gResourceManager* mgr, GRESOURCEGROUP group, const cha
 {
 	m_isVisible = true;
 	m_isRenderable = true;
+	m_resourceId = m_pResMgr->_incrementRenderableIdCounter(); //TODO: может это переделать?
+}
+
+unsigned short gRenderable::getId() const
+{
+	return m_resourceId;
 }
 
 bool gRenderable::isVisible() const
@@ -124,13 +130,6 @@ gResource::gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* f
 		m_resName = m_fileName;
 
 	m_isRenderable = false;
-	//m_refCounter = 0; // 1 or 0??
-	m_resourceId = m_pResMgr->_incrementResourceIdCounter(); //TODO: может это переделать?
-}
-
-unsigned int gResource::getId() const
-{
-	return m_resourceId;
 }
 
 void gResource::release()
@@ -631,7 +630,7 @@ gResourceManager::gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* p
 	m_pLineDrawer = new gResourceLineDrawer( this, GRESGROUP_RESERVED_1, "*_line" );
 	m_resources[GRESGROUP_RESERVED_1]["*_line"] = m_pLineDrawer;
 
-	m_nextResourceId = 0;
+	m_nextRenderableId = 0;
 }
 gResourceManager::~gResourceManager()
 {
@@ -737,9 +736,9 @@ void gResourceManager::unloadAllResources()
 	_clearWADFilesList();
 }
 
-unsigned int gResourceManager::_incrementResourceIdCounter()
+unsigned int gResourceManager::_incrementRenderableIdCounter()
 {
-	return m_nextResourceId++;
+	return m_nextRenderableId++;
 }
 
 void gResourceManager::_clearWADFilesList()

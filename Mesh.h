@@ -33,6 +33,7 @@ struct gTrisGroup //для отрисовки
 	unsigned int textureIndex;
 	unsigned int trisOffsetInBuff;
 	gResource2DTexture* pTex;
+	gMaterial* pMat;
 	gSkinIndexRemapedSubsets remapedSubsets;
 
 	unsigned short baseIndex;
@@ -238,6 +239,8 @@ public:
 	bool isUseUserMemoryPointer();
 
 protected:
+
+	//gMaterial* m_pMaterial; // нужно ли это хранить?
 
 	//debug
 	gDebugNormal* m_normals;

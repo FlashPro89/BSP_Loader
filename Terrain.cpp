@@ -136,6 +136,8 @@ bool gResourceTerrain::preload() //загрузка статических данных
 	m_hMapFilename = dirName;
 	m_hMapFilename+= hMapFilename;
 
+	m_trisNum = (m_width - 1) * (m_depth - 1) * 2;
+
 	return true;
 }
 
@@ -204,9 +206,15 @@ void gResourceTerrain::onFrameRender(gRenderQueue* queue, const gEntity* entity,
 	//pD3DDev->SetRenderState(D3DRS_FOGSTART, *(DWORD*)(&fogStart));
 	//pD3DDev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&fogEnd));
 	
+	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
+	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
 
+	gRenderElement re( this, entity->getMaterial(), distance, 1, &matrix, 0, m_trisNum );
+	queue->pushBack(re);
+
+	//позже удалить
 	pD3DDev->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, m_width * m_depth,
-		0, (m_width-1) * (m_depth-1) * 2 );
+		0, m_trisNum );
 
 	pD3DDev->SetRenderState(D3DRS_FOGENABLE, false);
 

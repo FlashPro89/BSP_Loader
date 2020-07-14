@@ -88,14 +88,24 @@ unsigned short gRenderElement::getDistance() const
 
 void gRenderElement::_buildKey()
 {
-	m_key = m_distance; //16 bit of dist 0bit-first
-	
-	m_key = m_key << 16;
 	if (m_pMaterial)
-		m_key |= m_pMaterial->getId(); //16 bit of matId 16bit-first
-	
-	m_key = m_key << 32;
+		m_key = m_pMaterial->getId();
+	m_key = m_key << 10; // 1024 types of mat max - 10bits
+
 	m_key |= m_pRenderable->getId(); //16 bit of renderableId 32bit-first
+	m_key = m_key << 10; // 1024 types of renderables 10bits
+
+	m_key |= m_distance; //16 bit of dist 
+	//m_key = m_key << 16;
+
+	//alphablend bit
+	unsigned __int64 alphaMask;
+	if (false)
+		alphaMask = 0xFFFFFFFFFFFFFFFF & ( (unsigned __int64) 1 << 60 );
+	else
+		alphaMask = 0xFFFFFFFFFFFFFFFF << 60 ;
+
+	m_key &= alphaMask;
 }
 
 //-----------------------------------------------
@@ -205,14 +215,14 @@ void gRenderQueue::_debugOut( const char* fname )
 	{
 		if (m_elementsPointers[i]->getMaterial() != 0)
 		{
-			fprintf(f, "key: %lli mat: %s res: %s dist:%i\n",
-				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getMaterial()->getName(),
+			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i\n",
+				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getMaterial()->getId(), m_elementsPointers[i]->getMaterial()->getName(), m_elementsPointers[i]->getRenderable()->getId(),
 				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance());
 		}
 		else
 		{
-			fprintf(f, "key: %lli mat: 0 res: %s dist:%i\n",
-				m_elementsPointers[i]->getKey(),
+			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i\n",
+				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getRenderable()->getId(),
 				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance());
 		}
 	}

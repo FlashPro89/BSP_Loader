@@ -683,15 +683,19 @@ void loadScene( const char* mapname )
 	
 
 	FILE* f = 0;
-	errno_t err = fopen_s(&f, fname, "rb");
-	if (!f || err) throw("BSP File Opening Error");
+	//errno_t err = fopen_s(&f, "../all.g", "wb");
+	//fprintf(f, "GSAJK");
+	//fclose(f);
+
+	errno_t err = fopen_s( &f, fname, "rb" );
+	if ( !f || err ) throw( "BSP File Opening Error" );
 
 	int fl = filelength(f);
-	BSPMapHeader_t* bsp_header = (BSPMapHeader_t*)(new byte[fl + 1]); //? +1?
-	((byte*)bsp_header)[fl] = 0;
+	BSPMapHeader_t* bsp_header = (BSPMapHeader_t*)( new byte[fl + 1] ); //? +1?
+	( (byte*)bsp_header )[ fl ] = 0;
 	//memset( bsp_header, 0, fl );
 
-	if (fread_s(bsp_header, fl, 1, fl, f) != fl)
+	if ( fread_s(bsp_header, fl, 1, fl, f) != fl )
 		throw("Cannot read BSP file!");
 
 	fclose(f);

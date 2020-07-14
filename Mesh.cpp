@@ -1696,12 +1696,21 @@ gResourceStaticMesh::gResourceStaticMesh( gResourceManager* mgr, GRESOURCEGROUP 
 
 	m_tris_blockpos = 0;
 
+	//m_pMaterial = 0;
+
 	//debug
 	m_normals = 0;
 }
 
 gResourceStaticMesh::~gResourceStaticMesh()
 {
+	auto it = m_trisCacher.begin();
+	while (it != m_trisCacher.end())
+	{
+		if (it->second.pMat)
+			it->second.pMat->release();
+		it++;
+	}
 	unload();
 }
 
@@ -1726,6 +1735,7 @@ bool gResourceStaticMesh::preload()
 	dirName[l + 1] = 0;								//UNSAFE !?!?
 
 	char fullFileName[BUFSZ];
+	char matName[BUFSZ];
 
 	//find triangles block
 	while (fgets(buffer, BUFSZ, f))
@@ -1752,10 +1762,25 @@ bool gResourceStaticMesh::preload()
 					tg.__before = m_trisNum;
 					tg.trisOffsetInBuff = m_trisNum * 3;
 
-					sprintf_s(fullFileName, BUFSZ, "%s%s", dirName, buffer);
+					sprintf_s( fullFileName, BUFSZ, "%s%s", dirName, buffer );
+					sprintf_s( matName, BUFSZ, "%s.%s", m_resName.c_str(), buffer);
+					matName[strlen(matName) - 4] = 0;
 
-					gResource2DTexture* pTex = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName);
-					tg.pTex = pTex;
+					gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial(matName);
+					if (!pMaterial)
+					{
+						gResource2DTexture* pTex = (gResource2DTexture*)m_pResMgr->getResource(fullFileName, GRESGROUP_2DTEXTURE);
+						if (!pTex)
+							pTex = (gResource2DTexture*)m_pResMgr->loadTexture2D(fullFileName);
+
+						pMaterial = m_pResMgr->getMaterialFactory()->createMaterial(matName);
+						pMaterial->setTexture(0, pTex);
+					}
+					else
+						pMaterial->addRef();
+
+					tg.pMat = pMaterial;
+					tg.pTex = pMaterial->getTexture(0);
 
 					m_trisCacher[buffer] = tg;
 				}
@@ -1984,9 +2009,15 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 	pD3DDev9->SetStreamSource(0, m_pVB, 0, sizeof(gStaticVertex));
 	pD3DDev9->SetIndices(m_pIB);
 
+	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
+	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
+
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())
 	{
+		gRenderElement re( this, it->second.pMat, distance, 1, &matrix, it->second.trisOffsetInBuff * 3, it->second.trisNum );
+		queue->pushBack(re);
+
 		if (it->second.pTex)
 			pD3DDev9->SetTexture(0, it->second.pTex->getTexture());
 		
@@ -1995,6 +2026,7 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 
 		it++;
 	}
+
 
 	//drawNormals();
 }

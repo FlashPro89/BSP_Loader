@@ -18,6 +18,8 @@ gMaterialFactory::~gMaterialFactory()
 
 gMaterial* gMaterialFactory::createMaterial(const char* name)
 {
+	if (!name)
+		return (gMaterial*)0;
 	auto it = m_pMaterialsMap.find(name);
 	if (it != m_pMaterialsMap.end())
 		return 0;
@@ -30,6 +32,8 @@ gMaterial* gMaterialFactory::createMaterial(const char* name)
 
 gMaterial* gMaterialFactory::getMaterial( const char* name ) const
 {
+	if (!name)
+		return (gMaterial*)0;
 	auto it = m_pMaterialsMap.find(name);
 	if (it != m_pMaterialsMap.end())
 	{

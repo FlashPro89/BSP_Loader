@@ -87,6 +87,8 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 	m_textures[0] = 0; m_textures[1] = 0; m_textures[2] = 0; m_textures[3] = 0;
 	m_textures[4] = 0; m_textures[5] = 0; m_textures[6] = 0; m_textures[7] = 0;
 
+	m_transparent = false;
+
 	m_pMaterialId = id;
 
 	if (name)
@@ -189,4 +191,15 @@ unsigned short gMaterial::getId() const
 const char* gMaterial::getName() const
 {
 	return m_name;
+}
+
+
+bool gMaterial::isTransparent() const
+{
+	return m_transparent;
+}
+
+void gMaterial::setTransparent( bool isTransparent )
+{
+	m_transparent = isTransparent;
 }

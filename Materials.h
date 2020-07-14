@@ -56,12 +56,16 @@ public:
 
 	const char* getName() const;
 
+	bool isTransparent() const;
+	void setTransparent( bool isTransparent );
+
 protected:
 
 	gMaterial(gMaterial&) {}
 
 	char* m_name;
 	gMaterialFactory* m_factory;
+	bool m_transparent;
 
 	unsigned short m_pMaterialId; // only 65536 materials
 

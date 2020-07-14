@@ -88,24 +88,24 @@ unsigned short gRenderElement::getDistance() const
 
 void gRenderElement::_buildKey()
 {
-	if (m_pMaterial)
-		m_key = m_pMaterial->getId();
-	m_key = m_key << 10; // 1024 types of mat max - 10bits
+	unsigned __int64 alphaMask = 0;
 
-	m_key |= m_pRenderable->getId(); //16 bit of renderableId 32bit-first
+	if (m_pMaterial)
+	{
+		m_key = m_pMaterial->getId();
+		if( m_pMaterial->isTransparent() )
+			alphaMask = ((unsigned __int64)1 << 60);
+	}
+	m_key = m_key << 10; // 1024 types of materials max - 10bits
+
+	m_key |= m_pRenderable->getId(); 
 	m_key = m_key << 10; // 1024 types of renderables 10bits
 
 	m_key |= m_distance; //16 bit of dist 
 	//m_key = m_key << 16;
 
 	//alphablend bit
-	unsigned __int64 alphaMask;
-	if (false)
-		alphaMask = 0xFFFFFFFFFFFFFFFF & ( (unsigned __int64) 1 << 60 );
-	else
-		alphaMask = 0xFFFFFFFFFFFFFFFF << 60 ;
-
-	m_key &= alphaMask;
+	m_key |= alphaMask;
 }
 
 //-----------------------------------------------

@@ -670,6 +670,7 @@ void loadScene( const char* mapname )
 		ent = smgr.createEntity("ent__crystal1");
 		gResourceStaticMesh* pStaticMesh = (gResourceStaticMesh*)rmgr.loadStaticMesh( "../data/models/crystal/crystal_reference.smd", "crystal");
 		ent->setRenderable(pStaticMesh);
+		matFactory.getMaterial(pStaticMesh->getDefaultMaterialName())->setTransparent(true);
 		node_crystal->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
 		//// Terrain

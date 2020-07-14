@@ -1724,9 +1724,6 @@ void frame_render()
 	//pD3DDev9->SetTexture(0, 0);
 	//pD3DDev9->SetTexture(1, 0);
 
-	smgr.frameRender( rqueue );
-	rqueue.clear();
-
 
 	D3DXMATRIX mId;
 	D3DXMatrixIdentity(&mId);
@@ -1823,6 +1820,9 @@ void frame_render()
 	//drawMarkedFace(currentFace);
 
 	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
+
+	smgr.frameRender(rqueue);
+	rqueue.clear();
 
 	pD3DDev9->EndScene();
 	pD3DDev9->Present(0, 0, 0, 0);

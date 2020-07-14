@@ -2012,6 +2012,13 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
 
+	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+	//pD3DDev9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
+	pD3DDev9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
+	pD3DDev9->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+	pD3DDev9->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+	pD3DDev9->SetRenderState(D3DRS_BLENDFACTOR, 0xFF5F5F5F);
+
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())
 	{
@@ -2026,7 +2033,7 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 
 		it++;
 	}
-
+	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
 
 	//drawNormals();
 }

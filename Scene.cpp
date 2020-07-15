@@ -715,9 +715,9 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 			m_rootNode.onFrameRender( queue, m_activeCam );
 	}
 
-	queue._debugOut("out_queue_not_sorted.txt");
+	//queue._debugOut("out_queue_not_sorted.txt");
 	queue.sort();
-	queue._debugOut("out_queue_sorted.txt");
+	//queue._debugOut("out_queue_sorted.txt");
 
 
 	gRenderElement* pElement = 0;

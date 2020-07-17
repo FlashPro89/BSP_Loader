@@ -229,7 +229,7 @@ void createLightmapsAtlas(unsigned int width, unsigned int height, unsigned char
 	if (FAILED(hr))
 		throw("Cannot lock rect of lightmap atlas texture!");
 
-	memset(dlr.pBits, 0x7F, dlr.Pitch * height);
+	memset(dlr.pBits, 0xFF, dlr.Pitch * height);
 
 	unsigned int w = 0, h = 0, remappedX = 0, remappedY = 0;
 
@@ -1099,8 +1099,8 @@ void loadScene( const char* mapname )
 			}
 			else
 			{
-				p_vdata[g].tu2 = 0;
-				p_vdata[g].tv2 = 0;
+				p_vdata[g].tu2 = 1.0f; //BUGFIX: unlighted polys was gray, now is white
+				p_vdata[g].tv2 = 1.0f; 
 			}
 
 			p_vdata[g].tu /= miptex->width;
@@ -1586,6 +1586,12 @@ void renderFaces()
 
 	last_tex = -1;
 
+	if( useLightmaps )
+		pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
+	else
+		pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
+
+
 	for (int i = 0; i < num_faces; i++)
 	{
 		if (!rfaces[i].isDrawed)
@@ -1608,13 +1614,12 @@ void renderFaces()
 			last_tex = rfaces[i].miptex;
 			pD3DDev9->SetTexture(0, tex);
 		}
-
-		if( (bsp_faces[i].styles[0] == 0) && useLightmaps ) //если имеется лайт мап рисуем с ним
+/*
+		if( (bsp_faces[i].styles[0] == 0) ) //если имеется лайт мап рисуем с ним
 		{ 
 			//pD3DDev9->SetTexture(1, ltmap[i]);
 			if( !last_draw_useLMap)
 			{
-				pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
 				last_draw_useLMap = true;
 			}
 		}
@@ -1622,11 +1627,10 @@ void renderFaces()
 		{
 			if (last_draw_useLMap)
 			{
-				pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 				last_draw_useLMap = false;
 			}
 		}
-
+*/
 		pD3DDev9->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, r_num_v, rfaces[i].start_indx, rfaces[i].num_prim);
 	}
 
@@ -1726,10 +1730,12 @@ void frame_render()
 	//pD3DDev9->SetTexture(0, 0);
 	//pD3DDev9->SetTexture(1, 0);
 
-
 	D3DXMATRIX mId;
 	D3DXMatrixIdentity(&mId);
 	pD3DDev9->SetTransform(D3DTS_WORLD, &mId);
+
+	pD3DDev9->SetTransform(D3DTS_VIEW, &cam.getViewMatrix());
+	pD3DDev9->SetTransform(D3DTS_PROJECTION, &cam.getProjMatrix());
 
 	pD3DDev9->SetStreamSource(0, m_VB, 0, sizeof(D3DVertex));
 	pD3DDev9->SetIndices(m_IB);
@@ -1824,7 +1830,6 @@ void frame_render()
 	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 
 	smgr.frameRender(rqueue);
-	rqueue.clear();
 
 	pD3DDev9->EndScene();
 	pD3DDev9->Present(0, 0, 0, 0);
@@ -1907,11 +1912,13 @@ void frame_move()
 	//	node->setRelativeOrientation(q);
 	//}
 
-	smgr.getRootNode().computeTransform();
+	input->update();
+	//cam.tick(dt);
+
+	//smgr.getRootNode().computeTransform();
 	smgr.frameMove(dt);
 
-	input->update();
-	cam.tick(dt);
+
 
 	//cam.setRelativePosition(D3DXVECTOR3(-3000, 300, -3000));
 	//if( cam.getViewingFrustum().testAABB( D3DXVECTOR3( -3000, 300, -3000 ), D3DXVECTOR3( -3010, -300, -3010 ) ) )

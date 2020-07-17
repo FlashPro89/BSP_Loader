@@ -137,6 +137,7 @@ bool gResourceTerrain::preload() //загрузка статических данных
 	m_hMapFilename+= hMapFilename;
 
 	m_trisNum = (m_width - 1) * (m_depth - 1) * 2;
+	m_vertexesNum = m_width * m_depth;
 	
 	gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial(m_resName.c_str());
 	if (!pMaterial)
@@ -223,31 +224,40 @@ void gResourceTerrain::onFrameRender(gRenderQueue* queue, const gEntity* entity,
 	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
 
-	gRenderElement re( this, entity->getMaterial(0), distance, 1, &matrix, 0, m_trisNum );
+	gRenderElement re( this, m_defaultMatMap.begin()->second, distance, 1, &matrix, 0, m_trisNum, m_vertexesNum );
 	queue->pushBack(re);
 
 	//позже удалить
-	pD3DDev->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, m_width * m_depth,
-		0, m_trisNum );
+	//pD3DDev->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum,
+	//	0, m_trisNum );
 
 	pD3DDev->SetRenderState(D3DRS_FOGENABLE, false);
 
 	//drawNormals();
 }
 
-GVERTEXFORMAT gResourceTerrain::getVertexFormat()
+GVERTEXFORMAT gResourceTerrain::getVertexFormat() const
 {
 	return GVF_LEVEL;
 }
 
-void* gResourceTerrain::getVBuffer()
+void* gResourceTerrain::getVBuffer() const
 {
 	return m_pVertexBuffer;
 }
 
-void* gResourceTerrain::getIBuffer()
+void* gResourceTerrain::getIBuffer() const
 {
 	return m_pIndexBuffer;
+}
+
+GPRIMITIVETYPE gResourceTerrain::getPrimitiveType() const
+{
+	return GPRIMITIVETYPE::GPT_TRIANGLELIST;
+}
+unsigned int gResourceTerrain::getVertexStride() const
+{
+	return sizeof(gTerrainVertex);
 }
 
 bool gResourceTerrain::isUseUserMemoryPointer()

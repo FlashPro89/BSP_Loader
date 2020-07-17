@@ -1,9 +1,11 @@
 #include "util.h"
 
+
 //vars
 extern HWND hwnd = 0;
 extern LPDIRECT3D9 pD3D9 = 0;
 extern LPDIRECT3DDEVICE9 pD3DDev9 = 0;
+D3DPRESENT_PARAMETERS presParams;
 
 //local
 int l_width = 0;
@@ -86,22 +88,22 @@ void d3d9_init()
 	wnd_setTitle(id.Description);
 
 
-	D3DPRESENT_PARAMETERS p;
-	ZeroMemory( &p, sizeof( p ) );
-	p.AutoDepthStencilFormat = D3DFMT_D24X8;
-	p.EnableAutoDepthStencil = true;
-	p.hDeviceWindow = hwnd;
-	p.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-	p.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	p.Windowed = true;
+	//D3DPRESENT_PARAMETERS p;
+	ZeroMemory( &presParams, sizeof(presParams) );
+	presParams.AutoDepthStencilFormat = D3DFMT_D24X8;
+	presParams.EnableAutoDepthStencil = true;
+	presParams.hDeviceWindow = hwnd;
+	presParams.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+	presParams.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	presParams.Windowed = true;
 	
 
 #ifdef D3D9_SHADER_DEBUG
 	hr = pD3D9->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_REF, hwnd, 
-		D3DCREATE_SOFTWARE_VERTEXPROCESSING, &p, &pD3DDev9 );
+		D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presParams, &pD3DDev9 );
 #else
 	hr = pD3D9->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, 
-		D3DCREATE_HARDWARE_VERTEXPROCESSING, &p, &pD3DDev9 );
+		D3DCREATE_HARDWARE_VERTEXPROCESSING, &presParams, &pD3DDev9 );
 #endif
 
 	if( FAILED( hr ) )
@@ -161,6 +163,11 @@ void d3d9_destroy()
 	if( pD3D9 )
 		pD3D9->Release();
 	pD3D9 = 0;
+}
+
+bool d3d9_reset()
+{
+	return(SUCCEEDED(pD3DDev9->Reset(&presParams)));
 }
 
 void wnd_setTitle(const char* title)

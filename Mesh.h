@@ -167,11 +167,14 @@ public:
 
 	unsigned int getBonesNum() const;
 
-	GVERTEXFORMAT getVertexFormat();
+	GVERTEXFORMAT getVertexFormat() const;
 	const char* getDefaultMaterialName();
 
-	void* getVBuffer();
-	void* getIBuffer();
+	void* getVBuffer() const;
+	void* getIBuffer() const;
+
+	GPRIMITIVETYPE getPrimitiveType() const;
+	unsigned int getVertexStride() const;
 
 	bool isUseUserMemoryPointer();
 
@@ -231,10 +234,13 @@ public:
 	//void onFrameRender(const D3DXMATRIX& transform) const;
 	void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam = 0 ) const;
 
-	GVERTEXFORMAT getVertexFormat();
+	GVERTEXFORMAT getVertexFormat() const;
 
-	void* getVBuffer();
-	void* getIBuffer();
+	void* getVBuffer() const;
+	void* getIBuffer() const;
+
+	GPRIMITIVETYPE getPrimitiveType() const;
+	unsigned int getVertexStride() const;
 
 	bool isUseUserMemoryPointer();
 

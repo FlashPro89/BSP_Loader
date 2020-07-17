@@ -39,7 +39,7 @@ int comp(const void* i, const void* j)
 
 class gRenderable;
 class gMaterial;
-
+struct IDirect3DDevice9;
 
 typedef unsigned __int64 GRQSORTINGKEY;
 
@@ -59,7 +59,7 @@ public:
 	//gRenderElement(gRenderElement& other);
 	gRenderElement();
 	gRenderElement( const gRenderable* renderable, const gMaterial* material, unsigned short distance, unsigned char matrixPaleteSize, 
-		const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount, const gSkinBoneGroup* remapedBones = 0 );
+		const D3DXMATRIX* matrixPalete, unsigned int startIndex, unsigned int primitiveCount, unsigned int vertexesNum = 0, const gSkinBoneGroup* remapedBones = 0 );
 	~gRenderElement();
 
 	GRQSORTINGKEY getKey() const;
@@ -70,6 +70,11 @@ public:
 	unsigned char getMatrixPaleteSize() const;
 
 	unsigned short getDistance() const;
+
+	unsigned int getStartIndex() const;
+	unsigned int getPrimitiveCount()  const;
+	unsigned int getVertexesNum()  const;
+	const gSkinBoneGroup* getSkinBoneGroup() const;
 
 protected:
 	GRQSORTINGKEY m_key;
@@ -83,6 +88,7 @@ protected:
 	unsigned char m_paleteSize; // num of world matrixes
 	unsigned int m_startBufferIndex;
 	unsigned int m_primitiveCount;
+	unsigned int m_vertexesNum;
 	const gSkinBoneGroup* m_pSkinBoneGroup;
 
 };
@@ -98,6 +104,8 @@ public:
 	bool pushBack( const gRenderElement& element );
 	bool popBack( gRenderElement** element );
 	void clear();
+
+	void render(IDirect3DDevice9* pDevice);
 
 	//DEBUG
 	void _debugOut( const char* fname );

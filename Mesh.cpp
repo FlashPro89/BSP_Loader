@@ -920,6 +920,8 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 
 	m_defaultMatMap[m_resName.c_str()] = pMaterial;
 
+	m_vertexesNum = m_trisNum * 3;
+
 	return true;
 }
 
@@ -1427,12 +1429,13 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 			}
 
 			unsigned short distance = cam->getDistanceToPointUS( D3DXVECTOR3( matrixes[0]._41, matrixes[0]._42, matrixes[0]._43) );
-			gRenderElement re( this, entity->getMaterial(0), distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, &(*it) );
+			gRenderElement re( this, m_defaultMatMap.begin()->second, distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, m_vertexesNum, &(*it) );
 			queue->pushBack(re);
 
 			//позже удалить
-			pD3DDev9->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 
-				it->firstTriangle*3, it->TrianglesNum );
+			//pD3DDev9->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 
+			//	it->firstTriangle*3, it->TrianglesNum );
+
 			it++;
 		}
 	}
@@ -1515,7 +1518,7 @@ unsigned int gResourceSkinnedMesh::getBonesNum() const
 	return m_bonesNum;
 }
 
-GVERTEXFORMAT gResourceSkinnedMesh::getVertexFormat()
+GVERTEXFORMAT gResourceSkinnedMesh::getVertexFormat() const
 {
 	return GVF_SKINNED0WEIGHTS;
 }
@@ -1525,14 +1528,23 @@ const char* gResourceSkinnedMesh::getDefaultMaterialName()
 	return m_resName.c_str();
 }
 
-void* gResourceSkinnedMesh::getVBuffer()
+void* gResourceSkinnedMesh::getVBuffer() const
 {
 	return m_pVB;
 }
 
-void* gResourceSkinnedMesh::getIBuffer()
+void* gResourceSkinnedMesh::getIBuffer() const
 {
 	return m_pIB;
+}
+
+GPRIMITIVETYPE gResourceSkinnedMesh::getPrimitiveType() const
+{
+	return GPRIMITIVETYPE::GPT_TRIANGLELIST;
+}
+unsigned int gResourceSkinnedMesh::getVertexStride() const
+{
+	return sizeof(gSkinVertex);
 }
 
 
@@ -1804,6 +1816,8 @@ bool gResourceStaticMesh::preload()
 	}
 	fclose(f);
 
+	m_vertexesNum = m_trisNum * 3;
+
 	return true;
 }
 bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT
@@ -1984,19 +1998,28 @@ void gResourceStaticMesh::drawNormals() const
 	//pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 }
 
-GVERTEXFORMAT gResourceStaticMesh::getVertexFormat()
+GVERTEXFORMAT gResourceStaticMesh::getVertexFormat() const
 {
 	return GVF_STATICMESH;
 }
 
-void* gResourceStaticMesh::getVBuffer()
+void* gResourceStaticMesh::getVBuffer() const
 {
 	return m_pVB;
 }
 
-void* gResourceStaticMesh::getIBuffer()
+void* gResourceStaticMesh::getIBuffer() const
 {
 	return m_pIB;
+}
+
+GPRIMITIVETYPE gResourceStaticMesh::getPrimitiveType() const
+{
+	return GPRIMITIVETYPE::GPT_TRIANGLELIST;
+}
+unsigned int gResourceStaticMesh::getVertexStride() const
+{
+	return sizeof(gStaticVertex);
 }
 
 bool gResourceStaticMesh::isUseUserMemoryPointer()
@@ -2030,14 +2053,14 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())
 	{
-		gRenderElement re( this, it->second.pMat, distance, 1, &matrix, it->second.trisOffsetInBuff * 3, it->second.trisNum );
+		gRenderElement re( this, it->second.pMat, distance, 1, &matrix, it->second.trisOffsetInBuff * 3, it->second.trisNum, m_vertexesNum );
 		queue->pushBack(re);
 
 		if (it->second.pTex)
 			pD3DDev9->SetTexture(0, it->second.pTex->getTexture());
 		
-		pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0,
-			m_trisNum * 3, it->second.trisOffsetInBuff, it->second.trisNum );
+		//pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0,
+		//	m_trisNum * 3, it->second.trisOffsetInBuff, it->second.trisNum );
 
 		it++;
 	}

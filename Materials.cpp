@@ -161,7 +161,7 @@ float gMaterial::getSpecularPower() const
 	return m_specularPower;
 }
 
-gResource2DTexture* gMaterial::getTexture(unsigned char level)
+gResource2DTexture* gMaterial::getTexture(unsigned char level) const
 {
 	//if (level > 7)
 	//	return;

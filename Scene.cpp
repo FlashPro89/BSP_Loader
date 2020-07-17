@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Resources.h"
 #include "Mesh.h"
+#include "Util.h"
 
 //-----------------------------------------------
 //
@@ -782,17 +783,34 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 	m_entsInFrustum = 0;
 	m_nodesInFrustum = 0;
 
-	if (!m_pResMgr) return;
-
 	LPDIRECT3DDEVICE9 pD3DDev = m_pResMgr->getDevice();
 
-	queue.clear();
+	if (!m_pResMgr || !pD3DDev) return;
 
-	if ( m_activeCam && pD3DDev )
+	//queue.clear();
+
+	HRESULT hr = pD3DDev->TestCooperativeLevel();
+	switch (hr)
 	{
-		pD3DDev->SetTransform(D3DTS_VIEW, &m_activeCam->getViewMatrix());
-		pD3DDev->SetTransform(D3DTS_PROJECTION, &m_activeCam->getProjMatrix());
+	case S_OK:
+		break;
+	case D3DERR_DEVICELOST:
+		m_pResMgr->onRenderDeviceLost();
+		return;
+	case D3DERR_DEVICENOTRESET:
+		if (d3d9_reset())
+		{
+			m_pResMgr->onRenderDeviceReset();
+			break;
+		}
+		else
+			return;
+	case D3DERR_DRIVERINTERNALERROR:
+		throw("d3d9 driver internal error");
+	}
 
+	if ( m_activeCam )
+	{
 		if (m_activeCam->getViewingFrustum().testAABB(m_rootNode.getAABB()))
 			m_rootNode.onFrameRender( queue, m_activeCam );
 	}
@@ -801,13 +819,14 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 	queue.sort();
 	queue._debugOut("out_queue_sorted.txt");
 
+	queue.render(pD3DDev);
 
-	gRenderElement* pElement = 0;
-	int counter = 0;
-	while (queue.popBack(&pElement))
-	{
-		counter++;
-	}
+//	gRenderElement* pElement = 0;
+//	int counter = 0;
+//	while (queue.popBack(&pElement))
+//	{
+//		counter++;
+//	}
 }
 
 void gSceneManager::frameMove(float delta)

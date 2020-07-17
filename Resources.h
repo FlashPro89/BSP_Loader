@@ -29,7 +29,18 @@ enum  GVERTEXFORMAT
 	GVF_NUM
 };
 
+enum GPRIMITIVETYPE 
+{
+	GPT_POINTLIST, // ????
+	GPT_LINELIST,
+	GPT_TRIANGLELIST,
+	GPT_D3DXMESH
+};
+
 DWORD getFVF( GVERTEXFORMAT fmt );
+D3DPRIMITIVETYPE getPrimitiveType(GVERTEXFORMAT fmt);
+unsigned int getVertexFormatStride( GVERTEXFORMAT fmt);
+
 void toUpper(char* str);
 
 struct gFontParameters
@@ -147,15 +158,17 @@ public:
 	void setVisible(bool visible);
 
 	const gAABB& getAABB();
-	virtual GVERTEXFORMAT getVertexFormat() = 0;
+	virtual GVERTEXFORMAT getVertexFormat() const = 0;
 
 	virtual unsigned short getDefaultMaterialsNum() const;
 	virtual gMaterial* getDefaultMaterialByIndex(unsigned short subMeshIndex) const;
 	virtual gMaterial* getDefaultMaterialByName(const char* name) const;
 
+	virtual void* getVBuffer() const = 0;
+	virtual void* getIBuffer() const = 0;
 
-	virtual void* getVBuffer() = 0;
-	virtual void* getIBuffer() = 0;
+	virtual GPRIMITIVETYPE getPrimitiveType() const = 0;
+	virtual unsigned int getVertexStride() const = 0;
 
 	virtual bool isUseUserMemoryPointer() = 0;
 	
@@ -207,12 +220,15 @@ public:
 
 	void setSizes( float height, float width, float depth, float r1, float r2 );
 
-	void* getVBuffer();
-	void* getIBuffer();
+	void* getVBuffer() const;
+	void* getIBuffer() const;
+
+	GPRIMITIVETYPE getPrimitiveType() const;
+	unsigned int getVertexStride() const;
 
 	bool isUseUserMemoryPointer();
 
-	GVERTEXFORMAT getVertexFormat();
+	GVERTEXFORMAT getVertexFormat() const;
 
 protected:
 	LPD3DXMESH m_pMesh;

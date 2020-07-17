@@ -37,6 +37,33 @@ DWORD getFVF( GVERTEXFORMAT fmt )
 	}
 }
 
+unsigned int getVertexFormatStride(GVERTEXFORMAT fmt)
+{
+	switch (fmt)
+	{
+	case GVF_RHW:
+		//return D3DFVF_XYZRHW | D3DFVF_TEX1;
+		return 6 * sizeof(float);
+	case GVF_LEVEL:
+		//return D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2;
+		return 10 * sizeof(float);
+	case GVF_LINE:
+		//return D3DFVF_XYZ | D3DFVF_DIFFUSE;
+		return 3 * sizeof(float) + sizeof(DWORD);
+	case GVF_STATICMESH:
+		//return D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX1;
+		return 8 * sizeof(float);
+	case GVF_SHAPE:
+		//return D3DFVF_XYZ | D3DFVF_NORMAL;
+		return 6 * sizeof(float);
+	case GVF_SKINNED0WEIGHTS:
+		//return D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1;
+		return 9 * sizeof(float);
+	default:
+		return 0;
+	}
+}
+
 void toUpper(char* str)
 {
 	int i = 0;
@@ -543,12 +570,21 @@ void gResourceShape::setSizes(float height, float width, float depth, float r1, 
 	m_r2 = r2;
 }
 
-void* gResourceShape::getVBuffer()
+void* gResourceShape::getVBuffer() const
 {
 	return 0;
 }
 
-void* gResourceShape::getIBuffer()
+void* gResourceShape::getIBuffer() const
+{
+	return 0;
+}
+
+GPRIMITIVETYPE gResourceShape::getPrimitiveType() const
+{
+	return GPRIMITIVETYPE::GPT_D3DXMESH;
+}
+unsigned int gResourceShape::getVertexStride() const
 {
 	return 0;
 }
@@ -558,7 +594,7 @@ bool gResourceShape::isUseUserMemoryPointer()
 	return false;
 }
 
-GVERTEXFORMAT gResourceShape::getVertexFormat()
+GVERTEXFORMAT gResourceShape::getVertexFormat() const
 {
 	return GVF_SHAPE;
 }

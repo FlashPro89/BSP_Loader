@@ -32,5 +32,6 @@ void wnd_setTitle( const char* title );
 //d3d9
 void d3d9_init();
 void d3d9_destroy();
+bool d3d9_reset();
 
 #endif

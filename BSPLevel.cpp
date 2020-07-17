@@ -31,12 +31,22 @@ void gResourceBSPLevel::onFrameRender( gRenderQueue* queue, const gEntity* entit
 
 }
 
-void* gResourceBSPLevel::getVBuffer()
+void* gResourceBSPLevel::getVBuffer() const
 {
 	return 0;
 }
 
-void* gResourceBSPLevel::getIBuffer()
+void* gResourceBSPLevel::getIBuffer() const
+{
+	return 0;
+}
+
+GPRIMITIVETYPE gResourceBSPLevel::getPrimitiveType() const
+{
+	return GPRIMITIVETYPE::GPT_TRIANGLELIST;
+}
+
+unsigned int gResourceBSPLevel::getVertexStride() const
 {
 	return 0;
 }

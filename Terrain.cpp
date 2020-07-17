@@ -137,6 +137,20 @@ bool gResourceTerrain::preload() //загрузка статических данных
 	m_hMapFilename+= hMapFilename;
 
 	m_trisNum = (m_width - 1) * (m_depth - 1) * 2;
+	
+	gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial(m_resName.c_str());
+	if (!pMaterial)
+	{
+		pMaterial = m_pResMgr->getMaterialFactory()->createMaterial(m_resName.c_str());
+		pMaterial->setTexture(0, m_pTex);
+		pMaterial->setTexture(1, m_pTexDetail);
+	}
+	else
+	{
+		pMaterial->addRef();
+	}
+
+	m_defaultMatMap[m_resName.c_str()] = pMaterial;
 
 	return true;
 }
@@ -209,7 +223,7 @@ void gResourceTerrain::onFrameRender(gRenderQueue* queue, const gEntity* entity,
 	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
 
-	gRenderElement re( this, entity->getMaterial(), distance, 1, &matrix, 0, m_trisNum );
+	gRenderElement re( this, entity->getMaterial(0), distance, 1, &matrix, 0, m_trisNum );
 	queue->pushBack(re);
 
 	//позже удалить

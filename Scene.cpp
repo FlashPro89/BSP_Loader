@@ -13,16 +13,26 @@ gEntity::gEntity( const char* name )
 	m_name = name;
 	m_pHoldingNode = 0;
 	m_pRenderable = 0;
-	m_pMaterial = 0; // may be use "default" mat?
 
 	deleteAnimators();
 }
 
 gEntity::~gEntity()
 {
+	setRenderable(0); //renderable->release();
+
 	deleteAnimators();
-	if (m_pMaterial)
-		m_pMaterial->release();
+	auto it = m_userMaterials.begin();
+	while ( it != m_userMaterials.end() )
+	{
+		if (it->second)
+			it->second->release();
+		it++;
+	}
+	m_userMaterials.clear();
+
+	if (m_pRenderable)
+		m_pRenderable->release();
 }
 
 const char* gEntity::getName() const
@@ -47,10 +57,22 @@ gSceneNode* gEntity::getHoldingNode() const
 
 void gEntity::setRenderable( gRenderable* renderable )
 {
-	deleteAnimators();
 
 	if (m_pRenderable)
+	{
+		deleteAnimators();
+
 		m_pRenderable->release();
+
+		auto it = m_userMaterials.begin();
+		while (it != m_userMaterials.end())
+		{
+			if (it->second)
+				it->second->release();
+			it++;
+		}
+		m_userMaterials.clear();
+	}
 
 	m_pRenderable = renderable;
 	if (m_pRenderable != 0)
@@ -115,19 +137,76 @@ gAnimator* gEntity::getAnimator( GANIMATOR_TYPE type ) const
 	return m_animators[type];
 }
 
-void gEntity::setMaterial(gMaterial* material)
+bool gEntity::setMaterial( gMaterial* pMaterial, short matIndex )
 {
-	if (m_pMaterial)
-		m_pMaterial->release();
+	if ( !m_pRenderable )
+		return false;
 
-	m_pMaterial = material;
-	if (m_pMaterial)
-		m_pMaterial->addRef();
+	if ((matIndex >= 0) && (matIndex < m_userMaterials.size()))
+	{
+		auto it = m_userMaterials.begin();
+		std::advance( it, matIndex );
+		it->second = pMaterial;
+		pMaterial->addRef();
+	}
+	else if (matIndex < 0)
+	{
+		for (unsigned short i = 0; i < m_pRenderable->getDefaultMaterialsNum(); i++)
+		{
+			gMaterial* pMaterial = m_pRenderable->getDefaultMaterialByIndex(i);
+			m_userMaterials[pMaterial->getName()] = pMaterial;
+			pMaterial->addRef();
+		}
+	}
+	return true;
 }
 
-gMaterial* gEntity::getMaterial() const
+bool gEntity::setMaterialByName( gMaterial* pMaterial, const char* name )
 {
-	return m_pMaterial;
+	if ( (!m_pRenderable) || (name != 0) )
+		return false;
+
+	auto it = m_userMaterials.find(name);
+	if (it != m_userMaterials.end())
+	{
+		it->second = pMaterial;
+	}
+	else
+	{
+		m_userMaterials[name] = pMaterial;
+	}
+
+	pMaterial->addRef();
+	return true;
+}
+
+gMaterial* gEntity::getMaterial( short matIndex ) const
+{
+	if (!m_pRenderable)
+		return 0;
+
+	if ((matIndex >= 0) && (matIndex < m_userMaterials.size()))
+	{
+		auto it = m_userMaterials.begin();
+		std::advance(it, matIndex);
+		return it->second;
+	}
+	else
+		return 0;
+}
+
+gMaterial* gEntity::getMaterialByName( const char* name ) const
+{
+	if ((!m_pRenderable) || (name != 0))
+		return 0;
+
+	auto it = m_userMaterials.find(name);
+	if (it != m_userMaterials.end())
+	{
+		return it->second;
+	}
+	else
+		return 0;
 }
 
 void gEntity::deleteAnimators()
@@ -688,7 +767,10 @@ void gSceneManager::destroyAllEntities( )
 	while (it != m_entList.end())
 	{
 		if (it->second)
+		{
+			
 			delete it->second;
+		}
 		it++;
 	}
 	m_entList.clear();
@@ -715,9 +797,9 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 			m_rootNode.onFrameRender( queue, m_activeCam );
 	}
 
-	//queue._debugOut("out_queue_not_sorted.txt");
+	queue._debugOut("out_queue_not_sorted.txt");
 	queue.sort();
-	//queue._debugOut("out_queue_sorted.txt");
+	queue._debugOut("out_queue_sorted.txt");
 
 
 	gRenderElement* pElement = 0;

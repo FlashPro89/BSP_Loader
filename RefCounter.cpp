@@ -15,11 +15,6 @@ void gReferenceCounter::addRef()
 	m_refCounter++;
 }
 
-void gReferenceCounter::release()
-{
-	m_refCounter--;
-}
-
 COUNTER_TYPE gReferenceCounter::getRefCounter() const
 {
 	return m_refCounter;

@@ -28,6 +28,8 @@ public:
 
 	void getTransformedByMatrix( gAABB* out, const D3DXMATRIX& transform ) const;
 
+	void getCenterPoint(D3DXVECTOR3* outCenter);
+
 protected:
 	D3DXVECTOR3 m_bmin;
 	D3DXVECTOR3 m_bmax;

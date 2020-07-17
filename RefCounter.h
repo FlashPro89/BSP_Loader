@@ -11,7 +11,7 @@ public:
 	virtual ~gReferenceCounter();
 
 	virtual void addRef();
-	virtual void release();
+	virtual void release() = 0;
 	COUNTER_TYPE getRefCounter() const;
 
 protected:

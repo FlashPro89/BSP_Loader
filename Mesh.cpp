@@ -588,6 +588,8 @@ gResourceSkinnedMesh::gResourceSkinnedMesh(gResourceManager* mgr, GRESOURCEGROUP
 	m_pMaterialsNum = 0;
 	m_trisNum = 0;
 
+	//m_pMaterial = 0;
+
 	m_nodes_blockpos = 0;
 	m_time0_blockpos = 0;
 	m_tris_blockpos = 0;
@@ -617,11 +619,7 @@ gResourceSkinnedMesh::~gResourceSkinnedMesh()
 		delete[] m_pTransformedBones;
 	m_pTransformedBones = 0;
 
-	if (m_pMaterial)
-		m_pMaterial->release();
 
-	//if (m_pAtlasTexture)
-	//	m_pAtlasTexture->release();
 	
 	m_trisCacher.clear(); // ??
 
@@ -915,10 +913,12 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 		m_pAtlasTexture = (gResource2DTexture*)m_pResMgr->loadTexture2D( fullFileName ); //load texture in first trisGroup
 	}
 
-	m_pMaterial = m_pResMgr->getMaterialFactory()->getMaterial( getDefaultMaterialName() );
-	if (!m_pMaterial)
-		m_pResMgr->getMaterialFactory()->createMaterial( getDefaultMaterialName() );
-	m_pMaterial->setTexture( 0, m_pAtlasTexture );
+	gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial( getResourceName() );
+	if (!pMaterial)
+		pMaterial = m_pResMgr->getMaterialFactory()->createMaterial( getResourceName() );
+	pMaterial->setTexture( 0, m_pAtlasTexture );
+
+	m_defaultMatMap[m_resName.c_str()] = pMaterial;
 
 	return true;
 }
@@ -1427,7 +1427,7 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 			}
 
 			unsigned short distance = cam->getDistanceToPointUS( D3DXVECTOR3( matrixes[0]._41, matrixes[0]._42, matrixes[0]._43) );
-			gRenderElement re( this, entity->getMaterial(), distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, &(*it) );
+			gRenderElement re( this, entity->getMaterial(0), distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, &(*it) );
 			queue->pushBack(re);
 
 			//позже удалить
@@ -1534,6 +1534,7 @@ void* gResourceSkinnedMesh::getIBuffer()
 {
 	return m_pIB;
 }
+
 
 bool gResourceSkinnedMesh::isUseUserMemoryPointer()
 {
@@ -1704,6 +1705,8 @@ gResourceStaticMesh::gResourceStaticMesh( gResourceManager* mgr, GRESOURCEGROUP 
 
 gResourceStaticMesh::~gResourceStaticMesh()
 {
+	//освобождение материала в деструкторе gRenderable
+	/*
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())
 	{
@@ -1711,6 +1714,7 @@ gResourceStaticMesh::~gResourceStaticMesh()
 			it->second.pMat->release();
 		it++;
 	}
+	*/
 	unload();
 }
 
@@ -1778,6 +1782,8 @@ bool gResourceStaticMesh::preload()
 					}
 					else
 						pMaterial->addRef();
+
+					m_defaultMatMap[matName] = pMaterial;
 
 					tg.pMat = pMaterial;
 					tg.pTex = pMaterial->getTexture(0);
@@ -2019,6 +2025,8 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 	pD3DDev9->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
 	pD3DDev9->SetRenderState(D3DRS_BLENDFACTOR, 0xFF5F5F5F);
 
+	pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, false);
+
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())
 	{
@@ -2033,6 +2041,7 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 
 		it++;
 	}
+	pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, true);
 	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
 
 	//drawNormals();

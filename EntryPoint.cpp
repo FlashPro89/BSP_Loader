@@ -549,22 +549,26 @@ void loadScene( const char* mapname )
 		gSceneNode* node_crystal = node_centr->createChild("new_crystal");
 		gSceneNode* node_terrain = smgr.getRootNode().createChild("new_terrain");
 
-
+		/*
 		gResource2DTexture* t = (gResource2DTexture*)rmgr.loadTexture2D( "../data/textures/XCRATE5B.BMP", "box" );
 		gMaterial* mat = matFactory.createMaterial("default");
 		if (mat)
 		{
 			mat->setTexture(0, t);
 		}
+		*/
 
-		gResourceShape* shape = (gResourceShape*)rmgr.createShape("box_1", GSHAPE_BOX);
-		shape->setSizes(40, 40, 40, 10, 10);
-		//shape->load();
 
+		gResourceStaticMesh* pStaticMesh = (gResourceStaticMesh*)rmgr.loadStaticMesh("../data/models/crystal/crystal_reference.smd", "crystal");
+
+		//gResourceShape* shape = (gResourceShape*)rmgr.createShape("box_1", GSHAPE_BOX);
+		//shape->setSizes(40, 40, 40, 10, 10);
+
+		gRenderable* shape = pStaticMesh;
 
 		gEntity* ent = smgr.createEntity("box__root");
 		ent->setRenderable(shape);
-		ent->setMaterial(mat);
+		//ent->setMaterial(mat);
 
 		smgr.getRootNode().attachEntity(ent);
 
@@ -637,7 +641,7 @@ void loadScene( const char* mapname )
 		
 		ent = smgr.createEntity("ent__skinning1");
 		ent->setRenderable(pSMesh);
-		ent->setMaterial( matFactory.getMaterial(pSMesh->getDefaultMaterialName() ) );
+		//ent->setMaterial( matFactory.getMaterial(pSMesh->getDefaultMaterialName() ) );
 		node_skin1->attachEntity( ent );
 
 		gSkinnedMeshAnimator* ctrl = (gSkinnedMeshAnimator * )ent->getAnimator(GANIMATOR_SKINNED);
@@ -651,7 +655,7 @@ void loadScene( const char* mapname )
 
 		ent = smgr.createEntity("ent__skinning2");
 		ent->setRenderable(pSMesh2);
-		ent->setMaterial(matFactory.getMaterial( pSMesh2->getDefaultMaterialName() ) );
+		//ent->setMaterial(matFactory.getMaterial( pSMesh2->getDefaultMaterialName() ) );
 		node_skin2->attachEntity(ent);
 
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
@@ -659,7 +663,7 @@ void loadScene( const char* mapname )
 
 		ent = smgr.createEntity("ent__skinning3");
 		ent->setRenderable(pSMesh2);
-		ent->setMaterial(matFactory.getMaterial(pSMesh2->getDefaultMaterialName()));
+		//ent->setMaterial(matFactory.getMaterial(pSMesh2->getDefaultMaterialName()));
 		node_skin3->attachEntity(ent);
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("eatbody", GSKINANIM_LOOP)->play();
@@ -668,9 +672,7 @@ void loadScene( const char* mapname )
 		///////////////////////////////////////////////////////////////////
 		// Static mesh test
 		ent = smgr.createEntity("ent__crystal1");
-		gResourceStaticMesh* pStaticMesh = (gResourceStaticMesh*)rmgr.loadStaticMesh( "../data/models/crystal/crystal_reference.smd", "crystal");
 		ent->setRenderable(pStaticMesh);
-		matFactory.getMaterial(pStaticMesh->getDefaultMaterialName())->setTransparent(true);
 		node_crystal->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
 		//// Terrain
@@ -1620,7 +1622,7 @@ void renderFaces()
 		{
 			if (last_draw_useLMap)
 			{
-				pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTEXOPCAPS_DISABLE);
+				pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 				last_draw_useLMap = false;
 			}
 		}

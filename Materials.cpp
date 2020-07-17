@@ -16,6 +16,7 @@ gMaterialFactory::~gMaterialFactory()
 
 }
 
+//after create Material always free mem by mat->release()
 gMaterial* gMaterialFactory::createMaterial(const char* name)
 {
 	if (!name)
@@ -47,16 +48,17 @@ gMaterial* gMaterialFactory::getMaterial( const char* name ) const
 
 bool gMaterialFactory::destroyMaterial( const char* name )
 {
-	return 0 != m_pMaterialsMap.erase(name);
-	/*
 	auto it = m_pMaterialsMap.find(name);
 	if (it != m_pMaterialsMap.end())
 	{
 		if (it->second)
+		{
 			delete it->second;
+		}
 		m_pMaterialsMap.erase(it);
+		return true;
 	}
-	*/
+	return false;
 }
 
 void gMaterialFactory::destroyAllMaterials()
@@ -113,10 +115,10 @@ gMaterial::~gMaterial()
 
 void gMaterial::release()
 {
+	m_refCounter--;
+
 	if (m_refCounter == 0)
 		m_factory->destroyMaterial(m_name);
-	else
-		m_refCounter--;
 }
 
 void gMaterial::setDiffuse(GCOLOR color)
@@ -174,6 +176,7 @@ void gMaterial::setTexture(unsigned char level, gResource2DTexture* texture)
 {
 	//if (level > 7)
 	//	return;
+
 
 	if (m_textures[level])
 		m_textures[level]->release();

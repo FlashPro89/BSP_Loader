@@ -27,7 +27,7 @@ struct gSkinIndexRemapedSubset
 };
 typedef std::vector< gSkinIndexRemapedSubset > gSkinIndexRemapedSubsets;
 
-struct gTrisGroup //для отрисовки
+struct gTrisGroup
 {
 	unsigned int trisNum;
 	unsigned int textureIndex;
@@ -185,7 +185,7 @@ protected:
 
 	void _skeleton(const gSkinBone* frame, int b1, DWORD color = 0xFF7FFF00) const;
 
-	gMaterial* m_pMaterial; // нужно ли это хранить?
+	//gMaterial* m_pMaterial; // нужно ли это хранить?
 	gResource2DTexture* m_pAtlasTexture;
 	gTextureAtlas m_atlas;
 

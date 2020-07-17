@@ -24,7 +24,7 @@ gTextureAtlas::gTextureAtlas( unsigned int texturesNum )
 }
 
 gTextureAtlas::~gTextureAtlas()
-{
+ {
 	_reset();
 }
 

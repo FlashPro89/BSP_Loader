@@ -91,6 +91,18 @@ gRenderable::gRenderable( gResourceManager* mgr, GRESOURCEGROUP group, const cha
 	m_resourceId = m_pResMgr->_incrementRenderableIdCounter(); //TODO: может это переделать?
 }
 
+gRenderable::~gRenderable()
+{
+	auto it = m_defaultMatMap.begin();
+	while (it != m_defaultMatMap.end())
+	{
+		if (it->second)
+			it->second->release();
+		it++;
+	}
+	m_defaultMatMap.clear();
+}
+
 unsigned short gRenderable::getId() const
 {
 	return m_resourceId;
@@ -110,6 +122,32 @@ const gAABB& gRenderable::getAABB()
 {
 	return m_AABB;
 }
+
+unsigned short gRenderable::getDefaultMaterialsNum() const
+{ 
+	return (unsigned short)m_defaultMatMap.size();
+} 
+
+gMaterial* gRenderable::getDefaultMaterialByIndex(unsigned short subMeshIndex) const
+{ 
+	if ((subMeshIndex >= 0) && (subMeshIndex < m_defaultMatMap.size()))
+	{
+		auto it = m_defaultMatMap.begin();
+		std::advance(it, subMeshIndex);
+		return it->second;
+	}
+	else
+		return 0;
+} 
+
+gMaterial* gRenderable::getDefaultMaterialByName(const char* name) const
+{ 
+	auto it = m_defaultMatMap.find(name);
+	if( it != m_defaultMatMap.end() )
+		return it->second;
+	else
+		return 0;
+} 
 
 //-----------------------------------------------
 //
@@ -134,10 +172,10 @@ gResource::gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* f
 
 void gResource::release()
 {
+	m_refCounter--;
+
 	if (m_refCounter == 0)
-		m_pResMgr->destroyResource( m_resName.c_str(), m_group ); 
-	else
-		m_refCounter--;
+		m_pResMgr->destroyResource( m_resName.c_str(), m_group ); 		
 }
 
 const char* gResource::getResourceName() const
@@ -415,6 +453,17 @@ gResourceShape::gResourceShape(gResourceManager* mgr, GRESOURCEGROUP group, gSha
 	m_r1 = 10.f;
 	m_r2 = 20.f;
 	m_isRenderable = true;
+
+	gMaterial* pMaterial = m_pResMgr->getMaterialFactory()->getMaterial(m_resName.c_str());
+	if (!pMaterial)
+	{
+		pMaterial = m_pResMgr->getMaterialFactory()->createMaterial(m_resName.c_str());
+		//pMaterial->setTexture(0, pTex);
+	}
+	else
+		pMaterial->addRef();
+
+	m_defaultMatMap[m_resName.c_str()] = pMaterial;
 }
 
 gResourceShape::~gResourceShape()
@@ -873,9 +922,9 @@ gResource* gResourceManager::loadStaticMesh(const char* filename, const char* na
 	else
 		m_resources[GRESGROUP_STATICMESH][name] = pRes;
 
-	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	if (!pMaterial)
-		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	//if (!pMaterial)
+	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
 
 	pRes->preload();
 	return pRes;
@@ -889,9 +938,9 @@ gResource* gResourceManager::loadSkinnedMeshSMD(const char* filename, const char
 	else
 		m_resources[GRESGROUP_SKINNEDMESH][name] = pRes;
 
-	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	if (!pMaterial)
-		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	//if (!pMaterial)
+	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
 
 	pRes->preload();
 	return pRes;
@@ -905,9 +954,9 @@ gResource* gResourceManager::loadTerrain(const char* filename, const char* name)
 	else
 		m_resources[GRESGROUP_TERRAIN][name] = pRes;
 
-	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	if (!pMaterial)
-		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	//if (!pMaterial)
+	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
 
 	pRes->preload();
 	return pRes;
@@ -930,9 +979,9 @@ gResource* gResourceManager::createShape( const char* name, gShapeType type )
 	gResourceShape* pRes = new gResourceShape( this, GRESGROUP_SHAPE, type, name );
 	m_resources[GRESGROUP_SHAPE][name] = (gResource*)pRes;
 
-	gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	if (!pMaterial)
-		pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
+	//if (!pMaterial)
+	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
 
 	return (gResource*)pRes;
 }

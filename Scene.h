@@ -47,9 +47,12 @@ public:
 
 	const gAABB& getAABB();
 	gAnimator* getAnimator( GANIMATOR_TYPE type ) const;
-
-	void setMaterial(gMaterial* material);
-	gMaterial* getMaterial() const;
+	
+	//index -1 set All subMesh Materials to this
+	bool setMaterial( gMaterial* material, short matIndex = -1 );
+	bool setMaterialByName( gMaterial* material, const char* name );
+	gMaterial* getMaterial( short matIndex ) const;
+	gMaterial* getMaterialByName( const char* name ) const;
 
 protected:
 	gEntity() { }
@@ -57,7 +60,7 @@ protected:
 
 	void deleteAnimators();
 
-	gMaterial* m_pMaterial;
+	std::map< std::string, gMaterial* > m_userMaterials;
 
 	std::string m_name;
 	gSceneNode* m_pHoldingNode;

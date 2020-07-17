@@ -135,7 +135,7 @@ class gRenderable : public gResource
 {
 public:
 	gRenderable( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
-	virtual ~gRenderable() {};
+	virtual ~gRenderable();
 
 	//virtual void onFrameRender( const D3DXMATRIX& transform ) const {};
 	virtual void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* camera ) const = 0;
@@ -148,7 +148,11 @@ public:
 
 	const gAABB& getAABB();
 	virtual GVERTEXFORMAT getVertexFormat() = 0;
-	virtual const char* getDefaultMaterialName() { return m_resName.c_str(); }
+
+	virtual unsigned short getDefaultMaterialsNum() const;
+	virtual gMaterial* getDefaultMaterialByIndex(unsigned short subMeshIndex) const;
+	virtual gMaterial* getDefaultMaterialByName(const char* name) const;
+
 
 	virtual void* getVBuffer() = 0;
 	virtual void* getIBuffer() = 0;
@@ -159,6 +163,8 @@ protected:
 	bool m_isVisible;
 	gAABB m_AABB;
 	unsigned short m_resourceId;
+
+	std::map< std::string, gMaterial* > m_defaultMatMap;
 };
 
 class gResource2DTexture : public gResource

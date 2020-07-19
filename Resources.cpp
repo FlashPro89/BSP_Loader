@@ -729,7 +729,9 @@ void gResourceManager::onRenderDeviceLost()
 		auto it = m_resources[i].begin();
 		while ( it != m_resources[i].end() )
 		{
-			it->second->unload();
+			if(it->second)
+				it->second->unload();
+			it++;
 		}
 	}
 }
@@ -958,10 +960,6 @@ gResource* gResourceManager::loadStaticMesh(const char* filename, const char* na
 	else
 		m_resources[GRESGROUP_STATICMESH][name] = pRes;
 
-	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	//if (!pMaterial)
-	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
-
 	pRes->preload();
 	return pRes;
 }
@@ -973,10 +971,6 @@ gResource* gResourceManager::loadSkinnedMeshSMD(const char* filename, const char
 		m_resources[GRESGROUP_SKINNEDMESH][filename] = pRes;
 	else
 		m_resources[GRESGROUP_SKINNEDMESH][name] = pRes;
-
-	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	//if (!pMaterial)
-	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
 
 	pRes->preload();
 	return pRes;
@@ -990,13 +984,22 @@ gResource* gResourceManager::loadTerrain(const char* filename, const char* name)
 	else
 		m_resources[GRESGROUP_TERRAIN][name] = pRes;
 
-	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	//if (!pMaterial)
-	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
+	pRes->preload();
+	return pRes;
+}
+
+gResource* gResourceManager::loadBSPLevel(const char* filename, const char* name)
+{
+	gResource* pRes = new gResourceTerrain(this, GRESGROUP_BSPLEVEL, filename, name);
+	if (name == 0)
+		m_resources[GRESGROUP_TERRAIN][filename] = pRes;
+	else
+		m_resources[GRESGROUP_TERRAIN][name] = pRes;
 
 	pRes->preload();
 	return pRes;
 }
+
 
 gResource* gResourceManager::loadSkinnedAnimationSMD( const char* filename, const char* name, gResourceSkinnedMesh* ref )
 {

@@ -134,15 +134,14 @@ gMaterial::gMaterial( gMaterial* other, gMaterialFactory* factory, const char* n
 	m_emissive = other->getEmissive();
 	m_specularPower = other->getSpecularPower();
 
-	m_textures[0] = other->getTexture(0);
-	m_textures[1] = other->getTexture(1);
-	m_textures[2] = other->getTexture(2);
-	m_textures[3] = other->getTexture(3);
-
-	m_textures[4] = other->getTexture(4);
-	m_textures[5] = other->getTexture(5);
-	m_textures[6] = other->getTexture(6);
-	m_textures[7] = other->getTexture(7);
+	setTexture(0, other->getTexture(0));
+	setTexture(1, other->getTexture(1));
+	setTexture(2, other->getTexture(2));
+	setTexture(3, other->getTexture(3));
+	setTexture(4, other->getTexture(4));
+	setTexture(5, other->getTexture(5));
+	setTexture(6, other->getTexture(6));
+	setTexture(7, other->getTexture(7));
 
 	m_transparency = other->getTransparency();
 
@@ -219,6 +218,16 @@ void gMaterial::setSpecularPower(float power)
 float gMaterial::getSpecularPower() const
 {
 	return m_specularPower;
+}
+
+unsigned char gMaterial::getTexturesNum() const
+{
+	for( unsigned char i = 7; i >= 0; i-- )
+	{
+		if (m_textures[i] != 0)
+			return i + 1;
+	}
+	return 0;
 }
 
 gResource2DTexture* gMaterial::getTexture(unsigned char level) const

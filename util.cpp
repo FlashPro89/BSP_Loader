@@ -74,7 +74,7 @@ void wnd_update()
 }
 
 
-void d3d9_init()
+void d3d9_init( bool fullscreen )
 {
 	HRESULT hr;
 	
@@ -95,9 +95,11 @@ void d3d9_init()
 	presParams.hDeviceWindow = hwnd;
 	presParams.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 	presParams.SwapEffect = D3DSWAPEFFECT_DISCARD;
-	presParams.Windowed = true;
+	presParams.Windowed = !fullscreen;
 	presParams.BackBufferFormat = D3DFMT_A8R8G8B8;
-	
+	//presParams.BackBufferWidth = 1920;
+	//presParams.BackBufferHeight = 1080;
+
 
 #ifdef D3D9_SHADER_DEBUG
 	hr = pD3D9->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_REF, hwnd, 
@@ -169,6 +171,16 @@ void d3d9_destroy()
 bool d3d9_reset()
 {
 	return(SUCCEEDED(pD3DDev9->Reset(&presParams)));
+}
+
+bool d3d9_isFullScreen()
+{
+	return !presParams.Windowed;
+}
+
+void d3d9_setFullScreen(bool fullscreen)
+{
+	presParams.Windowed = !fullscreen;
 }
 
 void wnd_setTitle(const char* title)

@@ -54,6 +54,7 @@ public:
 	void setSpecularPower(float power);
 	float getSpecularPower() const;
 
+	unsigned char getTexturesNum() const;
 	gResource2DTexture* getTexture(unsigned char level) const;
 	void setTexture(unsigned char level, gResource2DTexture* texture);
 	

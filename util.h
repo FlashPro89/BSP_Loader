@@ -30,8 +30,10 @@ void wnd_mode( bool fs );
 void wnd_setTitle( const char* title );
 
 //d3d9
-void d3d9_init();
+void d3d9_init( bool fuulscreen );
 void d3d9_destroy();
 bool d3d9_reset();
+bool d3d9_isFullScreen();
+void d3d9_setFullScreen(bool fullscreen);
 
 #endif

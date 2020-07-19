@@ -788,6 +788,11 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 	if (!m_pResMgr || !pD3DDev) return;
 
 	HRESULT hr = pD3DDev->TestCooperativeLevel();
+
+	HRESULT hr1 = D3DERR_DEVICELOST;
+	HRESULT hr2 = D3DERR_DEVICENOTRESET;
+	HRESULT hr3 = D3DERR_DRIVERINTERNALERROR;
+
 	switch (hr)
 	{
 	case S_OK:

@@ -165,11 +165,6 @@ gRenderQueue::gRenderQueue()
 	m_elementsPointers = 0;
 	m_elementsArraySize = 0;
 	m_arrayPos = 0;
-
-	m_lastRenderable = -1;
-	m_lastMaterial = -1;
-	m_lastMatSkinned = -1;
-	m_lastMatUseBlending = -1;
 }
 
 gRenderQueue::~gRenderQueue()
@@ -267,10 +262,11 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	const D3DXMATRIX* matPalete = 0;
 	const gSkinBoneGroup* skinBoneGroup = 0;
 
-	if( m_lastMatSkinned == -1 )
-		m_lastMatSkinned = !( m_elementsPointers[m_arrayPos-1]->getMatrixPaleteSize() >1 );
-	if(m_lastMatUseBlending == -1)
-		m_lastMatUseBlending = m_elementsPointers[m_arrayPos-1]->getMaterial()->getTransparency() == 0xFF;
+	int m_lastRenderable = -1;
+	int m_lastMaterial = -1;
+
+	int m_lastMatSkinned = !( m_elementsPointers[m_arrayPos-1]->getMatrixPaleteSize() >1 );
+	int m_lastMatUseBlending = m_elementsPointers[m_arrayPos-1]->getMaterial()->getTransparency() == 0xFF;
 
 	GVERTEXFORMAT lastVF = GVF_NUM;
 	
@@ -359,10 +355,14 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				{
 					m_lastMaterial = pMaterial->getId();
 
-					for (unsigned char i = 0; i < 8; i++)
+					for (unsigned char i = 0; i < pMaterial->getTexturesNum(); i++)
 					{
 						pTex = pMaterial->getTexture(i);
-						if (pTex) pDevice->SetTexture(i, pTex->getTexture());
+						if( pTex ) pDevice->SetTexture(i, pTex->getTexture());
+						if( pTex )
+							pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_MODULATE );
+						else
+							pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_DISABLE );
 					}
 
 					if ( transpByte == 0xFF)

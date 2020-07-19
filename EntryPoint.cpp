@@ -687,12 +687,7 @@ void loadScene( const char* mapname )
 		node_terrain->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
 
-	
-
 	FILE* f = 0;
-	//errno_t err = fopen_s(&f, "../all.g", "wb");
-	//fprintf(f, "GSAJK");
-	//fclose(f);
 
 	errno_t err = fopen_s( &f, fname, "rb" );
 	if ( !f || err ) throw( "BSP File Opening Error" );
@@ -1729,123 +1724,129 @@ void drawMarkedFace( int face )
 
 void frame_render()
 {
-	pD3DDev9->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xFF7F7F7F, 1.0f, 0);
-	pD3DDev9->BeginScene();
-
-	//pD3DDev9->SetTexture(0, 0);
-	//pD3DDev9->SetTexture(1, 0);
-
-	D3DXMATRIX mId;
-	D3DXMatrixIdentity(&mId);
-	pD3DDev9->SetTransform(D3DTS_WORLD, &mId);
-
-	pD3DDev9->SetTransform(D3DTS_VIEW, &cam.getViewMatrix());
-	pD3DDev9->SetTransform(D3DTS_PROJECTION, &cam.getProjMatrix());
-
-	pD3DDev9->SetStreamSource(0, m_VB, 0, sizeof(D3DVertex));
-	pD3DDev9->SetIndices(m_IB);
-	pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2);
-
-	int tri_counter = 0;
-	int tris_in_face = 0;
-	last_tex = -1;
-
-	drawedFaces = 0;
-	drawedLeafs = 0;
-	numSetTexCalls = 0;
-
-	int steps = 0;
-	currentLeaf = getLeafInCamPosition(&steps);
-
-	char tmp[1024];
-
-	if (bsp_visdatasize != 0)
+	HRESULT coopLevel = pD3DDev9->TestCooperativeLevel();
+	if (SUCCEEDED(coopLevel))
 	{
-		if (rmodels)
-			drawModels(1, num_models);
-	}
-	else
-		drawModels(0, num_models);
-		
 
-	D3DXVECTOR3 p = cam.getPosition();
-	int content = isCollideWithWorld(p, 1500.f);
+		pD3DDev9->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xFF7F7F7F, 1.0f, 0);
+		pD3DDev9->BeginScene();
 
-	if (currentLeaf > 0)
-	{
-		drawVisibleLeafs(currentLeaf);
-	}
-	else if (currentLeaf == 0)
-	{
-		for (int i = 0; i < visLeafs; i++)
+		D3DXMATRIX mId;
+		D3DXMatrixIdentity(&mId);
+		pD3DDev9->SetTransform(D3DTS_WORLD, &mId);
+
+		pD3DDev9->SetTransform(D3DTS_VIEW, &cam.getViewMatrix());
+		pD3DDev9->SetTransform(D3DTS_PROJECTION, &cam.getProjMatrix());
+
+		pD3DDev9->SetStreamSource(0, m_VB, 0, sizeof(D3DVertex));
+		pD3DDev9->SetIndices(m_IB);
+		pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2);
+
+		int tri_counter = 0;
+		int tris_in_face = 0;
+		last_tex = -1;
+
+		drawedFaces = 0;
+		drawedLeafs = 0;
+		numSetTexCalls = 0;
+
+		int steps = 0;
+		currentLeaf = getLeafInCamPosition(&steps);
+
+		char tmp[1024];
+
+		if (bsp_visdatasize != 0)
 		{
-			drawLeaf(i);
+			if (rmodels)
+				drawModels(1, num_models);
 		}
-	}
+		else
+			drawModels(0, num_models);
 
-	renderFaces();
 
-	sprintf_s(tmp, 1024, "Map: %s%s, Num Leafs: %i, Curent Leaf: %i, Steps to find: %i, Visible Leafs: %i, Visible Faces: %i, Frustum: %s, LMaps: %s, Content: %i",
-		filesMapList[currentMap].c_str(), bsp_visdatasize > 0 ? "" : "(NO_VIS)", num_leafs, currentLeaf, steps, drawedLeafs, drawedFaces, useFrustum ? "on" : "off", useLightmaps ? "on" : "off", content);
-	wnd_setTitle(tmp);
+		D3DXVECTOR3 p = cam.getPosition();
+		int content = isCollideWithWorld(p, 1500.f);
 
-	if (rbboxes)
-	{
-		for (int i = 0; i < num_leafs; i++)
+		if (currentLeaf > 0)
 		{
-			drawAABB(bsp_leafs[i].mins, bsp_leafs[i].maxs, 0xFF00FF00);
+			drawVisibleLeafs(currentLeaf);
 		}
-	}
+		else if (currentLeaf == 0)
+		{
+			for (int i = 0; i < visLeafs; i++)
+			{
+				drawLeaf(i);
+			}
+		}
+
+		renderFaces();
+
+		sprintf_s(tmp, 1024, "Map: %s%s, Num Leafs: %i, Curent Leaf: %i, Steps to find: %i, Visible Leafs: %i, Visible Faces: %i, Frustum: %s, LMaps: %s, Content: %i",
+			filesMapList[currentMap].c_str(), bsp_visdatasize > 0 ? "" : "(NO_VIS)", num_leafs, currentLeaf, steps, drawedLeafs, drawedFaces, useFrustum ? "on" : "off", useLightmaps ? "on" : "off", content);
+		wnd_setTitle(tmp);
+
+		if (rbboxes)
+		{
+			for (int i = 0; i < num_leafs; i++)
+			{
+				drawAABB(bsp_leafs[i].mins, bsp_leafs[i].maxs, 0xFF00FF00);
+			}
+		}
 
 
-	if ((currentLeaf > 0) && rbboxes)
-	{
-		pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
+		if ((currentLeaf > 0) && rbboxes)
+		{
+			pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
 
-		drawAABB(bsp_leafs[currentLeaf].mins, bsp_leafs[currentLeaf].maxs, 0xFFFF0000, true);
-		drawVisibleLeafsAABB(currentLeaf);
+			drawAABB(bsp_leafs[currentLeaf].mins, bsp_leafs[currentLeaf].maxs, 0xFFFF0000, true);
+			drawVisibleLeafsAABB(currentLeaf);
 
-		pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
+			pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 
+		}
 	}
 
 	smgr.frameRender(rqueue);
-	if (input->isKeyDown(DIK_Y))
+
+	if (SUCCEEDED(coopLevel))
 	{
-		rqueue._debugOutSorted("out_queue_sorted.txt");
-		rqueue._debugOutUnsorted("out_queue_unsorted.txt");
+		if (input->isKeyDown(DIK_Y))
+		{
+			rqueue._debugOutSorted("out_queue_sorted.txt");
+			rqueue._debugOutUnsorted("out_queue_unsorted.txt");
+		}
+		rqueue.render(pD3DDev9);
+
+
+		//Draw Text Test
+		pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
+		gResourceTextDrawer* tdrawer = (gResourceTextDrawer*)rmgr.getResource("font1", GRESGROUP_TEXTDRAWER);
+		tdrawer->drawInScreenSpace("Test test", 400, 400, 0xFF00FF00, 1024, 768);
+
+		char buff[256];
+		sprintf_s(buff, 256, "Yaw: %f    Pitch: %f", cam.getYaw(), cam.getPitch());
+		tdrawer->drawInScreenSpace(buff, 20, 20, 0xFF00FF00, 1024, 768);
+
+		//sprintf_s( buff, 256, "Current face: %i", currentFace );
+		//tdrawer->drawInScreenSpace(buff, 20, 60, 0xFF00FF00, 1024, 768);
+
+		D3DXVECTOR3 v;
+		D3DVIEWPORT9 viewport;
+		pD3DDev9->GetViewport(&viewport);
+		cam.projPointToScreen(D3DXVECTOR3(0.f, 0.f, 0.f), v, viewport);
+
+		tdrawer = (gResourceTextDrawer*)rmgr.getResource("font2", GRESGROUP_TEXTDRAWER);
+
+		if (v.z < 0.f)
+			tdrawer->drawInScreenSpace("Null Point\nПроверка", (int)v.x, (int)v.y, 0xFF00FF00, 1024, 768);
+
+		//drawMarkedFace(currentFace);
+
+		pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
+
+		pD3DDev9->EndScene();
+		pD3DDev9->Present(0, 0, 0, 0);
 	}
-	rqueue.render(pD3DDev9);
-
-
-	//Draw Text Test
-	pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
-	gResourceTextDrawer* tdrawer = (gResourceTextDrawer*)rmgr.getResource("font1", GRESGROUP_TEXTDRAWER);
-	tdrawer->drawInScreenSpace("Test test", 400, 400, 0xFF00FF00, 1024, 768);
-
-	char buff[256];
-	sprintf_s(buff, 256, "Yaw: %f    Pitch: %f", cam.getYaw(), cam.getPitch());
-	tdrawer->drawInScreenSpace(buff, 20, 20, 0xFF00FF00, 1024, 768);
-
-	//sprintf_s( buff, 256, "Current face: %i", currentFace );
-	//tdrawer->drawInScreenSpace(buff, 20, 60, 0xFF00FF00, 1024, 768);
-
-	D3DXVECTOR3 v;
-	D3DVIEWPORT9 viewport;
-	pD3DDev9->GetViewport(&viewport);
-	cam.projPointToScreen(D3DXVECTOR3(0.f, 0.f, 0.f), v, viewport);
-
-	tdrawer = (gResourceTextDrawer*)rmgr.getResource("font2", GRESGROUP_TEXTDRAWER);
-
-	if (v.z < 0.f)
-		tdrawer->drawInScreenSpace("Null Point\nПроверка", (int)v.x, (int)v.y, 0xFF00FF00, 1024, 768);
-
-	//drawMarkedFace(currentFace);
-
-	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
-
-	pD3DDev9->EndScene();
-	pD3DDev9->Present(0, 0, 0, 0);
 }
 
 void rebuildVB( float dt, float delta_x, float delta_y, float sc )
@@ -1893,6 +1894,10 @@ void rebuildVB( float dt, float delta_x, float delta_y, float sc )
 void frame_move()
 {
 	float dt = timer->getDelta();
+
+	HRESULT coopLevel = pD3DDev9->TestCooperativeLevel();
+	if (FAILED(coopLevel))
+		return;
 
 	ti += dt * 0.2f;
 
@@ -2063,7 +2068,7 @@ int wmain(int argc, wchar_t* argv[])
 	try
 	{
 		wnd_create( "BSP LEVEL LOADER", 1024, 768 );
-		d3d9_init();
+		d3d9_init(false);
 		fillMapsList();
 
 		//loadScene(filesMapList[currentMap].c_str());

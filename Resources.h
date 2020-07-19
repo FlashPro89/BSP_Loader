@@ -61,6 +61,7 @@ class gResource2DTexture;
 
 enum GRESOURCEGROUP
 {
+	GRESGROUP_BSPLEVEL,
 	GRESGROUP_TERRAIN,
 	GRESGROUP_SHAPE,
 	GRESGROUP_STATICMESH,
@@ -288,6 +289,7 @@ public:
 	gResource* loadStaticMesh( const char* filename, const char* name = 0 );
 	gResource* loadSkinnedMeshSMD(const char* filename, const char* name );
 	gResource* loadTerrain( const char* filename, const char* name );
+	gResource* loadBSPLevel( const char* filename, const char* name );
 	gResource* loadSkinnedAnimationSMD( const char* filename, const char* name, gResourceSkinnedMesh* ref );
 	gResource* createShape( const char* name, gShapeType type );
 	gResource* createTextDrawer( const char* name, const gFontParameters& params);

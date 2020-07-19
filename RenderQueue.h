@@ -120,11 +120,6 @@ protected:
 	unsigned int m_elementsArraySize;
 	unsigned int m_arrayPos;
 
-	int m_lastRenderable;
-	int m_lastMaterial;
-	int m_lastMatSkinned;
-	int m_lastMatUseBlending;
-	
 };
 
 #endif

@@ -1344,7 +1344,7 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 		return;
 	HRESULT hr;
 
-	DWORD oldLightingState;
+	//DWORD oldLightingState;
 	//pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
 	
 	//pD3DDev9->SetRenderState(D3DRS_LIGHTING, true);

@@ -18,6 +18,7 @@ public:
 	gMaterialFactory();
 	~gMaterialFactory();
 
+	gMaterial* cloneMaterial(gMaterial* src, const char* cloneName);
 	gMaterial* createMaterial( const char* name );
 	gMaterial* getMaterial( const char* name ) const;
 	bool destroyMaterial(const char* name );
@@ -34,9 +35,13 @@ class gMaterial : public gReferenceCounter
 public:
 
 	gMaterial( gMaterialFactory* factory, const char* name, unsigned short id );
+	gMaterial( gMaterial* other, gMaterialFactory* factory, const char* name, unsigned short id );
+
 	~gMaterial();
 
 	void release();
+
+	gMaterial* cloneMaterial(const char* cloneName);
 
 	void setDiffuse(GCOLOR color);
 	void setSpecular(GCOLOR color);
@@ -56,8 +61,8 @@ public:
 
 	const char* getName() const;
 
-	bool isTransparent() const;
-	void setTransparent( bool isTransparent );
+	unsigned char getTransparency() const;
+	void setTransparency( unsigned char transparency );
 
 protected:
 
@@ -65,7 +70,7 @@ protected:
 
 	char* m_name;
 	gMaterialFactory* m_factory;
-	bool m_transparent;
+	unsigned char m_transparency;
 
 	unsigned short m_pMaterialId; // only 65536 materials
 

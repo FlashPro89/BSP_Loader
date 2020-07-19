@@ -113,21 +113,41 @@ const gSkinBoneGroup* gRenderElement::getSkinBoneGroup() const
 
 void gRenderElement::_buildKey()
 {
-	unsigned __int64 alphaMask = 0;
+	if (!m_pMaterial)
+		throw("no mat!");
 
-	if (m_pMaterial)
+	unsigned __int64 alphaMask = ((unsigned __int64)1 << 60);
+
+	if( m_pMaterial->getTransparency() != 0xFF )
+		alphaMask = 0;
+
+	if (alphaMask == 0) //opaque
 	{
-		m_key = m_pMaterial->getId();
-		if( m_pMaterial->isTransparent() )
-			alphaMask = ((unsigned __int64)1 << 60);
+		//16 bit of dist 
+		m_key = m_distance;
+		
+		//1024 types of materials max - 10bits
+		m_key = m_key << 10;
+		m_key |= m_pMaterial->getId();
+
+		// 1024 types of renderables 10bits
+		m_key = m_key << 10;
+		m_key |= m_pRenderable->getId();
+
 	}
-	m_key = m_key << 10; // 1024 types of materials max - 10bits
+	else //solid
+	{
+		//1024 types of materials max - 10bits
+		m_key = m_pMaterial->getId();
 
-	m_key |= m_pRenderable->getId(); 
-	m_key = m_key << 10; // 1024 types of renderables 10bits
+		// 1024 types of renderables 10bits
+		m_key = m_key << 10;
+		m_key |= m_pRenderable->getId();
 
-	m_key |= m_distance; //16 bit of dist 
-	//m_key = m_key << 16;
+		//16 bit of dist 
+		m_key = m_key << 16;
+		m_key |= 0xFFFF - m_distance;
+	}
 
 	//alphablend bit
 	m_key |= alphaMask;
@@ -145,6 +165,11 @@ gRenderQueue::gRenderQueue()
 	m_elementsPointers = 0;
 	m_elementsArraySize = 0;
 	m_arrayPos = 0;
+
+	m_lastRenderable = -1;
+	m_lastMaterial = -1;
+	m_lastMatSkinned = -1;
+	m_lastMatUseBlending = -1;
 }
 
 gRenderQueue::~gRenderQueue()
@@ -212,6 +237,7 @@ bool gRenderQueue::pushBack(const gRenderElement& element)
 {
 	if (!m_elements || m_arrayPos >= m_elementsArraySize)
 		return false;
+	m_elementsPointers[m_arrayPos] = &m_elements[m_arrayPos];
 	m_elements[m_arrayPos++] = element;
 	return true;
 }
@@ -231,6 +257,9 @@ void gRenderQueue::clear()
 
 void gRenderQueue::render(IDirect3DDevice9* pDevice)
 {
+	if (m_arrayPos == 0)
+		return; //null queue
+
 	gRenderElement* pElement = 0;
 	const gMaterial* pMaterial = 0;
 	const gResource2DTexture* pTex = 0;
@@ -238,10 +267,11 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	const D3DXMATRIX* matPalete = 0;
 	const gSkinBoneGroup* skinBoneGroup = 0;
 
-	bool isSkinning = !( m_elementsPointers[m_arrayPos]->getMatrixPaleteSize() >1 );
+	if( m_lastMatSkinned == -1 )
+		m_lastMatSkinned = !( m_elementsPointers[m_arrayPos-1]->getMatrixPaleteSize() >1 );
+	if(m_lastMatUseBlending == -1)
+		m_lastMatUseBlending = m_elementsPointers[m_arrayPos-1]->getMaterial()->getTransparency() == 0xFF;
 
-	int lastRenderable = -1;
-	int lastMaterial = -1;
 	GVERTEXFORMAT lastVF = GVF_NUM;
 	
 
@@ -251,15 +281,18 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		matPalete = pElement->getMatrixPalete();
 		if (pElement->getMatrixPaleteSize() > 1) //skinning
 		{
-			if (!isSkinning)
+			skinBoneGroup = pElement->getSkinBoneGroup();
+			auto rit = skinBoneGroup->remappedBones.begin();
+
+			if (!m_lastMatSkinned)
 			{
 				pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE);
 				pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS);
 			}
-			isSkinning = true;
+			m_lastMatSkinned = true;
 
-			skinBoneGroup = pElement->getSkinBoneGroup();
-			auto rit = skinBoneGroup->remappedBones.begin();
+
+
 			while (rit != skinBoneGroup->remappedBones.end())
 			{
 				pDevice->SetTransform(D3DTS_WORLDMATRIX(rit->second), &matPalete[rit->first]);
@@ -268,37 +301,13 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		}
 		else
 		{
-			if (isSkinning)
+			if (m_lastMatSkinned)
 			{
 				pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
 				pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false);
 			}
-			isSkinning = false;
+			m_lastMatSkinned = false;
 			pDevice->SetTransform(D3DTS_WORLDMATRIX(0), matPalete);
-		}
-
-		//set mat of element and render it
-
-		//setup material
-		pMaterial = pElement->getMaterial();
-		if (pMaterial)
-		{
-			if (pMaterial->getId() != lastMaterial)
-			{
-				for (unsigned char i = 0; i < 8; i++)
-				{
-					pTex = pMaterial->getTexture(i);
-					if (pTex) pDevice->SetTexture(i, pTex->getTexture());
-				}
-				lastMaterial = pMaterial->getId();
-			}
-		}
-		else
-		{
-			for (unsigned char i = 0; i < 8; i++)
-			{
-				pDevice->SetTexture(i, 0);
-			}
 		}
 
 		//render it!
@@ -321,7 +330,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				pt = D3DPT_FORCE_DWORD; // ??
 			}
 
-			if (pRenderable->getId() != lastRenderable)
+			if (pRenderable->getId() != m_lastRenderable)
 			{
 				//FFP only
 				if (lastVF != pRenderable->getVertexFormat())
@@ -337,8 +346,62 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				{
 					pDevice->SetIndices((LPDIRECT3DINDEXBUFFER9)pRenderable->getIBuffer());
 				}
-				lastRenderable = pRenderable->getId();
+				m_lastRenderable = pRenderable->getId();
 			}
+
+			//setup material
+			pMaterial = pElement->getMaterial();
+			if (pMaterial)
+			{
+				unsigned char transpByte = m_elementsPointers[m_arrayPos]->getMaterial()->getTransparency();
+
+				if (pMaterial->getId() != m_lastMaterial)
+				{
+					m_lastMaterial = pMaterial->getId();
+
+					for (unsigned char i = 0; i < 8; i++)
+					{
+						pTex = pMaterial->getTexture(i);
+						if (pTex) pDevice->SetTexture(i, pTex->getTexture());
+					}
+
+					if ( transpByte == 0xFF)
+					{
+						if (m_lastMatUseBlending)
+						{
+							pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+							//pDevice->SetRenderState(D3DRS_ZENABLE, true);
+							pDevice->SetRenderState(D3DRS_ZWRITEENABLE, true);
+							m_lastMatUseBlending = false;
+						}
+					}
+					else
+					{
+						DWORD blendFactor = transpByte | transpByte << 8 | transpByte << 16 | transpByte << 24;
+						pDevice->SetRenderState(D3DRS_BLENDFACTOR, blendFactor);
+
+						if (!m_lastMatUseBlending)
+						{
+
+							pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+							pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
+							pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+							pDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+							//pDevice->SetRenderState(D3DRS_ZENABLE, true);
+							pDevice->SetRenderState(D3DRS_ZWRITEENABLE, false);
+							m_lastMatUseBlending = true;
+						}
+					}
+				}
+			}
+			else
+			{
+				for (unsigned char i = 0; i < 8; i++)
+				{
+					pDevice->SetTexture(i, 0);
+				}
+			}
+
 
 			if (pRenderable->getIBuffer() != 0) //draw indexed
 			{
@@ -351,9 +414,10 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			}
 		}
 	}
+	//this->m_arrayPos = 0;
 }
 
-void gRenderQueue::_debugOut( const char* fname )
+void gRenderQueue::_debugOutSorted( const char* fname )
 {
 	FILE* f = 0;
 	errno_t err = fopen_s(&f, fname, "wt");
@@ -373,6 +437,31 @@ void gRenderQueue::_debugOut( const char* fname )
 			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i\n",
 				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getRenderable()->getId(),
 				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance());
+		}
+	}
+	fclose(f);
+}
+
+void gRenderQueue::_debugOutUnsorted(const char* fname)
+{
+	FILE* f = 0;
+	errno_t err = fopen_s(&f, fname, "wt");
+	if (err)
+		return;
+
+	for (unsigned int i = 0; i < m_arrayPos; i++)
+	{
+		if (m_elements[i].getMaterial() != 0)
+		{
+			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i\n",
+				m_elements[i].getKey(), m_elements[i].getMaterial()->getId(), m_elements[i].getMaterial()->getName(), m_elements[i].getRenderable()->getId(),
+				m_elements[i].getRenderable()->getResourceName(), m_elements[i].getDistance());
+		}
+		else
+		{
+			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i\n",
+				m_elements[i].getKey(), m_elements[i].getRenderable()->getId(),
+				m_elements[i].getRenderable()->getResourceName(), m_elements[i].getDistance());
 		}
 	}
 	fclose(f);

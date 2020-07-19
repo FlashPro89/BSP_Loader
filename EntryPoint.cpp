@@ -566,6 +566,8 @@ void loadScene( const char* mapname )
 
 		gRenderable* shape = pStaticMesh;
 
+		shape->getDefaultMaterialByIndex(0)->setTransparency(0xC0);
+
 		gEntity* ent = smgr.createEntity("box__root");
 		ent->setRenderable(shape);
 		//ent->setMaterial(mat);
@@ -575,7 +577,6 @@ void loadScene( const char* mapname )
 		ent = smgr.createEntity("box__center");
 		ent->setRenderable(shape);
 		node_centr->attachEntity( ent );
-
 
 		ent = smgr.createEntity("box__1");
 		ent->setRenderable(shape);
@@ -655,8 +656,11 @@ void loadScene( const char* mapname )
 
 		ent = smgr.createEntity("ent__skinning2");
 		ent->setRenderable(pSMesh2);
-		//ent->setMaterial(matFactory.getMaterial( pSMesh2->getDefaultMaterialName() ) );
+		gMaterial* opaqMat = pSMesh2->getDefaultMaterialByIndex(0)->cloneMaterial("zom_opaq");
+		opaqMat->setTransparency(0x40);
+		ent->setMaterial(opaqMat);
 		node_skin2->attachEntity(ent);
+		opaqMat->release(); //free mat pointer
 
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("idle1", GSKINANIM_LOOP)->play();
@@ -1566,7 +1570,8 @@ void renderFaces()
 	DWORD oldLightingState;
 	pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, false);
-	//pD3DDev9->SetRenderState(D3DRS_AMBIENT, 0xFFFFFFFF);
+	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+	pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, true);
 
 	D3DXMATRIX mId;
 	D3DXMatrixIdentity(&mId);
@@ -1587,7 +1592,7 @@ void renderFaces()
 	last_tex = -1;
 
 	if( useLightmaps )
-		pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE2X);
 	else
 		pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 
@@ -1793,20 +1798,30 @@ void frame_render()
 	}
 
 
-	pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
 	if ((currentLeaf > 0) && rbboxes)
 	{
+		pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
+
 		drawAABB(bsp_leafs[currentLeaf].mins, bsp_leafs[currentLeaf].maxs, 0xFFFF0000, true);
 		drawVisibleLeafsAABB(currentLeaf);
-	}
-	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 
-	//pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, r_num_v, 0, r_num_i/3 );
+		pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
+
+	}
+
+	smgr.frameRender(rqueue);
+	if (input->isKeyDown(DIK_Y))
+	{
+		rqueue._debugOutSorted("out_queue_sorted.txt");
+		rqueue._debugOutUnsorted("out_queue_unsorted.txt");
+	}
+	rqueue.render(pD3DDev9);
+
 
 	//Draw Text Test
 	pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
 	gResourceTextDrawer* tdrawer = (gResourceTextDrawer*)rmgr.getResource("font1", GRESGROUP_TEXTDRAWER);
-	tdrawer->drawInScreenSpace( "Test test", 400, 400, 0xFF00FF00, 1024, 768 );
+	tdrawer->drawInScreenSpace("Test test", 400, 400, 0xFF00FF00, 1024, 768);
 
 	char buff[256];
 	sprintf_s(buff, 256, "Yaw: %f    Pitch: %f", cam.getYaw(), cam.getPitch());
@@ -1818,18 +1833,16 @@ void frame_render()
 	D3DXVECTOR3 v;
 	D3DVIEWPORT9 viewport;
 	pD3DDev9->GetViewport(&viewport);
-	cam.projPointToScreen( D3DXVECTOR3(0.f, 0.f, 0.f), v, viewport);
+	cam.projPointToScreen(D3DXVECTOR3(0.f, 0.f, 0.f), v, viewport);
 
 	tdrawer = (gResourceTextDrawer*)rmgr.getResource("font2", GRESGROUP_TEXTDRAWER);
-	
-	if( v.z < 0.f )
+
+	if (v.z < 0.f)
 		tdrawer->drawInScreenSpace("Null Point\nПроверка", (int)v.x, (int)v.y, 0xFF00FF00, 1024, 768);
 
 	//drawMarkedFace(currentFace);
 
 	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
-
-	smgr.frameRender(rqueue);
 
 	pD3DDev9->EndScene();
 	pD3DDev9->Present(0, 0, 0, 0);

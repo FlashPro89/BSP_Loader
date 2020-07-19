@@ -108,7 +108,8 @@ public:
 	void render(IDirect3DDevice9* pDevice);
 
 	//DEBUG
-	void _debugOut( const char* fname );
+	void _debugOutSorted( const char* fname );
+	void _debugOutUnsorted(const char* fname);
 
 protected:
 	gRenderQueue(gRenderQueue&) {};
@@ -118,6 +119,11 @@ protected:
 	gRenderElement* m_elements;
 	unsigned int m_elementsArraySize;
 	unsigned int m_arrayPos;
+
+	int m_lastRenderable;
+	int m_lastMaterial;
+	int m_lastMatSkinned;
+	int m_lastMatUseBlending;
 	
 };
 

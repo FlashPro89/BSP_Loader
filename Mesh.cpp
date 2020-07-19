@@ -1345,16 +1345,16 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 	HRESULT hr;
 
 	DWORD oldLightingState;
-	pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
+	//pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
 	
-	pD3DDev9->SetRenderState(D3DRS_LIGHTING, true);
+	//pD3DDev9->SetRenderState(D3DRS_LIGHTING, true);
 	//pD3DDev9->SetTransform( D3DTS_WORLD, &matrixes[0] );
-	pD3DDev9->SetFVF( GSKIN_FVF );
-	pD3DDev9->SetStreamSource( 0, m_pVB, 0, sizeof(gSkinVertex) );
-	pD3DDev9->SetIndices( m_pIB );
+	//pD3DDev9->SetFVF( GSKIN_FVF );
+	//pD3DDev9->SetStreamSource( 0, m_pVB, 0, sizeof(gSkinVertex) );
+	//pD3DDev9->SetIndices( m_pIB );
 
-	pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE );
-	pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS );
+	//pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE );
+	//pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS );
 
 	gSkinnedMeshAnimator* animator = (gSkinnedMeshAnimator*)entity->getAnimator(GANIMATOR_SKINNED);
 	const D3DXMATRIX* matrixes = animator->getWordBonesMatrixes();
@@ -1412,7 +1412,7 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 	D3DXMatrixIdentity(&mId);
 	if (m_pAtlasTexture)
 	{
-		pD3DDev9->SetTexture(0, m_pAtlasTexture->getTexture());
+		//pD3DDev9->SetTexture(0, m_pAtlasTexture->getTexture());
 
 		auto it = m_skinBoneGroups.begin();
 		while (it != m_skinBoneGroups.end())
@@ -1421,15 +1421,19 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 		
 			while (rit != it->remappedBones.end())
 			{
-				if( !matrixes )
-					pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &mId);
-				else
-					pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &matrixes[rit->first]);
+				//if( !matrixes )
+				//	pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &mId);
+				//else
+				//	pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &matrixes[rit->first]);
 				rit++;
 			}
 
+			gMaterial* entMat = entity->getMaterial(0);
+			if (entMat == 0)
+				entMat = m_defaultMatMap.begin()->second;
+
 			unsigned short distance = cam->getDistanceToPointUS( D3DXVECTOR3( matrixes[0]._41, matrixes[0]._42, matrixes[0]._43) );
-			gRenderElement re( this, m_defaultMatMap.begin()->second, distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, m_vertexesNum, &(*it) );
+			gRenderElement re( this, entMat, distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, m_vertexesNum, &(*it) );
 			queue->pushBack(re);
 
 			//позже удалить
@@ -1444,22 +1448,22 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 		auto it = m_trisCacher.begin();
 		while (it != m_trisCacher.end())
 		{
-			if (it->second.pTex)
-				pD3DDev9->SetTexture(0, it->second.pTex->getTexture());
+			//if (it->second.pTex)
+			//pD3DDev9->SetTexture(0, it->second.pTex->getTexture());
 			
-			pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 
-				it->second.trisOffsetInBuff, it->second.trisNum );
+			//pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 
+			//	it->second.trisOffsetInBuff, it->second.trisNum );
 			it++;
 		}
 	}
 
-	pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE );
-	pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, false );
+	//pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE );
+	//pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, false );
 	 
 	if (m_pTransformedBones)
 		drawSkeleton(m_pTransformedBones, &matrixes[0], 0, 0xFF00FFFF );
 	
-	pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
+	//pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
 }
 
 bool gResourceSkinnedMesh::addAnimation(const char* filename, const char* name)
@@ -2033,39 +2037,43 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 	if (!pD3DDev9)
 		return;
 
-	pD3DDev9->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
-	pD3DDev9->SetFVF(GSTATIC_FVF);
-	pD3DDev9->SetStreamSource(0, m_pVB, 0, sizeof(gStaticVertex));
-	pD3DDev9->SetIndices(m_pIB);
+//	pD3DDev9->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
+//	pD3DDev9->SetFVF(GSTATIC_FVF);
+//	pD3DDev9->SetStreamSource(0, m_pVB, 0, sizeof(gStaticVertex));
+//	pD3DDev9->SetIndices(m_pIB);
 
 	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
 
-	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+//	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
 	//pD3DDev9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
-	pD3DDev9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
-	pD3DDev9->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-	pD3DDev9->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-	pD3DDev9->SetRenderState(D3DRS_BLENDFACTOR, 0xFF5F5F5F);
+//	pD3DDev9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
+//	pD3DDev9->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+//	pD3DDev9->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
+//	pD3DDev9->SetRenderState(D3DRS_BLENDFACTOR, 0xFF5F5F5F);
 
-	pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, false);
+//	pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, false);
 
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())
 	{
-		gRenderElement re( this, it->second.pMat, distance, 1, &matrix, it->second.trisOffsetInBuff * 3, it->second.trisNum, m_vertexesNum );
+		gMaterial* entMat = entity->getMaterialByName(it->second.pMat->getName());
+		if (entMat == 0)
+			entMat = ( m_defaultMatMap.find( it->second.pMat->getName() ) )->second; //very unsafe??
+
+		gRenderElement re( this, entMat, distance, 1, &matrix, it->second.trisOffsetInBuff * 3, it->second.trisNum, m_vertexesNum );
 		queue->pushBack(re);
 
 		if (it->second.pTex)
-			pD3DDev9->SetTexture(0, it->second.pTex->getTexture());
+			//pD3DDev9->SetTexture(0, it->second.pTex->getTexture());
 		
 		//pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0,
 		//	m_trisNum * 3, it->second.trisOffsetInBuff, it->second.trisNum );
 
 		it++;
 	}
-	pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, true);
-	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+	//pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, true);
+	//pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
 
 	//drawNormals();
 }

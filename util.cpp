@@ -96,6 +96,7 @@ void d3d9_init()
 	presParams.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 	presParams.SwapEffect = D3DSWAPEFFECT_DISCARD;
 	presParams.Windowed = true;
+	presParams.BackBufferFormat = D3DFMT_A8R8G8B8;
 	
 
 #ifdef D3D9_SHADER_DEBUG

@@ -154,8 +154,8 @@ bool gEntity::setMaterial( gMaterial* pMaterial, short matIndex )
 	{
 		for (unsigned short i = 0; i < m_pRenderable->getDefaultMaterialsNum(); i++)
 		{
-			gMaterial* pMaterial = m_pRenderable->getDefaultMaterialByIndex(i);
-			m_userMaterials[pMaterial->getName()] = pMaterial;
+			gMaterial* pDefaultMaterial = m_pRenderable->getDefaultMaterialByIndex(i);
+			m_userMaterials[pDefaultMaterial->getName()] = pMaterial;
 			pMaterial->addRef();
 		}
 	}
@@ -787,8 +787,6 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 
 	if (!m_pResMgr || !pD3DDev) return;
 
-	//queue.clear();
-
 	HRESULT hr = pD3DDev->TestCooperativeLevel();
 	switch (hr)
 	{
@@ -815,11 +813,11 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 			m_rootNode.onFrameRender( queue, m_activeCam );
 	}
 
-	queue._debugOut("out_queue_not_sorted.txt");
+	//queue._debugOut("out_queue_not_sorted.txt");
 	queue.sort();
-	queue._debugOut("out_queue_sorted.txt");
+	//queue._debugOut("out_queue_sorted.txt");
 
-	queue.render(pD3DDev);
+	//queue.render(pD3DDev);
 
 //	gRenderElement* pElement = 0;
 //	int counter = 0;

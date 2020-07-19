@@ -13,7 +13,28 @@ gMaterialFactory::gMaterialFactory()
 
 gMaterialFactory::~gMaterialFactory()
 {
+	auto it = m_pMaterialsMap.begin();
+	while (it != m_pMaterialsMap.end())
+	{
+		if( it->second )
+			delete it->second;
+	}
+	m_pMaterialsMap.clear();
+}
 
+gMaterial* gMaterialFactory::cloneMaterial(gMaterial* src, const char* cloneName)
+{
+	if (!cloneName)
+		return (gMaterial*)0;
+
+	auto it = m_pMaterialsMap.find(cloneName);
+	if (it != m_pMaterialsMap.end())
+		return (gMaterial*)0;
+
+	gMaterial* material = new gMaterial( src, this, cloneName, m_idCounter++);
+	m_pMaterialsMap[cloneName] = material;
+	material->addRef();
+	return material;
 }
 
 //after create Material always free mem by mat->release()
@@ -89,7 +110,7 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 	m_textures[0] = 0; m_textures[1] = 0; m_textures[2] = 0; m_textures[3] = 0;
 	m_textures[4] = 0; m_textures[5] = 0; m_textures[6] = 0; m_textures[7] = 0;
 
-	m_transparent = false;
+	m_transparency = 0xFF;
 
 	m_pMaterialId = id;
 
@@ -98,6 +119,40 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 		size_t lenght = strlen(name);
 		m_name = new char[ lenght + 1];
 		memcpy( m_name, name, lenght );
+		m_name[lenght] = 0;
+	}
+	else
+		throw("Material name null pointer!");
+}
+
+gMaterial::gMaterial( gMaterial* other, gMaterialFactory* factory, const char* name, unsigned short id)
+{
+	m_factory = factory;
+
+	m_diffuse = other->getDiffuse();
+	m_specular = other->getSpecular();
+	m_emissive = other->getEmissive();
+	m_specularPower = other->getSpecularPower();
+
+	m_textures[0] = other->getTexture(0);
+	m_textures[1] = other->getTexture(1);
+	m_textures[2] = other->getTexture(2);
+	m_textures[3] = other->getTexture(3);
+
+	m_textures[4] = other->getTexture(4);
+	m_textures[5] = other->getTexture(5);
+	m_textures[6] = other->getTexture(6);
+	m_textures[7] = other->getTexture(7);
+
+	m_transparency = other->getTransparency();
+
+	m_pMaterialId = id;
+
+	if (name)
+	{
+		size_t lenght = strlen(name);
+		m_name = new char[lenght + 1];
+		memcpy(m_name, name, lenght);
 		m_name[lenght] = 0;
 	}
 	else
@@ -119,6 +174,11 @@ void gMaterial::release()
 
 	if (m_refCounter == 0)
 		m_factory->destroyMaterial(m_name);
+}
+
+gMaterial* gMaterial::cloneMaterial(const char* cloneName)
+{
+	return m_factory->cloneMaterial(this, cloneName);
 }
 
 void gMaterial::setDiffuse(GCOLOR color)
@@ -197,12 +257,12 @@ const char* gMaterial::getName() const
 }
 
 
-bool gMaterial::isTransparent() const
+unsigned char gMaterial::getTransparency() const
 {
-	return m_transparent;
+	return m_transparency;
 }
 
-void gMaterial::setTransparent( bool isTransparent )
+void gMaterial::setTransparency(unsigned char transparency)
 {
-	m_transparent = isTransparent;
+	m_transparency = transparency;
 }

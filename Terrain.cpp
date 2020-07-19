@@ -195,17 +195,17 @@ void gResourceTerrain::onFrameRender(gRenderQueue* queue, const gEntity* entity,
 	if (!pD3DDev)
 		return;
 	
-	pD3DDev->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
-	if (m_pTex)
-		pD3DDev->SetTexture(0, m_pTex->getTexture());
-	if(m_pTexDetail)
-		pD3DDev->SetTexture(1, m_pTexDetail->getTexture()); //detail sampler
+	//pD3DDev->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
+	//if (m_pTex)
+	//	pD3DDev->SetTexture(0, m_pTex->getTexture());
+	//if(m_pTexDetail)
+	//	pD3DDev->SetTexture(1, m_pTexDetail->getTexture()); //detail sampler
 	
-	pD3DDev->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE2X);
+	//pD3DDev->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE2X);
 
-	pD3DDev->SetStreamSource(0, m_pVertexBuffer, 0, sizeof(gTerrainVertex));
-	pD3DDev->SetIndices(m_pIndexBuffer);
-	pD3DDev->SetFVF( GTERRAIN_FVF );
+	//pD3DDev->SetStreamSource(0, m_pVertexBuffer, 0, sizeof(gTerrainVertex));
+	//pD3DDev->SetIndices(m_pIndexBuffer);
+	//pD3DDev->SetFVF( GTERRAIN_FVF );
 
 	float fogDensity = 0.0001f;
 	float fogStart = 5100.5f;
@@ -213,25 +213,30 @@ void gResourceTerrain::onFrameRender(gRenderQueue* queue, const gEntity* entity,
 
 	//pD3DDev->SetRenderState(D3DRS_FILLMODE, D3DFILL_POINT);
 
-	pD3DDev->SetRenderState(D3DRS_FOGENABLE, true);
-	pD3DDev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_EXP2 );
-	pD3DDev->SetRenderState(D3DRS_FOGCOLOR, 0x007F7F7F);
-	pD3DDev->SetRenderState(D3DRS_FOGDENSITY, *(DWORD*)(&fogDensity) );
-	pD3DDev->SetRenderState(D3DRS_RANGEFOGENABLE, true);
+	//pD3DDev->SetRenderState(D3DRS_FOGENABLE, true);
+	//pD3DDev->SetRenderState(D3DRS_FOGVERTEXMODE, D3DFOG_EXP2 );
+	//pD3DDev->SetRenderState(D3DRS_FOGCOLOR, 0x007F7F7F);
+	//pD3DDev->SetRenderState(D3DRS_FOGDENSITY, *(DWORD*)(&fogDensity) );
+	//pD3DDev->SetRenderState(D3DRS_RANGEFOGENABLE, true);
 	//pD3DDev->SetRenderState(D3DRS_FOGSTART, *(DWORD*)(&fogStart));
 	//pD3DDev->SetRenderState(D3DRS_FOGEND, *(DWORD*)(&fogEnd));
 	
 	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
 
-	gRenderElement re( this, m_defaultMatMap.begin()->second, distance, 1, &matrix, 0, m_trisNum, m_vertexesNum );
+
+	gMaterial* entMat = entity->getMaterial(0);
+	if (entMat == 0)
+		entMat = m_defaultMatMap.begin()->second; //very unsafe??
+
+	gRenderElement re( this, entMat, distance, 1, &matrix, 0, m_trisNum, m_vertexesNum );
 	queue->pushBack(re);
 
 	//позже удалить
 	//pD3DDev->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum,
 	//	0, m_trisNum );
 
-	pD3DDev->SetRenderState(D3DRS_FOGENABLE, false);
+	//pD3DDev->SetRenderState(D3DRS_FOGENABLE, false);
 
 	//drawNormals();
 }

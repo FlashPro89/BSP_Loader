@@ -182,6 +182,11 @@ remapping:
 		return false;
 }
 
+unsigned int gTextureAtlas::getTexturesNum() const
+{
+	return m_texturesNum;
+}
+
 unsigned int gTextureAtlas::getAtlasWidth() const
 {
 	return m_atlasWidth;

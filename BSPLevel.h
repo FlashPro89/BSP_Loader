@@ -4,14 +4,25 @@
 #define _BSP_LEVEL_H_
 
 #include "Resources.h"
-#include "BSPFile.h"
+#include "TextureAtlas.h"
+
+struct BSPMapHeader_t;
+struct BSPVertex_t;
+struct BSPFace_t;
+struct BSPEdge_t;
+struct BSPTexinfo_t;
+struct BSPPlane_t;
+struct BSPModel_t;
+struct BSPNode_t;
+struct BSPLeaf_t;
+struct BSPClipnode_t;
+
 
 class gResourceBSPLevel : public gRenderable
 {
 public:
 	gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name);
 	~gResourceBSPLevel();
-
 
 	bool preload(); //загрузка статических данных
 	bool load(); //загрузка видеоданных POOL_DEFAULT
@@ -25,6 +36,7 @@ public:
 
 	GPRIMITIVETYPE getPrimitiveType() const;
 	unsigned int getVertexStride() const;
+	GVERTEXFORMAT getVertexFormat() const;
 
 	bool isUseUserMemoryPointer();
 
@@ -32,18 +44,27 @@ protected:
 	gResourceBSPLevel();
 	gResourceBSPLevel(gResourceBSPLevel&);
 
-	int m_vertsNum;
-	int m_edgesNum;
-	int m_surfedgesNum;
-	int m_facesNum;
-	int m_texinfsNum;
-	int m_planesNum;
-	int m_miptexsNum;
-	int m_modelsNum;
-	int m_nodesNum;
-	int m_leafsNum;
-	int m_marksurfacesNum;
-	int m_clipnodesNum;
+	void freeMem();
+	void* getLump(unsigned char lump) const;
+
+	bool loadLightmaps();
+	bool buildLightmapAtlas( unsigned int lightedFacesNum );
+
+	//	BSP format part -----------------------------------------
+	BSPMapHeader_t* m_pBSPHeader;
+
+	unsigned int  m_bspVertsNum;
+	unsigned int  m_bspEdgesNum;
+	unsigned int  m_bspSurfedgesNum;
+	unsigned int  m_bspFacesNum;
+	unsigned int  m_bspTexinfsNum;
+	unsigned int  m_bspPlanesNum;
+	unsigned int  m_bspMiptexsNum;
+	unsigned int  m_bspModelsNum;
+	unsigned int  m_bspNodesNum;
+	unsigned int  m_bspLeafsNum;
+	unsigned int  m_bspMarksurfacesNum;
+	unsigned int  m_bspClipnodesNum;
 
 	BSPVertex_t* m_bspVerts;
 	BSPEdge_t* m_bspEdges;
@@ -63,6 +84,16 @@ protected:
 	int m_bspTexDataSize;
 	int m_bspLightDataSize;
 	int m_bspVisDataSize;
+
+	int m_visLeafsNum;
+	int m_visRow;
+
+	//  Lightmaps part -----------------------------------------
+	gTextureAtlas m_lMapTexAtlas;
+
+	//	Rendering part -----------------------------------------
+	unsigned int m_trisNum;
+	unsigned int m_vertsNum;
 };
 
 #endif

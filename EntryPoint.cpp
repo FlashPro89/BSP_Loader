@@ -72,9 +72,10 @@ int bsp_texdatasize = 0;
 int bsp_lightdatasize = 0;
 int bsp_visdatasize = 0;
 
+gFileSystem				fSys;
 gMaterialFactory        matFactory;
 gCamera					cam;
-gResourceManager		rmgr( &pD3DDev9, &matFactory );
+gResourceManager		rmgr( &pD3DDev9, &matFactory, &fSys );
 gSceneManager			smgr( &rmgr, &matFactory );
 gRenderQueue			rqueue;
 
@@ -519,6 +520,9 @@ void loadScene( const char* mapname )
 	//sprintf_s(fname, 1024, "../data/maps/%s", mapname);
 	sprintf_s(fname, 1024, "../data/maps/%s", mapname);
 
+	rmgr.loadBSPLevel(fname, "bspLevel");
+	rmgr.destroyResource("bspLevel",GRESGROUP_BSPLEVEL);
+
 	//rmgr.loadTexture2D("../data/textures/lmap.png", "lmap");
 
 	printf_s("Loading Scene...\n");
@@ -888,7 +892,7 @@ void loadScene( const char* mapname )
 	for ( int i = 0; i < num_faces; i++ )
 	{
 		//расчитаем размеры лайтмапа для фэйса
-		float mins[2], maxs[2], exmins[2], exmaxs[2], tex_center[2], tex_bounds[2];
+		float mins[2], maxs[2], tex_center[2], tex_bounds[2];
 		int texsize[2];
 		float val; int e;
 		BSPTexinfo_t* tex;
@@ -932,8 +936,8 @@ void loadScene( const char* mapname )
 
 			for (int l = 0; l < 2; l++)
 			{
-				exmins[l] = mins[l];
-				exmaxs[l] = maxs[l];
+				//exmins[l] = mins[l];
+				//exmaxs[l] = maxs[l];
 
 				mins[l] = (float)floor(mins[l] / 16);
 				maxs[l] = (float)ceil(maxs[l] / 16);

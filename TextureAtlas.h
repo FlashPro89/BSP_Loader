@@ -24,6 +24,7 @@ public:
 	void beginAtlas( unsigned int texturesNum );
 	bool pushTexture( unsigned short width, unsigned short height, void* userData = 0 );
 	bool mergeTexturesToAtlas( unsigned short maxWidth, unsigned short maxHeight, unsigned char border = 0 );
+	unsigned int getTexturesNum() const;
 
 	unsigned int getAtlasWidth() const;
 	unsigned int getAtlasHeight() const;

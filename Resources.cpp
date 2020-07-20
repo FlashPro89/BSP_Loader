@@ -3,6 +3,7 @@
 #include "Scene.h"
 #include "Mesh.h"
 #include "Terrain.h"
+#include "BSPLevel.h"
 #include <stdio.h>
 
 iwadcolor colormap[256];
@@ -707,10 +708,11 @@ void gResourceTextDrawer::drawInScreenSpace(const char* text, int x, int y, DWOR
 //
 //-----------------------------------------------
 
-gResourceManager::gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* pMaterialFactory )
+gResourceManager::gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* pMaterialFactory, gFileSystem* pFileSystem )
 {
 	m_ppDev = pDev;
 	m_pMatFactory = pMaterialFactory;
+	m_pFileSystem = pFileSystem;
 
 	m_pLineDrawer = new gResourceLineDrawer( this, GRESGROUP_RESERVED_1, "*_line" );
 	m_resources[GRESGROUP_RESERVED_1]["*_line"] = m_pLineDrawer;
@@ -990,11 +992,11 @@ gResource* gResourceManager::loadTerrain(const char* filename, const char* name)
 
 gResource* gResourceManager::loadBSPLevel(const char* filename, const char* name)
 {
-	gResource* pRes = new gResourceTerrain(this, GRESGROUP_BSPLEVEL, filename, name);
+	gResource* pRes = new gResourceBSPLevel(this, GRESGROUP_BSPLEVEL, filename, name);
 	if (name == 0)
-		m_resources[GRESGROUP_TERRAIN][filename] = pRes;
+		m_resources[GRESGROUP_BSPLEVEL][filename] = pRes;
 	else
-		m_resources[GRESGROUP_TERRAIN][name] = pRes;
+		m_resources[GRESGROUP_BSPLEVEL][name] = pRes;
 
 	pRes->preload();
 	return pRes;
@@ -1057,4 +1059,9 @@ const gResource* gResourceManager::getResource(const char* name, GRESOURCEGROUP 
 gMaterialFactory* gResourceManager::getMaterialFactory() const
 {
 	return m_pMatFactory;
+}
+
+gFileSystem* gResourceManager::getFileSystem() const
+{
+	return m_pFileSystem;
 }

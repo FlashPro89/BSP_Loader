@@ -1,21 +1,30 @@
 #include "BSPLevel.h"
+#include "FileSystem.h"
+#include "BSPFile.h"
+
+//-----------------------------------------------
+//
+//	CLASS: gResourceBSPLevel
+//
+//-----------------------------------------------
 
 gResourceBSPLevel::gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group,
 	const char* filename, const char* name) : gRenderable(mgr, group, filename, name)
 {
+	m_pBSPHeader = 0;
 
-	m_vertsNum = 0;
-	m_edgesNum = 0;
-	m_surfedgesNum = 0;
-	m_facesNum = 0;
-	m_texinfsNum = 0;
-	m_planesNum = 0;
-	m_miptexsNum = 0;
-	m_modelsNum = 0;
-	m_nodesNum = 0;
-	m_leafsNum = 0;
-	m_marksurfacesNum = 0;
-	m_clipnodesNum = 0;
+	m_bspVertsNum = 0;
+	m_bspEdgesNum = 0;
+	m_bspSurfedgesNum = 0;
+	m_bspFacesNum = 0;
+	m_bspTexinfsNum = 0;
+	m_bspPlanesNum = 0;
+	m_bspMiptexsNum = 0;
+	m_bspModelsNum = 0;
+	m_bspNodesNum = 0;
+	m_bspLeafsNum = 0;
+	m_bspMarksurfacesNum = 0;
+	m_bspClipnodesNum = 0;
 
 	m_bspVerts = 0;
 	m_bspEdges = 0;
@@ -35,168 +44,169 @@ gResourceBSPLevel::gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group
 	m_bspTexDataSize = 0;
 	m_bspLightDataSize = 0;
 	m_bspVisDataSize = 0;
+
+	m_visLeafsNum = 0;
+	m_visRow = 0;
+
+	m_trisNum = 0;
+	m_vertsNum = 0;
 }
 
 gResourceBSPLevel::~gResourceBSPLevel()
 {
-
+	freeMem();
 }
 
 bool gResourceBSPLevel::preload() //загрузка статических данных
 {
-	/*
-	FILE* f = 0;
+	
+	if (!m_pResMgr->getFileSystem()->isFileExist(m_fileName.c_str() ) )
+		return false;
 
-	errno_t err = fopen_s(&f, m_fileName.c_str(), "rb");
-	if (!f || err) throw("BSP File Opening Error");
+	gFile* pFile = m_pResMgr->getFileSystem()->openFile( m_fileName.c_str(), false, true );
+	if (!pFile)
+		return false;
 
-	int fl = filelength(f);
-	BSPMapHeader_t* bsp_header = (BSPMapHeader_t*)(new byte[fl + 1]); //? +1?
-	((byte*)bsp_header)[fl] = 0;
-	//memset( bsp_header, 0, fl );
+	size_t fl = pFile->getFileSize();
 
-	if (fread_s(bsp_header, fl, 1, fl, f) != fl)
-		throw("Cannot read BSP file!");
+	m_pBSPHeader = (BSPMapHeader_t*)(new byte[fl + 1]); //? +1?
+	((byte*)m_pBSPHeader)[fl] = 0;
+	m_pBSPHeader->version = 0;
 
-	fclose(f);
-	f = 0;
+	size_t readed = pFile->read( (byte*)m_pBSPHeader, fl );
+	delete pFile;
+	if( (readed != fl ) || (m_pBSPHeader->version != BSPVERSION) )
+	{
+		freeMem();
+		return false;
+	}
 
-	if (bsp_header->version != BSPVERSION) throw("Invalid BSP File Version");
-
+	// Little / Big Endian
 	//swap bytes ?!?!? or no?
 
 	//load verts
-	num_verts = BSPGetLumpItemsNum(bsp_header, LUMP_VERTEXES);
-	bsp_verts = new BSPVertex_t[num_verts];
-	BSPCopyLump(bsp_header, LUMP_VERTEXES, bsp_verts, sizeof(BSPVertex_t));
+	m_bspVertsNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_VERTEXES);
+	m_bspVerts = (BSPVertex_t*)getLump(LUMP_VERTEXES);
 
 	//load eges
-	num_edges = BSPGetLumpItemsNum(bsp_header, LUMP_EDGES);
-	bsp_edges = new BSPEdge_t[num_edges];
-	BSPCopyLump(bsp_header, LUMP_EDGES, bsp_edges, sizeof(BSPEdge_t));
+	m_bspEdgesNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_EDGES);
+	m_bspEdges = (BSPEdge_t*)getLump(LUMP_EDGES);
 
 	//load surfedges
-	num_surfedges = BSPGetLumpItemsNum(bsp_header, LUMP_SURFEDGES);
-	bsp_surfedges = new int[num_surfedges];
-	BSPCopyLump(bsp_header, LUMP_SURFEDGES, bsp_surfedges, sizeof(int));
+	m_bspSurfedgesNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_SURFEDGES);
+	m_bspSurfedges = (int*)getLump(LUMP_SURFEDGES);
 
 	//load faces
-	num_faces = BSPGetLumpItemsNum(bsp_header, LUMP_FACES);
-	bsp_faces = new BSPFace_t[num_faces];
-	BSPCopyLump(bsp_header, LUMP_FACES, bsp_faces, sizeof(BSPFace_t));
+	m_bspFacesNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_FACES);
+	m_bspFaces = (BSPFace_t*)getLump(LUMP_FACES);
 
 	//load texinfos
-	num_texinfs = BSPGetLumpItemsNum(bsp_header, LUMP_TEXINFO);
-	bsp_texinfs = new BSPTexinfo_t[num_texinfs];
-	BSPCopyLump(bsp_header, LUMP_TEXINFO, bsp_texinfs, sizeof(BSPTexinfo_t));
+	m_bspTexinfsNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_TEXINFO);
+	m_bspTexinfs = (BSPTexinfo_t*)getLump(LUMP_TEXINFO);
 
 	//load planes
-	num_planes = BSPGetLumpItemsNum(bsp_header, LUMP_PLANES);
-	bsp_planes = new BSPPlane_t[num_planes];
-	BSPCopyLump(bsp_header, LUMP_PLANES, bsp_planes, sizeof(BSPPlane_t));
+	m_bspPlanesNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_PLANES);
+	m_bspPlanes = (BSPPlane_t*)getLump(LUMP_PLANES);
 
 	///load models
-	num_models = BSPGetLumpItemsNum(bsp_header, LUMP_MODELS);
-	bsp_models = new BSPModel_t[num_models];
-	BSPCopyLump(bsp_header, LUMP_MODELS, bsp_models, sizeof(BSPModel_t));
+	m_bspModelsNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_MODELS);
+	m_bspModels = (BSPModel_t*)getLump(LUMP_MODELS);
 
 	//load leafs
-	num_leafs = BSPGetLumpItemsNum(bsp_header, LUMP_LEAFS);
-	bsp_leafs = new BSPLeaf_t[num_leafs];
-	BSPCopyLump(bsp_header, LUMP_LEAFS, bsp_leafs, sizeof(BSPLeaf_t));
+	m_bspLeafsNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_LEAFS);
+	m_bspLeafs = (BSPLeaf_t*)getLump(LUMP_LEAFS);
 
 	//load nodes
-	num_nodes = BSPGetLumpItemsNum(bsp_header, LUMP_NODES);
-	bsp_nodes = new BSPNode_t[num_nodes];
-	BSPCopyLump(bsp_header, LUMP_NODES, bsp_nodes, sizeof(BSPNode_t));
+	m_bspNodesNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_NODES);
+	m_bspNodes = (BSPNode_t*)getLump(LUMP_NODES);
 
 	//load marksurfaces
-	num_marksurfaces = BSPGetLumpItemsNum(bsp_header, LUMP_MARKSURFACES);
-	bsp_marksurfaces = new unsigned short[num_marksurfaces];
-	BSPCopyLump(bsp_header, LUMP_MARKSURFACES, bsp_marksurfaces, sizeof(unsigned short));
+	m_bspMarksurfacesNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_MARKSURFACES);
+	m_bspMarksurfaces = (unsigned short*)getLump(LUMP_MARKSURFACES);
 
 	//load clipnodes
-	num_clipnodes = BSPGetLumpItemsNum(bsp_header, LUMP_CLIPNODES);
-	bsp_clipnodes = new BSPClipnode_t[num_clipnodes];
-	BSPCopyLump(bsp_header, LUMP_CLIPNODES, bsp_clipnodes, sizeof(BSPClipnode_t));
+	m_bspClipnodesNum = BSPGetLumpItemsNum(m_pBSPHeader, LUMP_CLIPNODES);
+	m_bspClipnodes = (BSPClipnode_t*)getLump(LUMP_CLIPNODES);
 
 	//load miptexs
-	bsp_texdatasize = bsp_header->lumps[LUMP_TEXTURES].filelen;
-	bsp_texdata = new byte[bsp_texdatasize];
-	BSPCopyLump(bsp_header, LUMP_TEXTURES, bsp_texdata, bsp_header->lumps[LUMP_TEXTURES].filelen);
+	m_bspTexDataSize = m_pBSPHeader->lumps[LUMP_TEXTURES].filelen;
+	m_bspTexData = (byte*)getLump(LUMP_TEXTURES);
 
 	//load visdata
-	bsp_visdatasize = bsp_header->lumps[LUMP_VISIBILITY].filelen;
-	if (bsp_visdatasize > 0)
+	m_bspVisDataSize = m_pBSPHeader->lumps[LUMP_VISIBILITY].filelen;
+	if( m_bspVisDataSize > 0 )
 	{
-		bsp_visdata = new byte[bsp_visdatasize];
-		BSPCopyLump(bsp_header, LUMP_VISIBILITY, bsp_visdata, bsp_visdatasize);
+		m_bspVisData = (byte*)getLump(LUMP_VISIBILITY);
 	}
 
 	//load lightdata
-	bsp_lightdatasize = bsp_header->lumps[LUMP_LIGHTING].filelen;
-	bsp_lightdata = new byte[bsp_lightdatasize];
-	BSPCopyLump(bsp_header, LUMP_LIGHTING, bsp_lightdata, bsp_lightdatasize);
+	m_bspLightDataSize = m_pBSPHeader->lumps[LUMP_LIGHTING].filelen;
+	if (m_bspLightDataSize > 0)
+		m_bspLightData = (byte*)getLump(LUMP_LIGHTING);
 
-	num_miptexs = bsp_texdatasize ? ((BSPMiptexlump_t*)bsp_texdata)->nummiptex : 0;
+	m_bspMiptexsNum = m_bspTexDataSize ? ((BSPMiptexlump_t*)m_bspTexData)->nummiptex : 0;
 
 	//count leafs with PVS 
-	visLeafs = 0;
-	for (int i = 0; i < num_leafs; i++)
+	m_visLeafsNum = 0;
+	for ( unsigned int i = 0; i < m_bspLeafsNum; i++)
 	{
-		if (bsp_leafs[i].visofs >= 0)
-			visLeafs++;
+		if (m_bspLeafs[i].visofs >= 0)
+			m_visLeafsNum++;
 	}
-	visrow = (visLeafs + 7) >> 3;
+	m_visRow = ( m_visLeafsNum + 7 ) >> 3;
 
+	
 	//count triangles for vertex buffer
-	int tri_num = 0;
-	int vert_num = 0;
 	unsigned short tmp[1024];
+	unsigned int lightedFacesNum = 0;
 
-	for (int i = 0; i < num_faces; i++)
+	for (unsigned int i = 0; i <m_bspFacesNum; i++)
 	{
+		if (m_bspFaces[i].styles[0] == 0)
+			lightedFacesNum++;
+
 		//собираем неповторяющиеся индексы вершин по гряням
 		memset(tmp, 0xFFFF, sizeof(short) * 1024);
 
-		int vert_in_face = 0;
+		unsigned short vert_in_face = 0;
 
-		int last_edge = bsp_faces[i].firstedge + bsp_faces[i].numedges;
-		for (int j = bsp_faces[i].firstedge; j < last_edge; j++)
+		int last_edge = m_bspFaces[i].firstedge + m_bspFaces[i].numedges;
+		for (int j = m_bspFaces[i].firstedge; j < last_edge; j++)
 		{
 			bool isPresent = false;
-			for (int k = 0; k < bsp_faces[i].numedges; k++)
+			for (int k = 0; k < m_bspFaces[i].numedges; k++)
 			{
-				if (tmp[k] == bsp_edges[abs(bsp_surfedges[j])].v[0])
+				if (tmp[k] == m_bspEdges[abs(m_bspSurfedges[j])].v[0])
 				{
 					isPresent = true;
 				}
 			}
 			if (!isPresent)
 			{
-				tmp[vert_in_face] = bsp_edges[abs(bsp_surfedges[j])].v[0];
+				tmp[vert_in_face] = m_bspEdges[abs(m_bspSurfedges[j])].v[0];
 				vert_in_face++;
 			}
 			isPresent = false;
 
-			for (int k = 0; k < bsp_faces[i].numedges; k++)
+			for (int k = 0; k < m_bspFaces[i].numedges; k++)
 			{
-				if (tmp[k] == bsp_edges[abs(bsp_surfedges[j])].v[1])
+				if (tmp[k] == m_bspEdges[abs(m_bspSurfedges[j])].v[1])
 				{
 					isPresent = true;
 				}
 			}
 			if (!isPresent)
 			{
-				tmp[vert_in_face] = bsp_edges[abs(bsp_surfedges[j])].v[1];
+				tmp[vert_in_face] = m_bspEdges[abs(m_bspSurfedges[j])].v[1];
 				vert_in_face++;
 			}
 		}
 
-		tri_num += vert_in_face - 2;
-		vert_num += vert_in_face;
+		m_trisNum += vert_in_face - 2;
+		m_vertsNum += vert_in_face;
 	}
-	*/
+	
+	buildLightmapAtlas();
 
 	return true;
 }
@@ -231,6 +241,11 @@ GPRIMITIVETYPE gResourceBSPLevel::getPrimitiveType() const
 	return GPRIMITIVETYPE::GPT_TRIANGLELIST;
 }
 
+GVERTEXFORMAT gResourceBSPLevel::getVertexFormat() const
+{
+	return GVF_LEVEL;
+}
+
 unsigned int gResourceBSPLevel::getVertexStride() const
 {
 	return 0;
@@ -241,3 +256,29 @@ bool gResourceBSPLevel::isUseUserMemoryPointer()
 	return false;
 }
 
+bool gResourceBSPLevel::loadLightmaps()
+{
+	return true;
+}
+
+bool gResourceBSPLevel::buildLightmapAtlas( unsigned int lightedFacesNum )
+{
+	m_lMapTexAtlas.beginAtlas(lightedFacesNum);
+
+	return true;
+}
+
+
+void gResourceBSPLevel::freeMem()
+{
+	if (m_pBSPHeader)
+		delete[] ( (byte*)m_pBSPHeader );
+	m_pBSPHeader = 0;
+}
+
+void* gResourceBSPLevel::getLump(unsigned char lump) const
+{
+	if ( lump >= HEADER_LUMPS )
+		return 0;
+	return (((byte*)m_pBSPHeader) + m_pBSPHeader->lumps[lump].fileofs);
+}

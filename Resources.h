@@ -159,7 +159,6 @@ public:
 	void setVisible(bool visible);
 
 	const gAABB& getAABB();
-	virtual GVERTEXFORMAT getVertexFormat() const = 0;
 
 	virtual unsigned short getDefaultMaterialsNum() const;
 	virtual gMaterial* getDefaultMaterialByIndex(unsigned short subMeshIndex) const;
@@ -170,6 +169,7 @@ public:
 
 	virtual GPRIMITIVETYPE getPrimitiveType() const = 0;
 	virtual unsigned int getVertexStride() const = 0;
+	virtual GVERTEXFORMAT getVertexFormat() const = 0;
 
 	virtual bool isUseUserMemoryPointer() = 0;
 	
@@ -271,11 +271,12 @@ protected:
 };
 
 class gMaterialFactory;
+class gFileSystem;
 
 class gResourceManager
 {
 public:
-	gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* pMaterialFactory );
+	gResourceManager( LPDIRECT3DDEVICE9* pDev, gMaterialFactory* pMaterialFactory, gFileSystem* pFileSystem );
 	~gResourceManager();
 
 	void onRenderDeviceLost();
@@ -298,6 +299,7 @@ public:
 	const LPDIRECT3DDEVICE9 getDevice() const;
 	const gResource* getResource(const char* name, GRESOURCEGROUP group) const;
 	gMaterialFactory* getMaterialFactory() const;
+	gFileSystem* getFileSystem() const;
 	
 	bool destroyResource(const char* name, GRESOURCEGROUP group);
 	void unloadAllResources();
@@ -310,6 +312,7 @@ protected:
 	bool _loadWADFileHeader( const char* filename );
 
 	gMaterialFactory* m_pMatFactory;
+	gFileSystem* m_pFileSystem;
 	std::string m_wadFolder;
 	LPDIRECT3DDEVICE9* m_ppDev;
 	std::map < std::string, gResource* > m_resources[ GRESGROUP_NUM ];

@@ -206,7 +206,7 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 		m_vertsNum += vert_in_face;
 	}
 	
-	buildLightmapAtlas();
+	buildLightmapAtlas(lightedFacesNum);
 
 	return true;
 }

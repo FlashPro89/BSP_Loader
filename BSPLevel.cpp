@@ -168,7 +168,7 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	int e = 0;
 	float value = 0;
 
-	m_faceBounds = new gBSPFaceBounds[m_bspFacesNum]; // need zeroMem ?
+	m_faceBounds = new gBSPFaceBounds[lightedFacesNum]; // need zeroMem ?
 
 	for (unsigned int i = 0; i <m_bspFacesNum; i++)
 	{
@@ -178,11 +178,11 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 
 		if ( face->styles[0] == 0 )
 		{
-			m_faceBounds->baseIndexInAtlas = lightedFacesNum++;
+			m_faceBounds[lightedFacesNum].faceIndex = i;
 
 			// compute face bounds
-			m_faceBounds[i].mins[0] = 99999.f; m_faceBounds[i].mins[1] = 99999.f;
-			m_faceBounds[i].maxs[0] = -99999.f; m_faceBounds[i].maxs[1] = -99999.f;
+			m_faceBounds[lightedFacesNum].mins[0] = 99999.f; m_faceBounds[lightedFacesNum].mins[1] = 99999.f;
+			m_faceBounds[lightedFacesNum].maxs[0] = -99999.f; m_faceBounds[lightedFacesNum].maxs[1] = -99999.f;
 
 			for (int j = face->firstedge; j < face->numedges + face->firstedge; j++)
 			{
@@ -198,22 +198,24 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 						vertex->point[2] * texinfo->vecs[k][2] +
 						vertex->point[1] * texinfo->vecs[k][1] + texinfo->vecs[k][3];
 
-					if (value < m_faceBounds[i].mins[k])
-						m_faceBounds[i].mins[k] = value;
-					if (value > m_faceBounds[i].maxs[k])
-						m_faceBounds[i].maxs[k] = value;
+					if (value < m_faceBounds[lightedFacesNum].mins[k])
+						m_faceBounds[lightedFacesNum].mins[k] = value;
+					if (value > m_faceBounds[lightedFacesNum].maxs[k])
+						m_faceBounds[lightedFacesNum].maxs[k] = value;
 				}
 			}
 
 			for (int l = 0; l < 2; l++)
 			{
-				m_faceBounds[i].mins[l] = (float)floor(m_faceBounds[i].mins[l] / 16);
-				m_faceBounds[i].maxs[l] = (float)ceil(m_faceBounds[i].maxs[l] / 16);
+				m_faceBounds[lightedFacesNum].mins[l] = (float)floor(m_faceBounds[lightedFacesNum].mins[l] / 16);
+				m_faceBounds[lightedFacesNum].maxs[l] = (float)ceil(m_faceBounds[lightedFacesNum].maxs[l] / 16);
 
-				m_faceBounds[i].texsize[l] = (int)(m_faceBounds[i].maxs[l] - m_faceBounds[i].mins[l] + 1);
-				if (m_faceBounds[i].texsize[l] > 18) //17+1
+				m_faceBounds[lightedFacesNum].texsize[l] = (int)(m_faceBounds[lightedFacesNum].maxs[l] - m_faceBounds[lightedFacesNum].mins[l] + 1);
+				if (m_faceBounds[lightedFacesNum].texsize[l] > 18) //17+1
 					throw("Bad surface extents");
 			}
+
+			lightedFacesNum++;
 		}
 
 		//собираем неповторяющиеся индексы вершин по гряням
@@ -309,6 +311,23 @@ bool gResourceBSPLevel::isUseUserMemoryPointer()
 
 bool gResourceBSPLevel::loadLightmaps()
 {
+	gBMPFile atlasBMP;
+	atlasBMP.createBitMap( m_lMapTexAtlas.getAtlasWidth(), m_lMapTexAtlas.getAtlasHeight() );
+
+	for ( unsigned int i = 0; i < m_lMapTexAtlas.getTexturesNum(); i++ )
+	{
+		gBSPFaceBounds* pFaceBounds = (gBSPFaceBounds*)m_lMapTexAtlas.getUserDataBySortedIndex(i);
+		iwadcolor* pFaceLightBitmapData = (iwadcolor*)(m_bspLightData + m_bspFaces[pFaceBounds->faceIndex].lightofs);
+		gBMPFile faceLightBitmap;
+		faceLightBitmap.loadFromMemory(pFaceLightBitmapData, m_lMapTexAtlas.getTextureWidthBySortedOrder(i), m_lMapTexAtlas.getTextureHeightBySortedOrder(i));
+		atlasBMP.overlapOther( faceLightBitmap, m_lMapTexAtlas.getTextureRemapedXPosBySortedOrder(i),
+			m_lMapTexAtlas.getTextureRemapedYPosBySortedOrder(i) );
+	}
+
+	gFile* f = m_pResMgr->getFileSystem()->openFile( "new_atlas.bmp", true, true );
+	atlasBMP.saveToFile(f);
+	delete f;
+
 	return true;
 }
 
@@ -316,13 +335,17 @@ bool gResourceBSPLevel::buildLightmapAtlas( unsigned int lightedFacesNum )
 {
 	m_lMapTexAtlas.beginAtlas(lightedFacesNum);
 
-	for (unsigned int i = 0; i < m_bspFacesNum; i++)
+	for (unsigned int i = 0, j = 0; i < m_bspFacesNum; i++)
 	{
 		if (m_bspFaces[i].styles[0] == 0)
-			m_lMapTexAtlas.pushTexture( m_faceBounds[i].texsize[0], m_faceBounds[i].texsize[0] );
+		{
+			m_lMapTexAtlas.pushTexture(m_faceBounds[j].texsize[0], m_faceBounds[j].texsize[1], &m_faceBounds[j]);
+			j++;
+		}
 	}
 
-	m_lMapTexAtlas.mergeTexturesToAtlas( 4096, 4096 );
+	if (!m_lMapTexAtlas.mergeTexturesToAtlas(4096, 4096))
+		return false;
 
 	return loadLightmaps();
 

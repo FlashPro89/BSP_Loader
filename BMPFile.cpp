@@ -13,14 +13,14 @@ gBMPFile::gBMPFile()
 
 gBMPFile::~gBMPFile()
 {
-    if (m_bitmap)
+    if (m_bitmap && m_loadedFromMem == false)
         delete[] m_bitmap;
 }
 
 //24bit
 void gBMPFile::createBitMap(unsigned int width, unsigned int height, unsigned char fillingByte )
 {
-    if (m_bitmap)
+    if ( (m_bitmap) && (m_loadedFromMem == false ) )
         delete[] m_bitmap;
     m_bitmap = new tagRGBTRIPLE[width * height];
     memset( m_bitmap, fillingByte, width * height * sizeof(tagRGBTRIPLE) );
@@ -52,6 +52,8 @@ bool gBMPFile::loadFromFile( gFile* file, bool useVerticalFlip )
 
         m_width = inf.biWidth; m_height = inf.biHeight;
         createBitMap(m_width, m_height);
+
+        m_loadedFromMem = false;
 
         bitmap = new unsigned char[m_width * m_height];
         file->seek(GFS_SET, header.bfOffBits);
@@ -88,15 +90,13 @@ bool gBMPFile::loadFromFile( gFile* file, bool useVerticalFlip )
 }
 
 //use user pointer to bitmap 24bit
-void loadFromMemory(void* src, unsigned int width, unsigned int height)
+void gBMPFile::loadFromMemory(void* src, unsigned int width, unsigned int height)
 {
-    if (!m_bitmap)
-        return false;
-
-    errno_t err = memcpy_s(m_bitmap, m_width * m_height * sizeof(tagRGBTRIPLE), src, 
-        m_width * m_height * sizeof(tagRGBTRIPLE));
-
-    return err != 0;
+    m_bitmap = (tagRGBTRIPLE*) src;
+    m_width = width;
+    m_height = height;
+    m_loadedFromMem = true;
+    return;
 }
 
 

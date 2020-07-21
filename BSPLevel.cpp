@@ -168,7 +168,7 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	int e = 0;
 	float value = 0;
 
-	m_faceBounds = new gBSPFaceBounds[lightedFacesNum]; // need zeroMem ?
+	m_faceBounds = new gBSPFaceBounds[m_bspFacesNum]; // need zeroMem ?
 
 	for (unsigned int i = 0; i <m_bspFacesNum; i++)
 	{
@@ -178,11 +178,12 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 
 		if ( face->styles[0] == 0 )
 		{
-			m_faceBounds[lightedFacesNum].faceIndex = i;
+			gBSPFaceBounds* pFaceBounds = &m_faceBounds[lightedFacesNum];
+			pFaceBounds->faceIndex = i;
 
 			// compute face bounds
-			m_faceBounds[lightedFacesNum].mins[0] = 99999.f; m_faceBounds[lightedFacesNum].mins[1] = 99999.f;
-			m_faceBounds[lightedFacesNum].maxs[0] = -99999.f; m_faceBounds[lightedFacesNum].maxs[1] = -99999.f;
+			pFaceBounds->mins[0] = 99999.f; pFaceBounds->mins[1] = 99999.f;
+			pFaceBounds->maxs[0] = -99999.f; pFaceBounds->maxs[1] = -99999.f;
 
 			for (int j = face->firstedge; j < face->numedges + face->firstedge; j++)
 			{
@@ -198,20 +199,20 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 						vertex->point[2] * texinfo->vecs[k][2] +
 						vertex->point[1] * texinfo->vecs[k][1] + texinfo->vecs[k][3];
 
-					if (value < m_faceBounds[lightedFacesNum].mins[k])
-						m_faceBounds[lightedFacesNum].mins[k] = value;
-					if (value > m_faceBounds[lightedFacesNum].maxs[k])
-						m_faceBounds[lightedFacesNum].maxs[k] = value;
+					if (value < pFaceBounds->mins[k])
+						pFaceBounds->mins[k] = value;
+					if (value > pFaceBounds->maxs[k])
+						pFaceBounds->maxs[k] = value;
 				}
 			}
 
 			for (int l = 0; l < 2; l++)
 			{
-				m_faceBounds[lightedFacesNum].mins[l] = (float)floor(m_faceBounds[lightedFacesNum].mins[l] / 16);
-				m_faceBounds[lightedFacesNum].maxs[l] = (float)ceil(m_faceBounds[lightedFacesNum].maxs[l] / 16);
+				pFaceBounds->mins[l] = (float)floor(pFaceBounds->mins[l] / 16);
+				pFaceBounds->maxs[l] = (float)ceil(pFaceBounds->maxs[l] / 16);
 
-				m_faceBounds[lightedFacesNum].texsize[l] = (int)(m_faceBounds[lightedFacesNum].maxs[l] - m_faceBounds[lightedFacesNum].mins[l] + 1);
-				if (m_faceBounds[lightedFacesNum].texsize[l] > 18) //17+1
+				pFaceBounds->texsize[l] = (int)(pFaceBounds->maxs[l] - pFaceBounds->mins[l] + 1);
+				if (pFaceBounds->texsize[l] > 18) //17+1
 					throw("Bad surface extents");
 			}
 
@@ -319,7 +320,8 @@ bool gResourceBSPLevel::loadLightmaps()
 		gBSPFaceBounds* pFaceBounds = (gBSPFaceBounds*)m_lMapTexAtlas.getUserDataBySortedIndex(i);
 		iwadcolor* pFaceLightBitmapData = (iwadcolor*)(m_bspLightData + m_bspFaces[pFaceBounds->faceIndex].lightofs);
 		gBMPFile faceLightBitmap;
-		faceLightBitmap.loadFromMemory(pFaceLightBitmapData, m_lMapTexAtlas.getTextureWidthBySortedOrder(i), m_lMapTexAtlas.getTextureHeightBySortedOrder(i));
+		faceLightBitmap.loadFromMemory(pFaceLightBitmapData, m_lMapTexAtlas.getTextureWidthBySortedOrder(i), 
+			m_lMapTexAtlas.getTextureHeightBySortedOrder(i));
 		atlasBMP.overlapOther( faceLightBitmap, m_lMapTexAtlas.getTextureRemapedXPosBySortedOrder(i),
 			m_lMapTexAtlas.getTextureRemapedYPosBySortedOrder(i) );
 	}
@@ -356,7 +358,7 @@ bool gResourceBSPLevel::buildLightmapAtlas( unsigned int lightedFacesNum )
 void gResourceBSPLevel::freeMem()
 {
 	if (m_faceBounds)
-		delete m_faceBounds;
+		delete[] m_faceBounds;
 	m_faceBounds = 0;
 
 	if (m_pBSPHeader)

@@ -1,6 +1,7 @@
 #include "BSPLevel.h"
 #include "FileSystem.h"
 #include "BSPFile.h"
+#include "BMPFile.h"
 
 //-----------------------------------------------
 //
@@ -50,6 +51,7 @@ gResourceBSPLevel::gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group
 
 	m_trisNum = 0;
 	m_vertsNum = 0;
+	m_faceBounds = 0;
 }
 
 gResourceBSPLevel::~gResourceBSPLevel()
@@ -59,7 +61,8 @@ gResourceBSPLevel::~gResourceBSPLevel()
 
 bool gResourceBSPLevel::preload() //загрузка статических данных
 {
-	
+	freeMem();
+
 	if (!m_pResMgr->getFileSystem()->isFileExist(m_fileName.c_str() ) )
 		return false;
 
@@ -159,11 +162,59 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	//count triangles for vertex buffer
 	unsigned short tmp[1024];
 	unsigned int lightedFacesNum = 0;
+	BSPFace_t* face = 0;
+	BSPVertex_t* vertex = 0;
+	BSPTexinfo_t* texinfo = 0;;
+	int e = 0;
+	float value = 0;
+
+	m_faceBounds = new gBSPFaceBounds[m_bspFacesNum]; // need zeroMem ?
 
 	for (unsigned int i = 0; i <m_bspFacesNum; i++)
 	{
-		if (m_bspFaces[i].styles[0] == 0)
-			lightedFacesNum++;
+		face = &m_bspFaces[i];
+		texinfo = &m_bspTexinfs[face->texinfo];
+
+
+		if ( face->styles[0] == 0 )
+		{
+			m_faceBounds->baseIndexInAtlas = lightedFacesNum++;
+
+			// compute face bounds
+			m_faceBounds[i].mins[0] = 99999.f; m_faceBounds[i].mins[1] = 99999.f;
+			m_faceBounds[i].maxs[0] = -99999.f; m_faceBounds[i].maxs[1] = -99999.f;
+
+			for (int j = face->firstedge; j < face->numedges + face->firstedge; j++)
+			{
+				e = m_bspSurfedges[j];
+				if (e >= 0)
+					vertex = m_bspVerts + m_bspEdges[e].v[0];
+				else
+					vertex = m_bspVerts + m_bspEdges[-e].v[1];
+
+				for (int k = 0; k < 2; k++)
+				{
+					value = vertex->point[0] * texinfo->vecs[k][0] +
+						vertex->point[2] * texinfo->vecs[k][2] +
+						vertex->point[1] * texinfo->vecs[k][1] + texinfo->vecs[k][3];
+
+					if (value < m_faceBounds[i].mins[k])
+						m_faceBounds[i].mins[k] = value;
+					if (value > m_faceBounds[i].maxs[k])
+						m_faceBounds[i].maxs[k] = value;
+				}
+			}
+
+			for (int l = 0; l < 2; l++)
+			{
+				m_faceBounds[i].mins[l] = (float)floor(m_faceBounds[i].mins[l] / 16);
+				m_faceBounds[i].maxs[l] = (float)ceil(m_faceBounds[i].maxs[l] / 16);
+
+				m_faceBounds[i].texsize[l] = (int)(m_faceBounds[i].maxs[l] - m_faceBounds[i].mins[l] + 1);
+				if (m_faceBounds[i].texsize[l] > 18) //17+1
+					throw("Bad surface extents");
+			}
+		}
 
 		//собираем неповторяющиеся индексы вершин по гряням
 		memset(tmp, 0xFFFF, sizeof(short) * 1024);
@@ -265,12 +316,26 @@ bool gResourceBSPLevel::buildLightmapAtlas( unsigned int lightedFacesNum )
 {
 	m_lMapTexAtlas.beginAtlas(lightedFacesNum);
 
+	for (unsigned int i = 0; i < m_bspFacesNum; i++)
+	{
+		if (m_bspFaces[i].styles[0] == 0)
+			m_lMapTexAtlas.pushTexture( m_faceBounds[i].texsize[0], m_faceBounds[i].texsize[0] );
+	}
+
+	m_lMapTexAtlas.mergeTexturesToAtlas( 4096, 4096 );
+
+	return loadLightmaps();
+
 	return true;
 }
 
 
 void gResourceBSPLevel::freeMem()
 {
+	if (m_faceBounds)
+		delete m_faceBounds;
+	m_faceBounds = 0;
+
 	if (m_pBSPHeader)
 		delete[] ( (byte*)m_pBSPHeader );
 	m_pBSPHeader = 0;

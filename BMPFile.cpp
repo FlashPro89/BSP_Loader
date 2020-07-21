@@ -8,6 +8,7 @@ gBMPFile::gBMPFile()
     m_width = 0;
     m_height = 0;
     m_bitmap = 0;
+    m_loadedFromMem = false;
 }
 
 gBMPFile::~gBMPFile()
@@ -17,14 +18,15 @@ gBMPFile::~gBMPFile()
 }
 
 //24bit
-void gBMPFile::createBitMap(unsigned int width, unsigned int height)
+void gBMPFile::createBitMap(unsigned int width, unsigned int height, unsigned char fillingByte )
 {
     if (m_bitmap)
         delete[] m_bitmap;
     m_bitmap = new tagRGBTRIPLE[width * height];
-    memset( m_bitmap, 0, width * height * sizeof(tagRGBTRIPLE) );
+    memset( m_bitmap, fillingByte, width * height * sizeof(tagRGBTRIPLE) );
     m_width = width;
     m_height = height;
+    m_loadedFromMem = false;
 }
 
 //load 8bit indexed bitmap and convert to 24bit or simply load 24bit
@@ -43,7 +45,7 @@ bool gBMPFile::loadFromFile( gFile* file, bool useVerticalFlip )
     if (!(sz == sizeof(tagBITMAPINFOHEADER)))
         return false;
 
-    if (inf.biBitCount = 8)
+    if (inf.biBitCount == 8)
     {
         sz = file->read(palete, inf.biClrUsed * sizeof(tagRGBQUAD));
         //sz = file->read(palete, 0xFF * sizeof(tagRGBQUAD));
@@ -84,6 +86,19 @@ bool gBMPFile::loadFromFile( gFile* file, bool useVerticalFlip )
 
     return true;
 }
+
+//use user pointer to bitmap 24bit
+void loadFromMemory(void* src, unsigned int width, unsigned int height)
+{
+    if (!m_bitmap)
+        return false;
+
+    errno_t err = memcpy_s(m_bitmap, m_width * m_height * sizeof(tagRGBTRIPLE), src, 
+        m_width * m_height * sizeof(tagRGBTRIPLE));
+
+    return err != 0;
+}
+
 
 //save 24bit image
 bool gBMPFile::saveToFile(gFile* file) const

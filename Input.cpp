@@ -1,5 +1,8 @@
 #include "Input.h"
 
+#pragma comment( lib , "dinput8.lib" )
+#pragma comment( lib , "dxguid.lib" )
+
 #pragma warning( disable : 4800 ) // 'BYTE' : forcing value to bool 'true' or 'false' (performance warning)
 
 gInput::gInput( HWND handle )

@@ -18,6 +18,15 @@ struct BSPLeaf_t;
 struct BSPClipnode_t;
 
 
+struct gBSPFaceBounds
+{
+	gBSPFaceBounds() { mins[0] = mins[1] = maxs[0] = maxs[1] = 0.f;  texsize[0] = texsize[1] = baseIndexInAtlas = 0; }
+	float mins[2];
+	float maxs[2];
+	unsigned char texsize[2];
+	unsigned int baseIndexInAtlas;
+};
+
 class gResourceBSPLevel : public gRenderable
 {
 public:
@@ -90,6 +99,7 @@ protected:
 
 	//  Lightmaps part -----------------------------------------
 	gTextureAtlas m_lMapTexAtlas;
+	gBSPFaceBounds* m_faceBounds;
 
 	//	Rendering part -----------------------------------------
 	unsigned int m_trisNum;

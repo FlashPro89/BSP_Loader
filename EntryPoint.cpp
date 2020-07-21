@@ -16,11 +16,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#pragma comment( lib , "d3d9.lib" )
-#pragma comment( lib , "d3dx9.lib" )
-#pragma comment( lib , "dinput8.lib" )
-#pragma comment( lib , "dxguid.lib" )
-
 LPDIRECT3DVERTEXBUFFER9 m_VB = 0;
 LPDIRECT3DINDEXBUFFER9 m_IB = 0;
 LPDIRECT3DTEXTURE9 pTexLightsAtlas = 0;

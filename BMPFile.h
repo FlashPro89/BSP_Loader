@@ -6,15 +6,16 @@
 class gFile;
 struct tagRGBTRIPLE;
 
-//используем в работе только 32бит режим
+//используем в работе только 24бит режим
 class gBMPFile
 {
 public:
     gBMPFile();
     ~gBMPFile();
 
-    void createBitMap( unsigned int width, unsigned int height );
+    void createBitMap( unsigned int width, unsigned int height, unsigned char fillingByte = 0xFF );
     bool loadFromFile( gFile* file, bool useVerticalFlip = true );
+    void loadFromMemory( void* src, unsigned int width, unsigned int height );
     bool saveToFile( gFile* file ) const;
 
     unsigned int getWidth() const;
@@ -32,6 +33,7 @@ protected:
     unsigned int m_width;
     unsigned int m_height;
     tagRGBTRIPLE* m_bitmap;
+    bool m_loadedFromMem;
 };
 
 #endif

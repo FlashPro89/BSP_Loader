@@ -182,6 +182,24 @@ void gBMPFile::verticalFlip()
     delete[] tmp;
 }
 
+void gBMPFile::swapRGBtoBGR()
+{
+    if (!m_bitmap || !m_width || !m_height)
+        return;
+
+    unsigned char tmp;
+    for (unsigned int x = 0, index = 0; x < m_width; x++)
+    {
+        for (unsigned y = 0; y < m_height; y++)
+        {
+            index = y * m_width + x;
+            tmp = m_bitmap[index].rgbtBlue;
+            m_bitmap[index].rgbtBlue = m_bitmap[index].rgbtRed;
+            m_bitmap[index].rgbtRed = tmp;
+        }
+    }
+}
+
 const tagRGBTRIPLE* gBMPFile::getBitMap() const
 {
     return m_bitmap;

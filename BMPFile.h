@@ -22,6 +22,7 @@ public:
     unsigned int getHeight() const;
 
     void verticalFlip();
+    void swapRGBtoBGR();
 
     const tagRGBTRIPLE* getBitMap() const;
     bool overlapOther( const gBMPFile& other, unsigned int inPosX, unsigned int inPosY );

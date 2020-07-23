@@ -3,6 +3,19 @@
 #include "BSPFile.h"
 #include "BMPFile.h"
 
+#define GBSP_FVF D3DUSAGE_WRITEONLY, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2
+
+typedef struct
+{
+	float x, y, z;
+	float nx, ny, nz;
+	float tu, tv;
+	float tu2, tv2;
+	//	DWORD color;
+}gBSPVertex;
+
+typedef unsigned __int16  gBSPIndex;
+
 //-----------------------------------------------
 //
 //	CLASS: gResourceBSPLevel
@@ -51,6 +64,8 @@ gResourceBSPLevel::gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group
 
 	m_trisNum = 0;
 	m_vertsNum = 0;
+	m_pVB = 0;
+	m_pIB = 0;
 	m_faceBounds = 0;
 }
 
@@ -175,10 +190,14 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 		face = &m_bspFaces[i];
 		texinfo = &m_bspTexinfs[face->texinfo];
 
+		if (i == 121)
+		{
+			i++; i--;
+		}
 
 		if ( face->styles[0] == 0 )
 		{
-			gBSPFaceBounds* pFaceBounds = &m_faceBounds[lightedFacesNum];
+			gBSPFaceBounds* pFaceBounds = &m_faceBounds[i];
 			pFaceBounds->faceIndex = i;
 
 			// compute face bounds
@@ -260,19 +279,57 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 		m_vertsNum += vert_in_face;
 	}
 	
-	buildLightmapAtlas(lightedFacesNum);
+	loadLightmaps( lightedFacesNum );
 
 	return true;
 }
 
 bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 {
+	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
+
+	/////////////////////////////////////
+	// create DX buffers
+	/////////////////////////////////////	
+
+	//create vertex buffer
+	HRESULT hr = pD3DDev9->CreateVertexBuffer(sizeof(gBSPVertex) * m_vertsNum, GBSP_FVF, D3DPOOL_DEFAULT, &m_pVB, 0);
+	if (FAILED(hr))
+		throw("ќшибка при создании буффера вершин!");
+
+	//create index buffer
+	hr = pD3DDev9->CreateIndexBuffer(sizeof(short) *m_trisNum * 3, D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &m_pIB, 0);
+	if (FAILED(hr))
+		throw("ќшибка при создании буффера индексов!");
+
+	gBSPVertex* p_vdata = 0;
+	gBSPIndex* p_idata = 0;
+
+	hr = m_pVB->Lock(0, sizeof(gBSPVertex) * m_vertsNum, (void**)&p_vdata, 0);
+	if (FAILED(hr))
+		throw("ќшибка при блокировке вершинного буффера!");
+
+	hr = m_pIB->Lock(0, sizeof(short) * m_trisNum * 3, (void**)&p_idata, 0);
+	if (FAILED(hr))
+		throw("ќшибка при блокировке индексного буффера!");
+
+	// DO SOMETHING
+
+	m_pVB->Unlock();
+	m_pIB->Unlock();
+
 	return true;
 }
 
 void gResourceBSPLevel::unload() //данные, загруженые preload() в этой функции не измен€ютс€
 {
-	
+	if (m_pVB)
+		m_pVB->Release();
+	if (m_pIB)
+		m_pIB->Release();
+
+	m_pVB = 0;
+	m_pIB = 0;
 }
 
 void gResourceBSPLevel::onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const
@@ -302,7 +359,7 @@ GVERTEXFORMAT gResourceBSPLevel::getVertexFormat() const
 
 unsigned int gResourceBSPLevel::getVertexStride() const
 {
-	return 0;
+	return sizeof(gBSPVertex);
 }
 
 bool gResourceBSPLevel::isUseUserMemoryPointer()
@@ -310,46 +367,55 @@ bool gResourceBSPLevel::isUseUserMemoryPointer()
 	return false;
 }
 
-bool gResourceBSPLevel::loadLightmaps()
+bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 {
-	gBMPFile atlasBMP;
-	atlasBMP.createBitMap( m_lMapTexAtlas.getAtlasWidth(), m_lMapTexAtlas.getAtlasHeight() );
+	gTextureAtlas mapTexAtlas;
+	mapTexAtlas.beginAtlas(lightedFacesNum);
 
-	for ( unsigned int i = 0; i < m_lMapTexAtlas.getTexturesNum(); i++ )
-	{
-		gBSPFaceBounds* pFaceBounds = (gBSPFaceBounds*)m_lMapTexAtlas.getUserDataBySortedIndex(i);
-		iwadcolor* pFaceLightBitmapData = (iwadcolor*)(m_bspLightData + m_bspFaces[pFaceBounds->faceIndex].lightofs);
-		gBMPFile faceLightBitmap;
-		faceLightBitmap.loadFromMemory(pFaceLightBitmapData, m_lMapTexAtlas.getTextureWidthBySortedOrder(i), 
-			m_lMapTexAtlas.getTextureHeightBySortedOrder(i));
-		atlasBMP.overlapOther( faceLightBitmap, m_lMapTexAtlas.getTextureRemapedXPosBySortedOrder(i),
-			m_lMapTexAtlas.getTextureRemapedYPosBySortedOrder(i) );
-	}
-
-	gFile* f = m_pResMgr->getFileSystem()->openFile( "new_atlas.bmp", true, true );
-	atlasBMP.saveToFile(f);
-	delete f;
-
-	return true;
-}
-
-bool gResourceBSPLevel::buildLightmapAtlas( unsigned int lightedFacesNum )
-{
-	m_lMapTexAtlas.beginAtlas(lightedFacesNum);
-
-	for (unsigned int i = 0, j = 0; i < m_bspFacesNum; i++)
+	for (unsigned int i = 0; i < m_bspFacesNum; i++)
 	{
 		if (m_bspFaces[i].styles[0] == 0)
 		{
-			m_lMapTexAtlas.pushTexture(m_faceBounds[j].texsize[0], m_faceBounds[j].texsize[1], &m_faceBounds[j]);
-			j++;
+			mapTexAtlas.pushTexture(m_faceBounds[i].texsize[0], m_faceBounds[i].texsize[1], &m_faceBounds[i]);
+
 		}
 	}
 
-	if (!m_lMapTexAtlas.mergeTexturesToAtlas(4096, 4096))
+	if (!mapTexAtlas.mergeTexturesToAtlas(4096, 4096))
 		return false;
 
-	return loadLightmaps();
+	gBMPFile atlasBMP;
+	atlasBMP.createBitMap( mapTexAtlas.getAtlasWidth(), mapTexAtlas.getAtlasHeight() );
+
+	//FILE* fd = 0;
+	//errno_t err = fopen_s(&fd, "out_bsplevel_order.txt", "wt");
+
+	for ( unsigned int i = 0; i < mapTexAtlas.getTexturesNum(); i++ )
+	{
+		gBSPFaceBounds* pFaceBounds = (gBSPFaceBounds*)mapTexAtlas.getUserDataBySortedIndex(i);
+		if (pFaceBounds)
+		{
+			iwadcolor* pFaceLightBitmapData = (iwadcolor*)(m_bspLightData + m_bspFaces[pFaceBounds->faceIndex].lightofs);
+			gBMPFile faceLightBitmap;
+
+			pFaceBounds->remapped[0] = mapTexAtlas.getTextureRemapedXPosBySortedOrder(i);
+			pFaceBounds->remapped[1] = mapTexAtlas.getTextureRemapedYPosBySortedOrder(i);
+
+			faceLightBitmap.loadFromMemory( pFaceLightBitmapData, pFaceBounds->texsize[0], pFaceBounds->texsize[1] );
+			atlasBMP.overlapOther( faceLightBitmap, pFaceBounds->remapped[0], pFaceBounds->remapped[1] );
+			
+
+			//fprintf(fd, "atlas ind: %i   face index: %i   lightofs: %i   w:%i h%i\n", i, pFaceBounds->faceIndex, 
+			//	m_bspFaces[pFaceBounds->faceIndex].lightofs, pFaceBounds->texsize[0], pFaceBounds->texsize[1]);
+		}
+	}
+
+	//fclose(fd);
+
+	gFile* f = m_pResMgr->getFileSystem()->openFile( "new_atlas.bmp", true, true );
+	atlasBMP.swapRGBtoBGR();
+	atlasBMP.saveToFile(f);
+	delete f;
 
 	return true;
 }
@@ -357,6 +423,14 @@ bool gResourceBSPLevel::buildLightmapAtlas( unsigned int lightedFacesNum )
 
 void gResourceBSPLevel::freeMem()
 {
+	if (m_pVB)
+		m_pVB->Release();
+	if (m_pIB)
+		m_pIB->Release();
+
+	m_pVB = 0; 
+	m_pIB = 0;
+
 	if (m_faceBounds)
 		delete[] m_faceBounds;
 	m_faceBounds = 0;

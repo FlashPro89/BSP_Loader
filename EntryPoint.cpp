@@ -229,6 +229,10 @@ void createLightmapsAtlas(unsigned int width, unsigned int height, unsigned char
 
 	unsigned int w = 0, h = 0, remappedX = 0, remappedY = 0;
 
+	//debug
+	//FILE* f = 0;
+	//errno_t err = fopen_s(&f, "out_ep_bsp_order.txt", "wt");
+
 	for (unsigned int i = 0; i < numLightedFaces; i++)
 	{
 		w = atlas.getTextureWidthBySortedOrder(i);
@@ -242,6 +246,9 @@ void createLightmapsAtlas(unsigned int width, unsigned int height, unsigned char
 		//load lightmap to DX texture
 		icolor* ptr_dx = 0;
 		iwadcolor* ptr_ld = (iwadcolor*)(bsp_lightdata + bsp_faces[atlas.getTextureBaseIndexInSortedOrder(i)].lightofs);
+
+		//fprintf(f, "atlas ind: %i   face index: %i   lightofs: %i\n", i, atlas.getTextureBaseIndexInSortedOrder(i), bsp_faces[atlas.getTextureBaseIndexInSortedOrder(i)].lightofs);
+
 
 		for (unsigned int y = remappedY; y < h + remappedY; y++)
 		{
@@ -257,6 +264,7 @@ void createLightmapsAtlas(unsigned int width, unsigned int height, unsigned char
 			}
 		}
 	}
+	//fclose(f);
 
 	hr = pTexLightsAtlas->UnlockRect(0);
 	if (FAILED(hr))

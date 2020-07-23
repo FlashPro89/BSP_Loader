@@ -20,10 +20,11 @@ struct BSPClipnode_t;
 
 struct gBSPFaceBounds
 {
-	gBSPFaceBounds() { mins[0] = mins[1] = maxs[0] = maxs[1] = 0.f;  texsize[0] = texsize[1] = 0; faceIndex = -1; }
+	gBSPFaceBounds() { mins[0] = mins[1] = maxs[0] = maxs[1] = 0.f;  texsize[0] = texsize[1] = remapped[0] = remapped[1] = 0; faceIndex = -1; }
 	float mins[2];
 	float maxs[2];
 	unsigned char texsize[2];
+	unsigned short remapped[2];
 	int faceIndex;
 };
 
@@ -56,8 +57,7 @@ protected:
 	void freeMem();
 	void* getLump(unsigned char lump) const;
 
-	bool loadLightmaps();
-	bool buildLightmapAtlas( unsigned int lightedFacesNum );
+	bool loadLightmaps( unsigned int lightedFacesNum );
 
 	//	BSP format part -----------------------------------------
 	BSPMapHeader_t* m_pBSPHeader;
@@ -98,12 +98,13 @@ protected:
 	int m_visRow;
 
 	//  Lightmaps part -----------------------------------------
-	gTextureAtlas m_lMapTexAtlas;
 	gBSPFaceBounds* m_faceBounds;
 
 	//	Rendering part -----------------------------------------
 	unsigned int m_trisNum;
 	unsigned int m_vertsNum;
+	IDirect3DVertexBuffer9* m_pVB;
+	IDirect3DIndexBuffer9* m_pIB;
 };
 
 #endif

@@ -44,13 +44,12 @@ bool gTextureAtlas::pushTexture( unsigned short width, unsigned short height, vo
 	if ( (m_curPosInArray >= m_texturesNum) || (m_pSortableTextureSizes == 0) )
 		return false;
 
-	m_pSortableTextureSizes[m_curPosInArray].baseIndex = m_curPosInArray;
 	m_pSortableTextureSizes[m_curPosInArray].width = width;
 	m_pSortableTextureSizes[m_curPosInArray].height = height;
 	m_pSortableTextureSizes[m_curPosInArray].userData = userData;
 	m_pSortableTextureSizes[m_curPosInArray].key = (height << 16) | width;
+	m_pSortableTextureSizes[m_curPosInArray].baseIndex = m_curPosInArray++;
 
-	m_curPosInArray++;
 	return true;
 }
 

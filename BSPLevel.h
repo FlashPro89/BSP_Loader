@@ -28,6 +28,17 @@ struct gBSPFaceBounds
 	int faceIndex;
 };
 
+class gMaterial;
+struct gBSPRendingFace
+{
+	gBSPRendingFace() {	start_indx = num_prim = miptex = 0; pMaterial = 0; needDraw = false;}
+	int start_indx;
+	int num_prim;
+	int miptex;
+	gMatrial* pMaterial;
+	bool needDraw;
+};
+
 class gResourceBSPLevel : public gRenderable
 {
 public:
@@ -99,12 +110,15 @@ protected:
 
 	//  Lightmaps part -----------------------------------------
 	gBSPFaceBounds* m_faceBounds;
+	unsigned short m_lMapAtlasW;
+	unsigned short m_lMapAtlasH;
 
 	//	Rendering part -----------------------------------------
 	unsigned int m_trisNum;
 	unsigned int m_vertsNum;
 	IDirect3DVertexBuffer9* m_pVB;
 	IDirect3DIndexBuffer9* m_pIB;
+	gBSPRendingFace* m_rFaces;
 };
 
 #endif

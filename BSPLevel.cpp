@@ -2,6 +2,7 @@
 #include "FileSystem.h"
 #include "BSPFile.h"
 #include "BMPFile.h"
+#include "Materials.h"
 
 #define GBSP_FVF D3DUSAGE_WRITEONLY, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2
 
@@ -67,6 +68,10 @@ gResourceBSPLevel::gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group
 	m_pVB = 0;
 	m_pIB = 0;
 	m_faceBounds = 0;
+	m_rFaces = 0;
+
+	m_lMapAtlasW = 0;
+	m_lMapAtlasH = 0;
 }
 
 gResourceBSPLevel::~gResourceBSPLevel()
@@ -313,7 +318,220 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 	if (FAILED(hr))
 		throw("ќшибка при блокировке индексного буффера!");
 
-	// DO SOMETHING
+	gBSPFaceBounds* pBounds;
+	BSPTexinfo_t* pTexinfo;
+	BSPVertex_t* pVertex;
+	BSPFace_t* pFace;
+	float nx, ny, nz;
+	float tex_center[2], tex_bounds[2];
+	int pos_in_vbuffer = 0;
+	int pos_in_ibuffer = 0;
+	int first_idx = 0;
+	unsigned short tmp[1024];
+	m_rFaces = new gBSPRendingFace[m_bspFacesNum];
+
+	for (int i = 0; i < m_bspFacesNum; i++)
+	{
+		pBounds = &m_faceBounds[i];
+		pTexinfo = &m_bspTexinfs[m_bspFaces[i].texinfo];
+		pFace = &m_bspFaces[i];
+
+		////////////////////////////////////////////////
+		//индексируем вершины на фейсе
+		////////////////////////////////////////////////
+
+		//собираем неповтор€ющиес€ индексы вершин по гр€н€м
+		memset(tmp, 0xFFFF, sizeof(short) * 1024);
+
+		int vert_in_face = 0;
+
+		int last_edge = m_bspFaces[i].firstedge + m_bspFaces[i].numedges;
+		for (int j = m_bspFaces[i].firstedge; j < last_edge; j++)
+		{
+			if (m_bspSurfedges[j] > 0)
+			{
+				bool isPresent = false;
+				for (int k = 0; k < m_bspFaces[i].numedges; k++)
+				{
+					if (tmp[k] == m_bspEdges[abs(m_bspSurfedges[j])].v[0])
+					{
+						isPresent = true;
+					}
+				}
+				if (!isPresent)
+				{
+					tmp[vert_in_face] = m_bspEdges[abs(m_bspSurfedges[j])].v[0];
+					vert_in_face++;
+				}
+				isPresent = false;
+
+				for (int k = 0; k < m_bspFaces[i].numedges; k++)
+				{
+					if (tmp[k] == m_bspEdges[abs(m_bspSurfedges[j])].v[1])
+					{
+						isPresent = true;
+					}
+				}
+				if (!isPresent)
+				{
+					tmp[vert_in_face] = m_bspEdges[abs(m_bspSurfedges[j])].v[1];
+					vert_in_face++;
+				}
+			}
+			else
+			{
+				bool isPresent = false;
+				for (int k = 0; k < m_bspFaces[i].numedges; k++)
+				{
+					if (tmp[k] == m_bspEdges[abs(m_bspSurfedges[j])].v[1])
+					{
+						isPresent = true;
+					}
+				}
+				if (!isPresent)
+				{
+					tmp[vert_in_face] = m_bspEdges[abs(m_bspSurfedges[j])].v[1];
+					vert_in_face++;
+				}
+				isPresent = false;
+
+				for (int k = 0; k < m_bspFaces[i].numedges; k++)
+				{
+					if (tmp[k] == m_bspEdges[abs(m_bspSurfedges[j])].v[0])
+					{
+						isPresent = true;
+					}
+				}
+				if (!isPresent)
+				{
+					tmp[vert_in_face] = m_bspEdges[abs(m_bspSurfedges[j])].v[0];
+					vert_in_face++;
+				}
+			}
+		}
+
+		/////////////////////////////////////////
+		//заполн€ем вершинный буфер
+		/////////////////////////////////////////
+
+		if (m_bspFaces[i].side != 0)
+		{
+			nx = -m_bspPlanes[m_bspFaces[i].planenum].normal[0];
+			ny = -m_bspPlanes[m_bspFaces[i].planenum].normal[2];
+			nz = -m_bspPlanes[m_bspFaces[i].planenum].normal[1];
+		}
+		else
+		{
+			nx = m_bspPlanes[m_bspFaces[i].planenum].normal[0];
+			ny = m_bspPlanes[m_bspFaces[i].planenum].normal[2];  ///swap normal z<->y
+			nz = m_bspPlanes[m_bspFaces[i].planenum].normal[1];
+		}
+
+		int pre_pos_in_vbuffer = pos_in_vbuffer;
+		for (int j = 0; j < vert_in_face; j++)
+		{
+			int g = pos_in_vbuffer;
+
+			//p_vdata[g].color = 0xFFFFFFFF;
+			p_vdata[g].x = m_bspVerts[tmp[j]].point[0];
+			p_vdata[g].y = m_bspVerts[tmp[j]].point[2]; // swap y <-> z
+			p_vdata[g].z = m_bspVerts[tmp[j]].point[1];
+
+			p_vdata[g].nx = nx;
+			p_vdata[g].ny = ny;
+			p_vdata[g].nz = nz;
+
+			//u = tv00 * x + tv01 * z + tv02 * y + tv03
+			//v = tv10 * x + tv11 * z + tv12 * y + tv13
+
+
+			//NEW:
+			p_vdata[g].tu = (
+				pTexinfo->vecs[0][0] * m_bspVerts[tmp[j]].point[0] +
+				pTexinfo->vecs[0][2] * m_bspVerts[tmp[j]].point[2] +
+				pTexinfo->vecs[0][1] * m_bspVerts[tmp[j]].point[1] +
+				pTexinfo->vecs[0][3]);
+			p_vdata[g].tv = (
+				pTexinfo->vecs[1][0] * m_bspVerts[tmp[j]].point[0] +
+				pTexinfo->vecs[1][2] * m_bspVerts[tmp[j]].point[2] +
+				pTexinfo->vecs[1][1] * m_bspVerts[tmp[j]].point[1] +
+				pTexinfo->vecs[1][3]);
+
+			if (pFace->styles[0] == 0)
+			{
+				tex_bounds[0] = m_faceBounds[i].maxs[0] - m_faceBounds[i].maxs[0];
+				tex_bounds[1] = m_faceBounds[i].maxs[1] - m_faceBounds[i].maxs[1];
+				tex_center[0] = tex_bounds[0] * 0.5f + m_faceBounds[i].mins[0];
+				tex_center[1] = tex_bounds[1] * 0.5f + m_faceBounds[i].mins[1];
+
+				float scaleU = (float)((float)m_faceBounds[i].texsize[0] - 1.f) 
+					/ (float)m_faceBounds[i].texsize[0];
+				float scaleV = (float)((float)m_faceBounds[i].texsize[1] - 1.f) 
+					/ (float)m_faceBounds[i].texsize[1];
+
+				float dott[2] = { (p_vdata[g].tu * 0.0625f), (p_vdata[g].tv * 0.0625f) }; // /16 = *0.0625
+
+				p_vdata[g].tu2 = ((dott[0] - tex_center[0]) / tex_bounds[0]) * scaleU + 0.5f;
+				p_vdata[g].tv2 = ((dott[1] - tex_center[1]) / tex_bounds[1]) * scaleV + 0.5f;
+
+				float pxU = 1.f / m_lMapAtlasW;
+				float pxV = 1.f / m_lMapAtlasH;
+
+				//remap for Lightmap atlas
+				p_vdata[g].tu2 = (pxU * m_faceBounds[i].remapped[0] + 
+					p_vdata[g].tu2 * (float)m_faceBounds[i].texsize[0] / m_lMapAtlasW);
+				p_vdata[g].tv2 = (pxV * m_faceBounds[i].remapped[1] + 
+					p_vdata[g].tv2 * (float)m_faceBounds[i].texsize[1] / m_lMapAtlasH);
+
+			}
+			else
+			{
+				p_vdata[g].tu2 = 1.0f; //BUGFIX: unlighted polys was gray, now is white
+				p_vdata[g].tv2 = 1.0f;
+			}
+
+			p_vdata[g].tu /= (float)m_faceBounds[i].texsize[0];
+			p_vdata[g].tv /= (float)m_faceBounds[i].texsize[1];
+
+			pos_in_vbuffer++;
+		}
+
+
+		///////////////////////////////////////////////////////
+		//по проиндексированным вершинам строим многоугольники
+		///////////////////////////////////////////////////////
+		int* offs = (int*)(m_bspTexData + sizeof(int));
+		BSPMiptex_t* miptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
+
+		int tris_in_face = vert_in_face - 2;
+
+		m_rFaces[i].needDraw = false;
+		m_rFaces[i].start_indx = pos_in_ibuffer;
+		m_rFaces[i].num_prim = tris_in_face;
+		m_rFaces[i].miptex = m_bspTexinfs[m_bspFaces[i].texinfo].miptex;
+
+		toUpper(miptex->name);
+		gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
+		if (!pMat)
+		{
+			pMat = m_pResMgr->getMaterialFactory()->createMaterial(miptex->name);
+			m_defaultMatMap[miptex->name] = pMat;
+		}
+		else
+			m_rFaces[i].pMaterial = pMat;
+
+		first_idx = pre_pos_in_vbuffer;
+		for (int j = 0; j < tris_in_face; j++)
+		{
+			int g = pos_in_ibuffer;
+			p_idata[g] = first_idx;
+			p_idata[g + 1] = j + 1 + first_idx;
+			p_idata[g + 2] = j + 2 + first_idx;
+			pos_in_ibuffer += 3;
+
+		}
+	}
+
 
 	m_pVB->Unlock();
 	m_pIB->Unlock();

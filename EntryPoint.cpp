@@ -523,7 +523,9 @@ void loadScene( const char* mapname )
 	//sprintf_s(fname, 1024, "../data/maps/%s", mapname);
 	sprintf_s(fname, 1024, "../data/maps/%s", mapname);
 
-	rmgr.loadBSPLevel(fname, "bspLevel");
+	gResource* pBSPLevel = rmgr.loadBSPLevel(fname, "bspLevel");
+	pBSPLevel->load();
+	//pBSPLevel->unload();
 	rmgr.destroyResource("bspLevel",GRESGROUP_BSPLEVEL);
 
 	//rmgr.loadTexture2D("../data/textures/lmap.png", "lmap");

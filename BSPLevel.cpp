@@ -3,6 +3,8 @@
 #include "BSPFile.h"
 #include "BMPFile.h"
 #include "Materials.h"
+#include "RenderQueue.h"
+#include "Scene.h"
 
 #define GBSP_FVF D3DUSAGE_WRITEONLY, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2
 
@@ -76,12 +78,32 @@ gResourceBSPLevel::gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group
 
 gResourceBSPLevel::~gResourceBSPLevel()
 {
-	freeMem();
+	unload();
+
+	if (m_pLMapTex)
+		m_pLMapTex->release();
+	m_pLMapTex = 0;
+
+	if (m_faceBounds)
+		delete[] m_faceBounds;
+	m_faceBounds = 0;
+
+	if (m_pBSPHeader)
+		delete[]((byte*)m_pBSPHeader);
+	m_pBSPHeader = 0;
+
+	if (m_pBitmap)
+		delete m_pBitmap;
+	m_pBitmap = 0;
+
+	if (m_rFaces)
+		delete[] m_rFaces;
+	m_rFaces = 0;
 }
 
 bool gResourceBSPLevel::preload() //загрузка статических данных
 {
-	freeMem();
+	//freeMem();
 
 	if (!m_pResMgr->getFileSystem()->isFileExist(m_fileName.c_str() ) )
 		return false;
@@ -100,7 +122,6 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	delete pFile;
 	if( (readed != fl ) || (m_pBSPHeader->version != BSPVERSION) )
 	{
-		freeMem();
 		return false;
 	}
 
@@ -459,8 +480,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 
 			if (pFace->styles[0] == 0)
 			{
-				tex_bounds[0] = m_faceBounds[i].maxs[0] - m_faceBounds[i].maxs[0];
-				tex_bounds[1] = m_faceBounds[i].maxs[1] - m_faceBounds[i].maxs[1];
+				tex_bounds[0] = m_faceBounds[i].maxs[0] - m_faceBounds[i].mins[0];
+				tex_bounds[1] = m_faceBounds[i].maxs[1] - m_faceBounds[i].mins[1];
 				tex_center[0] = tex_bounds[0] * 0.5f + m_faceBounds[i].mins[0];
 				tex_center[1] = tex_bounds[1] * 0.5f + m_faceBounds[i].mins[1];
 
@@ -486,7 +507,7 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 			}
 			else
 			{
-				p_vdata[g].tu2 = 1.0f; //BUGFIX: unlighted polys was gray, now is white
+				p_vdata[g].tu2 = 1.0f; //BUGFIX:
 				p_vdata[g].tv2 = 1.0f;
 			}
 
@@ -516,6 +537,15 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 		{
 			pMat = m_pResMgr->getMaterialFactory()->createMaterial(miptex->name);
 			m_defaultMatMap[miptex->name] = pMat;
+
+			gResource2DTexture* pTex = (gResource2DTexture*)m_pResMgr->getResource(miptex->name, GRESGROUP_2DTEXTURE);
+			if( !pTex )
+				pTex = (gResource2DTexture*)m_pResMgr->loadTexture2DFromWADList(miptex->name);
+
+			pTex->addRef();
+
+			pMat->setTexture( 0, pTex );
+			pMat->setTexture( 1, m_pLMapTex );
 		}
 		else
 			m_rFaces[i].pMaterial = pMat;
@@ -550,19 +580,30 @@ void gResourceBSPLevel::unload() //данные, загруженые preload() в этой функции н
 	m_pIB = 0;
 }
 
-void gResourceBSPLevel::onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const
+void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* cam) const
 {
+	for (unsigned int i = 0; i < m_bspFacesNum; i++)
+	{
 
+		int* offs = (int*)(m_bspTexData + sizeof(int));
+		BSPMiptex_t* miptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
+		gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
+		const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
+
+	
+		queue->pushBack(gRenderElement(this, pMat, 0, 1, 
+			&matrix, m_rFaces[i].start_indx, m_rFaces[i].num_prim, m_vertsNum));
+	}
 }
 
 void* gResourceBSPLevel::getVBuffer() const
 {
-	return 0;
+	return m_pVB;
 }
 
 void* gResourceBSPLevel::getIBuffer() const
 {
-	return 0;
+	return m_pIB;
 }
 
 GPRIMITIVETYPE gResourceBSPLevel::getPrimitiveType() const
@@ -602,8 +643,8 @@ bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 	if (!mapTexAtlas.mergeTexturesToAtlas(4096, 4096))
 		return false;
 
-	gBMPFile atlasBMP;
-	atlasBMP.createBitMap( mapTexAtlas.getAtlasWidth(), mapTexAtlas.getAtlasHeight() );
+	m_pBitmap = new gBMPFile();
+	m_pBitmap->createBitMap(mapTexAtlas.getAtlasWidth(), mapTexAtlas.getAtlasHeight());
 
 	//FILE* fd = 0;
 	//errno_t err = fopen_s(&fd, "out_bsplevel_order.txt", "wt");
@@ -620,7 +661,7 @@ bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 			pFaceBounds->remapped[1] = mapTexAtlas.getTextureRemapedYPosBySortedOrder(i);
 
 			faceLightBitmap.loadFromMemory( pFaceLightBitmapData, pFaceBounds->texsize[0], pFaceBounds->texsize[1] );
-			atlasBMP.overlapOther( faceLightBitmap, pFaceBounds->remapped[0], pFaceBounds->remapped[1] );
+			m_pBitmap->overlapOther( faceLightBitmap, pFaceBounds->remapped[0], pFaceBounds->remapped[1] );
 			
 
 			//fprintf(fd, "atlas ind: %i   face index: %i   lightofs: %i   w:%i h%i\n", i, pFaceBounds->faceIndex, 
@@ -630,32 +671,18 @@ bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 
 	//fclose(fd);
 
-	gFile* f = m_pResMgr->getFileSystem()->openFile( "new_atlas.bmp", true, true );
-	atlasBMP.swapRGBtoBGR();
-	atlasBMP.saveToFile(f);
-	delete f;
+	//gFile* f = m_pResMgr->getFileSystem()->openFile( "new_atlas.bmp", true, true );
+	m_pBitmap->swapRGBtoBGR();
+	//atlasBMP.saveToFile(f);
+	//delete f;
+
+	std::string name = m_resName + ".lmap";
+
+	// m_pLMapTex loaded in MANAGED_POOL
+	m_pLMapTex = (gResource2DTexture*)m_pResMgr->loadTextureFromBitmap(m_pBitmap, name.c_str() );
+	m_pLMapTex->addRef();
 
 	return true;
-}
-
-
-void gResourceBSPLevel::freeMem()
-{
-	if (m_pVB)
-		m_pVB->Release();
-	if (m_pIB)
-		m_pIB->Release();
-
-	m_pVB = 0; 
-	m_pIB = 0;
-
-	if (m_faceBounds)
-		delete[] m_faceBounds;
-	m_faceBounds = 0;
-
-	if (m_pBSPHeader)
-		delete[] ( (byte*)m_pBSPHeader );
-	m_pBSPHeader = 0;
 }
 
 void* gResourceBSPLevel::getLump(unsigned char lump) const

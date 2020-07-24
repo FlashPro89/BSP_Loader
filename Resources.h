@@ -11,6 +11,9 @@
 #include "WADFile.h"
 #include "RefCounter.h"
 
+class gMaterialFactory;
+class gFileSystem;
+class gBMPFile;
 
 enum  GVERTEXFORMAT
 {
@@ -185,7 +188,8 @@ class gResource2DTexture : public gResource
 {
 public:
 	//gResource2DTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
-	gResource2DTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0, WADLumpInfo_t* lumpinfo = 0 );
+	gResource2DTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, 
+		const char* name = 0, WADLumpInfo_t* lumpinfo = 0, gBMPFile* bitmap = 0 );
 	~gResource2DTexture();
 
 	bool preload();//загрузка статических данных
@@ -199,6 +203,7 @@ public:
 
 protected:
 	WADLumpInfo_t* m_pLumpInfo;
+	gBMPFile* m_pBitmap;
 	//bool m_isTexFromWAD;
 	LPDIRECT3DTEXTURE9 m_pTex;
 	unsigned short m_width;
@@ -270,9 +275,6 @@ protected:
 	gFontParameters m_fontParams;
 };
 
-class gMaterialFactory;
-class gFileSystem;
-
 class gResourceManager
 {
 public:
@@ -286,9 +288,10 @@ public:
 	const char* getWADFolder() const;
 
 	gResource* loadTexture2DFromWADList( const char* name );
+	gResource* loadTextureFromBitmap( gBMPFile* bitmap, const char* name );
 	gResource* loadTexture2D( const char* filename, const char* name = 0 );
 	gResource* loadStaticMesh( const char* filename, const char* name = 0 );
-	gResource* loadSkinnedMeshSMD(const char* filename, const char* name );
+	gResource* loadSkinnedMeshSMD( const char* filename, const char* name );
 	gResource* loadTerrain( const char* filename, const char* name );
 	gResource* loadBSPLevel( const char* filename, const char* name );
 	gResource* loadSkinnedAnimationSMD( const char* filename, const char* name, gResourceSkinnedMesh* ref );

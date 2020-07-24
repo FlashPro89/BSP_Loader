@@ -607,6 +607,15 @@ gResourceSkinnedMesh::gResourceSkinnedMesh(gResourceManager* mgr, GRESOURCEGROUP
 
 gResourceSkinnedMesh::~gResourceSkinnedMesh()
 {
+	auto it = m_animMap.begin();
+	while (it != m_animMap.end())
+	{
+		if (it->second)
+			m_pResMgr->destroyResource(it->second->getResourceName(), it->second->getGroup());
+		it++;
+	}
+	m_animMap.clear();
+
 	if (m_pMatInverted)
 		delete[]  m_pMatInverted;
 	m_pMatInverted = 0;
@@ -619,18 +628,8 @@ gResourceSkinnedMesh::~gResourceSkinnedMesh()
 		delete[] m_pTransformedBones;
 	m_pTransformedBones = 0;
 
-
-	
 	m_trisCacher.clear(); // ??
 
-	auto it = m_animMap.begin();
-	while (it != m_animMap.end())
-	{
-		if (it->second)
-			//m_pResMgr->destroyResource( it->second->getResourceName(), it->second->getGroup());
-			it->second->release();
-		it++;
-	}
 	unload();
 }
 
@@ -1481,6 +1480,7 @@ bool gResourceSkinnedMesh::addAnimation(const char* filename, const char* name)
 		return false;
 	}
 
+	anim->addRef();
 	m_animMap[name] = anim;
 	return true;
 }

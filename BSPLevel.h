@@ -29,13 +29,15 @@ struct gBSPFaceBounds
 };
 
 class gMaterial;
+class gBMPFile;
+
 struct gBSPRendingFace
 {
 	gBSPRendingFace() {	start_indx = num_prim = miptex = 0; pMaterial = 0; needDraw = false;}
 	int start_indx;
 	int num_prim;
 	int miptex;
-	gMatrial* pMaterial;
+	gMaterial* pMaterial;
 	bool needDraw;
 };
 
@@ -65,9 +67,7 @@ protected:
 	gResourceBSPLevel();
 	gResourceBSPLevel(gResourceBSPLevel&);
 
-	void freeMem();
 	void* getLump(unsigned char lump) const;
-
 	bool loadLightmaps( unsigned int lightedFacesNum );
 
 	//	BSP format part -----------------------------------------
@@ -109,6 +109,8 @@ protected:
 	int m_visRow;
 
 	//  Lightmaps part -----------------------------------------
+	gResource2DTexture* m_pLMapTex;
+	gBMPFile* m_pBitmap;
 	gBSPFaceBounds* m_faceBounds;
 	unsigned short m_lMapAtlasW;
 	unsigned short m_lMapAtlasH;

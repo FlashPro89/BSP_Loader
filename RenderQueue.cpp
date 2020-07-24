@@ -179,6 +179,8 @@ void gRenderQueue::initialize( unsigned int elementsMaxNum )
 {
 	if (m_elements)
 		delete[] m_elements;
+	if (m_elementsPointers)
+		delete[] m_elementsPointers;
 
 	m_elementsArraySize = elementsMaxNum;
 	m_elements = new gRenderElement[m_elementsArraySize];

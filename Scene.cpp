@@ -58,7 +58,6 @@ gSceneNode* gEntity::getHoldingNode() const
 
 void gEntity::setRenderable( gRenderable* renderable )
 {
-
 	if (m_pRenderable)
 	{
 		deleteAnimators();

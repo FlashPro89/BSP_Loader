@@ -4,6 +4,7 @@
 #include "Mesh.h"
 #include "Terrain.h"
 #include "BSPLevel.h"
+#include "BMPFile.h"
 #include <stdio.h>
 
 iwadcolor colormap[256];
@@ -264,11 +265,12 @@ gResource2DTexture::gResource2DTexture( gResourceManager* mgr, GRESOURCEGROUP gr
 */
 
 gResource2DTexture::gResource2DTexture(gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, 
-	const char* name, WADLumpInfo_t* lumpinfo) : gResource(mgr, group, filename, name)
+	const char* name, WADLumpInfo_t* lumpinfo, gBMPFile* bitmap ) : gResource(mgr, group, filename, name)
 {
 	m_pTex = 0;
 	m_isRenderable = false;
 	m_pLumpInfo = lumpinfo;
+	m_pBitmap = bitmap;
 	m_width = 0;
 	m_height = 0;
 }
@@ -276,32 +278,43 @@ gResource2DTexture::gResource2DTexture(gResourceManager* mgr, GRESOURCEGROUP gro
 gResource2DTexture::~gResource2DTexture()
 {
 	unload();
+	if (m_pTex)
+		m_pTex->Release();
 }
 
 bool gResource2DTexture::preload()
 {
-	if (m_pLumpInfo == 0)
+	if (m_pBitmap == 0 )
 	{
-		D3DXIMAGE_INFO inf;
-		D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
+		if (m_pLumpInfo == 0)
+		{
+			D3DXIMAGE_INFO inf;
+			D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
 
-		if (inf.ResourceType != D3DRTYPE_TEXTURE)
-			return false;
+			if (inf.ResourceType != D3DRTYPE_TEXTURE)
+				return false;
 
-		m_width = inf.Width;
-		m_height = inf.Height;
+			m_width = inf.Width;
+			m_height = inf.Height;
 
-		return true;
+			return true;
+		}
+		else
+		{
+			size_t sz = WADLoadLumpFromFile(m_fileName.c_str(), (void*)t, m_pLumpInfo->filepos, sizeof(WADPic));
+			if (sz != sizeof(WADPic))
+				return false;
+
+			WADPic* pic = ((WADPic*)t);
+			m_width = pic->width, m_height = pic->height;
+
+			return true;
+		}
 	}
 	else
 	{
-		size_t sz = WADLoadLumpFromFile(m_fileName.c_str(), (void*)t, m_pLumpInfo->filepos, sizeof( WADPic ) );
-		if (sz != sizeof(WADPic))
-			return false;
-
-		WADPic* pic = ((WADPic*)t);
-		m_width = pic->width, m_height = pic->height;
-
+		m_width = m_pBitmap->getWidth();
+		m_height = m_pBitmap->getHeight();
 		return true;
 	}
 }
@@ -311,142 +324,193 @@ bool gResource2DTexture::load()
 	if (m_isLoaded)
 		return true;
 
-	if( m_pLumpInfo )
+	if (m_pBitmap == 0)
 	{
-		size_t sz = WADLoadLumpFromFile( m_fileName.c_str(), (void*)t, m_pLumpInfo->filepos, m_pLumpInfo->disksize );
-		if ( sz != m_pLumpInfo->disksize )
-			return m_isLoaded; //не удалось считать текстуру
 
-		//colormap offset
-		WADPic* pic = ((WADPic*)t);
-		unsigned int w = pic->width, h = pic->height;
-
-		int offset = w * h + (w / 2) * (h / 2) + (w / 4) * (h / 4) + (w / 8) * (h / 8) + sizeof(short);
-		memcpy(colormap, t + sizeof(WADPic) + offset, 768);
-
-		//create tex in Sys mem
-		LPDIRECT3DTEXTURE9 pTexTmp = 0;
-		HRESULT hr = m_pResMgr->getDevice()->CreateTexture( w, h, 1, 0, 
-			D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &pTexTmp, 0 );
-
-		if (FAILED(hr))  
-			return m_isLoaded;
-
-		//create tex in Video mem
-		hr = m_pResMgr->getDevice()->CreateTexture( w, h, 1, D3DUSAGE_AUTOGENMIPMAP, 
-			D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pTex, 0 );
-
-		if (FAILED(hr))
+		if (m_pLumpInfo)
 		{
-			pTexTmp->Release();
-			return m_isLoaded;
-		}
-		//unsigned int y = m_pTex->GetLevelCount();
+			size_t sz = WADLoadLumpFromFile(m_fileName.c_str(), (void*)t, m_pLumpInfo->filepos, m_pLumpInfo->disksize);
+			if (sz != m_pLumpInfo->disksize)
+				return m_isLoaded; //не удалось считать текстуру
 
-		//Lock sysmem tex
-		D3DLOCKED_RECT rect;
-		hr = pTexTmp->LockRect(0, &rect, 0, D3DLOCK_DISCARD);
-		if (FAILED(hr))
-		{
-			pTexTmp->Release();
-			m_pTex->Release();
-			return m_isLoaded;
-		}
+			//colormap offset
+			WADPic* pic = ((WADPic*)t);
+			unsigned int w = pic->width, h = pic->height;
 
-		//bitmap
-		byte* data = t + pic->data[0];
-		icolor* img = (icolor*)rect.pBits;
-		int counter = 0;
-		for (unsigned int row = 0; row < h; row++)
-		{
-			for (unsigned int column = 0; column < w; column++)
+			int offset = w * h + (w / 2) * (h / 2) + (w / 4) * (h / 4) + (w / 8) * (h / 8) + sizeof(short);
+			memcpy(colormap, t + sizeof(WADPic) + offset, 768);
+
+			//create tex in Sys mem
+			LPDIRECT3DTEXTURE9 pTexTmp = 0;
+			HRESULT hr = m_pResMgr->getDevice()->CreateTexture(w, h, 1, 0,
+				D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &pTexTmp, 0);
+
+			if (FAILED(hr))
+				return m_isLoaded;
+
+			//create tex in Video mem
+			hr = m_pResMgr->getDevice()->CreateTexture(w, h, 1, D3DUSAGE_AUTOGENMIPMAP,
+				D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pTex, 0);
+
+			if (FAILED(hr))
 			{
-				if (colormap[data[counter]].r == 0 &&
-					colormap[data[counter]].g == 0 &&
-					colormap[data[counter]].b == 255 &&
-					data[counter] == 255)
-				{
-					img[counter].r = 0;   // Transparent
-					img[counter].g = 0;
-					img[counter].b = 0;
-					img[counter].a = 0;
-				}
-				else
-				{
-					img[counter].r = colormap[data[counter]].r;
-					img[counter].g = colormap[data[counter]].g;
-					img[counter].b = colormap[data[counter]].b;
-					img[counter].a = 0xFF;
-				}
-				counter++;
+				pTexTmp->Release();
+				return m_isLoaded;
 			}
-		}
-		pTexTmp->UnlockRect(0);
+			//unsigned int y = m_pTex->GetLevelCount();
 
-		// move texture to video mem
-		hr = m_pResMgr->getDevice()->UpdateTexture( pTexTmp, m_pTex );
-		if (FAILED(hr))
-		{
+			//Lock sysmem tex
+			D3DLOCKED_RECT rect;
+			hr = pTexTmp->LockRect(0, &rect, 0, D3DLOCK_DISCARD);
+			if (FAILED(hr))
+			{
+				pTexTmp->Release();
+				m_pTex->Release();
+				return m_isLoaded;
+			}
+
+			//bitmap
+			byte* data = t + pic->data[0];
+			icolor* img = (icolor*)rect.pBits;
+			int counter = 0;
+			for (unsigned int row = 0; row < h; row++)
+			{
+				for (unsigned int column = 0; column < w; column++)
+				{
+					if (colormap[data[counter]].r == 0 &&
+						colormap[data[counter]].g == 0 &&
+						colormap[data[counter]].b == 255 &&
+						data[counter] == 255)
+					{
+						img[counter].r = 0;   // Transparent
+						img[counter].g = 0;
+						img[counter].b = 0;
+						img[counter].a = 0;
+					}
+					else
+					{
+						img[counter].r = colormap[data[counter]].r;
+						img[counter].g = colormap[data[counter]].g;
+						img[counter].b = colormap[data[counter]].b;
+						img[counter].a = 0xFF;
+					}
+					counter++;
+				}
+			}
+			pTexTmp->UnlockRect(0);
+
+			// move texture to video mem
+			hr = m_pResMgr->getDevice()->UpdateTexture(pTexTmp, m_pTex);
+			if (FAILED(hr))
+			{
+				pTexTmp->Release();
+				m_pTex->Release();
+				return m_isLoaded;
+			}
+
 			pTexTmp->Release();
-			m_pTex->Release();
+
+			m_pTex->GenerateMipSubLevels();
+			//D3DXSaveTextureToFile("dest.dds", D3DXIFF_DDS, m_pTex, 0);
+
+
+			m_isLoaded = true;
+			return m_isLoaded;
+
+		}
+		else
+		{
+			D3DXIMAGE_INFO inf;
+			D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
+
+			HRESULT hr;
+			if (inf.Format == D3DFMT_P8) // ?? пока оставим так
+			{
+				hr = D3DXCreateTextureFromFileEx(m_pResMgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
+					D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_UNKNOWN, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
+			}
+			else
+			{
+				hr = D3DXCreateTextureFromFileEx(m_pResMgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
+					D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
+			}
+
+			if (FAILED(hr))
+				return false;
+			else
+				m_isLoaded = true;
+
+			/*
+			//TEST:
+			D3DSURFACE_DESC desc;
+			m_pTex->GetLevelDesc(0, &desc);
+
+			D3DLOCKED_RECT dlr;
+			RECT rc;
+			rc.left = 0; rc.top = 0; rc.right = desc.Width - 1; rc.bottom = desc.Height - 1;
+
+			hr = m_pTex->LockRect(0, &dlr, &rc, D3DLOCK_READONLY);
+
+			m_pTex->UnlockRect(0);
+			*/
+
 			return m_isLoaded;
 		}
-
-		pTexTmp->Release();
-
-		m_pTex->GenerateMipSubLevels();
-		//D3DXSaveTextureToFile("dest.dds", D3DXIFF_DDS, m_pTex, 0);
-
-
-		m_isLoaded = true;
-		return m_isLoaded;
-
 	}
 	else
 	{
-		D3DXIMAGE_INFO inf;
-		D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
-
-		HRESULT hr;
-		if (inf.Format == D3DFMT_P8) // ?? пока оставим так
-		{
-			hr = D3DXCreateTextureFromFileEx(m_pResMgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
-				D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_UNKNOWN, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
-		}
-		else
-		{
-			hr = D3DXCreateTextureFromFileEx(m_pResMgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
-				D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
-		}
+		if (m_isLoaded)
+			return true;
+		
+		//create tex in MANAGED_POOL
+		HRESULT hr = m_pResMgr->getDevice()->CreateTexture(m_width, m_height, 1, D3DUSAGE_AUTOGENMIPMAP,
+			D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &m_pTex, 0);
 
 		if (FAILED(hr))
-			return false;
-		else
-			m_isLoaded = true;
+		{
+			m_pTex->Release();
+			return m_isLoaded;
+		}
 
-		//TEST:
-		D3DSURFACE_DESC desc;
-		m_pTex->GetLevelDesc( 0, &desc );
+		//Lock sysmem tex
+		D3DLOCKED_RECT rect;
+		hr = m_pTex->LockRect(0, &rect, 0, D3DLOCK_DISCARD);
+		if (FAILED(hr))
+		{
+			m_pTex->Release();
+			return m_isLoaded;
+		}
 
-		D3DLOCKED_RECT dlr;
-		RECT rc;
-		rc.left = 0; rc.top = 0; rc.right = desc.Width - 1; rc.bottom = desc.Height - 1;
+		const tagRGBTRIPLE* bmp = m_pBitmap->getBitMap();
+		icolor* img = (icolor*)rect.pBits;
 
-		hr = m_pTex->LockRect(0, &dlr, &rc, D3DLOCK_READONLY);
-
+		for (unsigned int i = 0; i < ( m_height-1 )* (m_width - 1); i++)
+		{
+				
+			img[i].r = bmp[i].rgbtRed;
+			img[i].g = bmp[i].rgbtGreen;
+			img[i].b = bmp[i].rgbtBlue;
+			img[i].a = 0xFF;
+			
+		}
 		m_pTex->UnlockRect(0);
 
+		//m_pTex->GenerateMipSubLevels();
+		D3DXSaveTextureToFile("LMAP_FROM_gBMPFILE.bmp", D3DXIFF_BMP, m_pTex, 0);
+
+		m_isLoaded = true;
 		return m_isLoaded;
 	}
 }
 
 void gResource2DTexture::unload() //данные, загруженые preload() в этой функции не изменяются
 {
-	if (m_pTex)
+	if ( !m_pBitmap && m_pTex )
+	{
 		m_pTex->Release();
-	m_pTex = 0;
-
-	m_isLoaded = false;
+		m_pTex = 0;
+		m_isLoaded = false;
+	}
 }
 
 const LPDIRECT3DTEXTURE9 gResource2DTexture::getTexture() const
@@ -868,8 +932,8 @@ gResource* gResourceManager::loadTexture2DFromWADList( const char* name )
 	FILE* f = 0;
 	std::string tmp;
 
-	if (!strcmp("06_CHALETI_WOO", name))
-		int i = 23 * 73;
+	//if (!strcmp("06_CHALETI_WOO", name))
+	//	int i = 23 * 73;
 
 	//if (!strcmp("06_CHALETI_WOO", name))
 	//	fopen_s( &f, "out_06.txt", "wt" );
@@ -941,6 +1005,15 @@ gResource* gResourceManager::loadTexture2DFromWADList( const char* name )
 	}
 
 	return 0;
+}
+
+gResource* gResourceManager::loadTextureFromBitmap( gBMPFile* bitmap, const char* name )
+{
+	gResource* pRes = new gResource2DTexture( this, GRESGROUP_2DTEXTURE, name, name, 0, bitmap );
+	m_resources[GRESGROUP_2DTEXTURE][name] = pRes;
+
+	pRes->preload();
+	return pRes;
 }
 
 gResource* gResourceManager::loadTexture2D( const char* filename, const char* name )

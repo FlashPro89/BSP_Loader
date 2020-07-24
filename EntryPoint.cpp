@@ -516,17 +516,12 @@ void loadScene( const char* mapname )
 	unLoadScene();
 
 	loadFonts();
-	testFileSystem();
+	//testFileSystem();
 	rmgr.setWADFolder( "../data/wad/" );
 
 	char fname[1024] = "";
 	//sprintf_s(fname, 1024, "../data/maps/%s", mapname);
 	sprintf_s(fname, 1024, "../data/maps/%s", mapname);
-
-	gResource* pBSPLevel = rmgr.loadBSPLevel(fname, "bspLevel");
-	pBSPLevel->load();
-	//pBSPLevel->unload();
-	rmgr.destroyResource("bspLevel",GRESGROUP_BSPLEVEL);
 
 	//rmgr.loadTexture2D("../data/textures/lmap.png", "lmap");
 
@@ -637,6 +632,12 @@ void loadScene( const char* mapname )
 		node_crystal->setRelativeScale(D3DXVECTOR3(0.25f, 0.25f, 0.25f));
 		node_terrain->setRelativePosition(D3DXVECTOR3(0.f, -500.f, 0.f));
 		////////////////////////////////////////////////////////////////////
+
+		//BSPLevel renderable
+		gEntity* pEnt = smgr.createEntity("ent_world");
+		gRenderable* pBSPLevel = (gRenderable * )rmgr.loadBSPLevel(fname, "bspLevel");
+		pEnt->setRenderable(pBSPLevel);
+		smgr.getRootNode().attachEntity(pEnt);
 
 		//Load skinned mesh
 		gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/barney/BARNEY-X_Template_Biped1.smd", "barney");
@@ -1240,7 +1241,7 @@ void loadScene( const char* mapname )
 	fwrite(((byte*)bsp_header) + bsp_header->lumps[LUMP_ENTITIES].fileofs, bsp_header->lumps[LUMP_ENTITIES].filelen, 1, fo);
 	fclose(fo);
 
-	delete[] bsp_header;
+	delete[] (byte*)bsp_header;
 
 	rmgr.onRenderDeviceReset();
 	smgr.getRootNode().computeTransform();
@@ -1340,6 +1341,8 @@ int decompressRow(byte* visCompr, byte* dest)
 
 void unLoadScene()
 {
+	rmgr.destroyResource("bspLevel", GRESGROUP_BSPLEVEL);
+
 	//////////////////////////////////////////////////////////////////
 	//// scene node graph test
 	smgr.destroyNode("new_central");
@@ -1788,7 +1791,7 @@ void frame_render()
 			}
 		}
 
-		renderFaces();
+		//renderFaces();
 
 		sprintf_s(tmp, 1024, "Map: %s%s, Num Leafs: %i, Curent Leaf: %i, Steps to find: %i, Visible Leafs: %i, Visible Faces: %i, Frustum: %s, LMaps: %s, Content: %i",
 			filesMapList[currentMap].c_str(), bsp_visdatasize > 0 ? "" : "(NO_VIS)", num_leafs, currentLeaf, steps, drawedLeafs, drawedFaces, useFrustum ? "on" : "off", useLightmaps ? "on" : "off", content);
@@ -2034,6 +2037,7 @@ void frame_move()
 			currentMap--;
 
 		loadScene(filesMapList.find(currentMap)->second.c_str());
+		frame_move();
 	}
 
 	if ( input->isKeyDown(DIK_F2) )
@@ -2044,6 +2048,13 @@ void frame_move()
 			currentMap++;
 
 		loadScene(filesMapList.find(currentMap)->second.c_str());
+		frame_move();
+	}
+
+	if (input->isKeyDown(DIK_F3))
+	{
+		loadScene(filesMapList.find(currentMap)->second.c_str());
+		frame_move();
 	}
 
 	static bool wf = false;

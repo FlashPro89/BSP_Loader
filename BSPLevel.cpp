@@ -307,6 +307,9 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	
 	loadLightmaps( lightedFacesNum );
 
+	m_AABB.setMinBounds(m_bspNodes[0].mins[0], m_bspNodes[0].mins[2], m_bspNodes[0].mins[1]);
+	m_AABB.setMaxBounds(m_bspNodes[0].maxs[0], m_bspNodes[0].maxs[2], m_bspNodes[0].maxs[1]);
+
 	return true;
 }
 
@@ -343,6 +346,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 	BSPTexinfo_t* pTexinfo;
 	BSPVertex_t* pVertex;
 	BSPFace_t* pFace;
+	BSPMiptex_t* pMiptex;
+	int* offs = (int*)(m_bspTexData + sizeof(int));
 	float nx, ny, nz;
 	float tex_center[2], tex_bounds[2];
 	int pos_in_vbuffer = 0;
@@ -356,6 +361,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 		pBounds = &m_faceBounds[i];
 		pTexinfo = &m_bspTexinfs[m_bspFaces[i].texinfo];
 		pFace = &m_bspFaces[i];
+
+		pMiptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
 
 		////////////////////////////////////////////////
 		//индексируем вершины на фейсе
@@ -511,8 +518,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 				p_vdata[g].tv2 = 1.0f;
 			}
 
-			p_vdata[g].tu /= (float)m_faceBounds[i].texsize[0];
-			p_vdata[g].tv /= (float)m_faceBounds[i].texsize[1];
+			p_vdata[g].tu /= pMiptex->width;
+			p_vdata[g].tv /= pMiptex->height;
 
 			pos_in_vbuffer++;
 		}
@@ -545,7 +552,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 			pTex->addRef();
 
 			pMat->setTexture( 0, pTex );
-			pMat->setTexture( 1, m_pLMapTex );
+			if( pFace->styles[0] == 0 )
+				pMat->setTexture( 1, m_pLMapTex );
 		}
 		else
 			m_rFaces[i].pMaterial = pMat;
@@ -582,18 +590,128 @@ void gResourceBSPLevel::unload() //данные, загруженые preload() в этой функции н
 
 void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* cam) const
 {
-	for (unsigned int i = 0; i < m_bspFacesNum; i++)
+	int currentLeaf = getLeafAtPoint( cam->getPosition() );
+
+	if (currentLeaf > 0)
 	{
+		drawVisibleLeafs(currentLeaf, *cam);
+	}
+	else if (currentLeaf == 0)
+	{
+		for (int i = 0; i < m_visLeafsNum; i++)
+		{
+			this->drawLeaf(i);
+		}
+	}
+
+	for( unsigned int i = 0; i < m_bspFacesNum; i++ )
+	{
+		if (!m_rFaces[i].needDraw)
+			continue;
 
 		int* offs = (int*)(m_bspTexData + sizeof(int));
 		BSPMiptex_t* miptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
 		gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
+		pMat->setLightingEnable(false);
 		const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 
-	
 		queue->pushBack(gRenderElement(this, pMat, 0, 1, 
 			&matrix, m_rFaces[i].start_indx, m_rFaces[i].num_prim, m_vertsNum));
+
+		m_rFaces[i].needDraw = false;
 	}
+}
+
+// returned dist point % plane
+inline float gResourceBSPLevel::testPointOnPlane(const D3DXVECTOR3& point, int plane) const
+{
+	return (point.x * m_bspPlanes[plane].normal[0] +
+		point.y * m_bspPlanes[plane].normal[2] +
+		point.z * m_bspPlanes[plane].normal[1] - m_bspPlanes[plane].dist);
+}
+
+int gResourceBSPLevel::getLeafAtPoint( const D3DXVECTOR3& point ) const
+{
+	int node = 0;
+	do
+	{
+		if (testPointOnPlane( point, m_bspNodes[node].planenum) >= 0)
+			node = m_bspNodes[node].children[0];
+		else
+			node = m_bspNodes[node].children[1];
+
+		//if (steps != 0) (*steps)++;
+
+	} while (node > 0);
+
+	return  -(node + 1);
+}
+
+void gResourceBSPLevel::drawVisibleLeafs(int leaf, const gCamera& cam ) const
+{
+	byte pvs[2048];
+	memset(&pvs[0], 0, 2048);
+
+	int decomprSz = 0;
+	if (m_bspVisData > 0)
+		decomprSz = BSPDecompressVisRow( &m_bspVisData[m_bspLeafs[leaf].visofs], &pvs[0], m_visRow );
+
+	for (int leaf = 0; leaf < m_visLeafsNum; leaf++)
+	{
+		if (isLeafVisible(&pvs[0], leaf)) //&& isLeafInFrustum(leaf + 1))
+		{
+			if( isLeafInFrustum( (leaf + 1), cam ) )
+				drawLeaf(leaf + 1);
+		//	drawedLeafs++;
+		}
+	}
+}
+
+bool gResourceBSPLevel::isLeafVisible(byte* decomprPVS, int leafBit) const
+{
+	if (m_bspVisData == 0)
+		return true;
+
+	/*
+	unsigned short b = leafBit >> 3; // leaf/8;
+	unsigned short bitOffset = leafBit - ( b << 3 ); // b*8
+
+	//extract bit
+	b = ( decomprPVS[b] >> bitOffset ) & 1;
+
+	if (!useFrustum)
+		return b != 0;
+	else
+		return (b != 0) && isLeafInFrustum(leafBit+1);
+	*/
+
+	//bool inFrustum = true;
+	//if (useFrustum)
+	//	inFrustum = isLeafInFrustum(leafBit + 1);
+
+	return ((decomprPVS[leafBit >> 3] & (1 << (leafBit & 7))));// && inFrustum; //Original Valve Pvs test
+}
+
+bool gResourceBSPLevel::isLeafInFrustum(int leaf, const gCamera& cam ) const
+{
+	D3DXVECTOR3 bmin(m_bspLeafs[leaf].mins[0], m_bspLeafs[leaf].mins[2], m_bspLeafs[leaf].mins[1]);
+	D3DXVECTOR3 bmax(m_bspLeafs[leaf].maxs[0], m_bspLeafs[leaf].maxs[2], m_bspLeafs[leaf].maxs[1]);
+
+	return 	cam.getViewingFrustum().testAABB(gAABB(bmin, bmax));
+}
+
+void gResourceBSPLevel::drawLeaf(int leaf) const
+{
+	for (int f = m_bspLeafs[leaf].firstmarksurface;
+		f < m_bspLeafs[leaf].firstmarksurface + m_bspLeafs[leaf].nummarksurfaces; f++)
+	{
+		drawFace( m_bspMarksurfaces[f]);
+	}
+}
+
+void gResourceBSPLevel::drawFace(int face) const
+{
+	m_rFaces[face].needDraw = true;
 }
 
 void* gResourceBSPLevel::getVBuffer() const
@@ -643,8 +761,12 @@ bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 	if (!mapTexAtlas.mergeTexturesToAtlas(4096, 4096))
 		return false;
 
+	m_lMapAtlasW = mapTexAtlas.getAtlasWidth();
+	m_lMapAtlasH = mapTexAtlas.getAtlasHeight();
+
+
 	m_pBitmap = new gBMPFile();
-	m_pBitmap->createBitMap(mapTexAtlas.getAtlasWidth(), mapTexAtlas.getAtlasHeight());
+	m_pBitmap->createBitMap( m_lMapAtlasW, m_lMapAtlasH );
 
 	//FILE* fd = 0;
 	//errno_t err = fopen_s(&fd, "out_bsplevel_order.txt", "wt");

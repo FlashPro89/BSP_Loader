@@ -114,6 +114,8 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 
 	m_pMaterialId = id;
 
+	m_lightingEnable = true;
+
 	if (name)
 	{
 		size_t lenght = strlen(name);
@@ -144,6 +146,7 @@ gMaterial::gMaterial( gMaterial* other, gMaterialFactory* factory, const char* n
 	setTexture(7, other->getTexture(7));
 
 	m_transparency = other->getTransparency();
+	m_lightingEnable = other->getLightingEnable();
 
 	m_pMaterialId = id;
 
@@ -178,6 +181,16 @@ void gMaterial::release()
 gMaterial* gMaterial::cloneMaterial(const char* cloneName)
 {
 	return m_factory->cloneMaterial(this, cloneName);
+}
+
+bool gMaterial::getLightingEnable() const
+{
+	return m_lightingEnable;
+}
+
+void gMaterial::setLightingEnable(bool enable)
+{
+	m_lightingEnable = enable;
 }
 
 void gMaterial::setDiffuse(GCOLOR color)

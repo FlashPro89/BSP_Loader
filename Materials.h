@@ -43,6 +43,9 @@ public:
 
 	gMaterial* cloneMaterial(const char* cloneName);
 
+	bool getLightingEnable() const;
+	void setLightingEnable(bool enable);
+
 	void setDiffuse(GCOLOR color);
 	void setSpecular(GCOLOR color);
 	void setEmissive(GCOLOR color);
@@ -74,7 +77,7 @@ protected:
 	unsigned char m_transparency;
 
 	unsigned short m_pMaterialId; // only 65536 materials
-
+	bool m_lightingEnable;
 	GCOLOR m_diffuse;
 	GCOLOR m_specular;
 	GCOLOR m_emissive;

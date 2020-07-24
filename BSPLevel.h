@@ -54,6 +54,14 @@ public:
 	//void onFrameRender(const D3DXMATRIX& transform) const;
 	void onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const;
 
+	inline float testPointOnPlane(const D3DXVECTOR3& point, int plane)const;
+	int getLeafAtPoint(const D3DXVECTOR3& point) const;
+	void drawVisibleLeafs(int leaf, const gCamera& cam) const;
+	bool isLeafVisible(byte* decomprPVS, int leafBit) const;
+	bool isLeafInFrustum(int leaf, const gCamera& cam) const;
+	void drawLeaf(int leaf) const;
+	void drawFace(int face) const;
+
 	void* getVBuffer() const;
 	void* getIBuffer() const;
 

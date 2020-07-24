@@ -194,14 +194,17 @@ void gRenderQueue::initialize( unsigned int elementsMaxNum )
 
 int compRE( const void* i, const void* j ) 
 {
-	//gRenderElement** ppE1 = (gRenderElement**)i;
-	//gRenderElement** ppE2 = (gRenderElement**)j;
+	gRenderElement* pE1 = *(gRenderElement**)i;
+	gRenderElement* pE2 = *(gRenderElement**)j;
 
-	__int64 x = (*((gRenderElement**)i))->getKey();
-	__int64 y = (*((gRenderElement**)j))->getKey();
+	__int64 x = pE1->getKey(); //(*((gRenderElement**)i))->getKey();
+	__int64 y = pE2->getKey(); //(*((gRenderElement**)j))->getKey();
 
 	if (x > y) return 1; // TODO: сделать чтото с этим
-	else if (x == y) return 0;
+	else if (x == y)
+	{
+		return pE2->getStartIndex() - pE1->getStartIndex();
+	}
 	else
 		return -1;
 }
@@ -264,6 +267,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	const D3DXMATRIX* matPalete = 0;
 	const gSkinBoneGroup* skinBoneGroup = 0;
 
+	int m_lastLighting = -1;
 	int m_lastRenderable = -1;
 	int m_lastMaterial = -1;
 
@@ -351,6 +355,23 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			pMaterial = pElement->getMaterial();
 			if (pMaterial)
 			{
+
+				if (m_lastLighting < 0)
+				{
+					m_lastLighting = pMaterial->getLightingEnable();
+					pDevice->SetRenderState(D3DRS_LIGHTING, m_lastLighting);
+				}
+				else if ( (m_lastLighting == 0) && pMaterial->getLightingEnable() )
+				{
+					m_lastLighting = true;
+					pDevice->SetRenderState(D3DRS_LIGHTING, m_lastLighting);
+				}
+				else if ((m_lastLighting == 1) && !pMaterial->getLightingEnable())
+				{
+					m_lastLighting = false;
+					pDevice->SetRenderState(D3DRS_LIGHTING, m_lastLighting);
+				}
+
 				unsigned char transpByte = m_elementsPointers[m_arrayPos]->getMaterial()->getTransparency();
 
 				if (pMaterial->getId() != m_lastMaterial)
@@ -430,15 +451,17 @@ void gRenderQueue::_debugOutSorted( const char* fname )
 	{
 		if (m_elementsPointers[i]->getMaterial() != 0)
 		{
-			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i\n",
+			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i  start:%i num:%i\n",
 				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getMaterial()->getId(), m_elementsPointers[i]->getMaterial()->getName(), m_elementsPointers[i]->getRenderable()->getId(),
-				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance());
+				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance(),
+				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount() );
 		}
 		else
 		{
-			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i\n",
+			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i  start:%i num:%i\n",
 				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getRenderable()->getId(),
-				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance());
+				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance(),
+				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount() );
 		}
 	}
 	fclose(f);
@@ -455,15 +478,17 @@ void gRenderQueue::_debugOutUnsorted(const char* fname)
 	{
 		if (m_elements[i].getMaterial() != 0)
 		{
-			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i\n",
+			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i  start:%i num:%i\n",
 				m_elements[i].getKey(), m_elements[i].getMaterial()->getId(), m_elements[i].getMaterial()->getName(), m_elements[i].getRenderable()->getId(),
-				m_elements[i].getRenderable()->getResourceName(), m_elements[i].getDistance());
+				m_elements[i].getRenderable()->getResourceName(), m_elements[i].getDistance(), 
+				m_elements[i].getStartIndex(), m_elements[i].getPrimitiveCount() );
 		}
 		else
 		{
-			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i\n",
+			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i  start:%i num:%i\n",
 				m_elements[i].getKey(), m_elements[i].getRenderable()->getId(),
-				m_elements[i].getRenderable()->getResourceName(), m_elements[i].getDistance());
+				m_elements[i].getRenderable()->getResourceName(), m_elements[i].getDistance(),
+				m_elements[i].getStartIndex(), m_elements[i].getPrimitiveCount());
 		}
 	}
 	fclose(f);

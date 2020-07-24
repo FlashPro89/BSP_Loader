@@ -410,7 +410,6 @@ int getLeafInCamPosition( int* steps = 0 )
 	int node = 0;
 	do
 	{
-
 		if (testPointOnPlane(cam.getPosition(), bsp_nodes[node].planenum) >= 0)
 			node = bsp_nodes[node].children[0];
 		else
@@ -1230,6 +1229,8 @@ void loadScene( const char* mapname )
 	pD3DDev9->SetSamplerState(1, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
 	pD3DDev9->SetSamplerState(1, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
 
+	pD3DDev9->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_MODULATE2X);
+
 	D3DCAPS9 d3dCaps;
 
 	pD3DDev9->GetDeviceCaps(&d3dCaps);
@@ -1341,7 +1342,7 @@ int decompressRow(byte* visCompr, byte* dest)
 
 void unLoadScene()
 {
-	rmgr.destroyResource("bspLevel", GRESGROUP_BSPLEVEL);
+	//rmgr.destroyResource("bspLevel", GRESGROUP_BSPLEVEL);
 
 	//////////////////////////////////////////////////////////////////
 	//// scene node graph test
@@ -1739,7 +1740,6 @@ void frame_render()
 	HRESULT coopLevel = pD3DDev9->TestCooperativeLevel();
 	if (SUCCEEDED(coopLevel))
 	{
-
 		pD3DDev9->Clear(0, 0, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xFF7F7F7F, 1.0f, 0);
 		pD3DDev9->BeginScene();
 

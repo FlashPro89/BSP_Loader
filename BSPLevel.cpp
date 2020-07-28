@@ -2,9 +2,9 @@
 #include "FileSystem.h"
 #include "BSPFile.h"
 #include "BMPFile.h"
-#include "Materials.h"
 #include "RenderQueue.h"
 #include "Scene.h"
+#include "Materials.h"
 
 #define GBSP_FVF D3DUSAGE_WRITEONLY, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2
 
@@ -67,18 +67,26 @@ gResourceBSPLevel::gResourceBSPLevel(gResourceManager* mgr, GRESOURCEGROUP group
 
 	m_trisNum = 0;
 	m_vertsNum = 0;
+	m_batchIBSize = 0;
 	m_pVB = 0;
 	m_pIB = 0;
+	m_pBatchIB = 0;
 	m_faceBounds = 0;
 	m_rFaces = 0;
 
 	m_lMapAtlasW = 0;
 	m_lMapAtlasH = 0;
+
+	m_facePositions = 0;
 }
 
 gResourceBSPLevel::~gResourceBSPLevel()
 {
 	unload();
+
+	if (m_facePositions == 0)
+		delete [] m_facePositions;
+	m_facePositions = 0;
 
 	if (m_pLMapTex)
 		m_pLMapTex->release();
@@ -310,6 +318,8 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	m_AABB.setMinBounds(m_bspNodes[0].mins[0], m_bspNodes[0].mins[2], m_bspNodes[0].mins[1]);
 	m_AABB.setMaxBounds(m_bspNodes[0].maxs[0], m_bspNodes[0].maxs[2], m_bspNodes[0].maxs[1]);
 
+	buildFacePositions();
+
 	return true;
 }
 
@@ -327,9 +337,15 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 		throw("ќшибка при создании буффера вершин!");
 
 	//create index buffer
-	hr = pD3DDev9->CreateIndexBuffer(sizeof(short) *m_trisNum * 3, D3DUSAGE_WRITEONLY, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &m_pIB, 0);
+	hr = pD3DDev9->CreateIndexBuffer(sizeof(short) *m_trisNum * 3, D3DUSAGE_DYNAMIC, D3DFMT_INDEX16, D3DPOOL_SYSTEMMEM, &m_pIB, 0);
 	if (FAILED(hr))
 		throw("ќшибка при создании буффера индексов!");
+	
+	//create batch index buffer
+	m_batchIBSize = sizeof(short) * m_trisNum * 3;
+	hr = pD3DDev9->CreateIndexBuffer(m_batchIBSize, D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC, D3DFMT_INDEX16, D3DPOOL_DEFAULT, &m_pBatchIB, 0);
+	if (FAILED(hr))
+		throw("ќшибка при создании batch буффера индексов!");
 
 	gBSPVertex* p_vdata = 0;
 	gBSPIndex* p_idata = 0;
@@ -579,6 +595,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 
 void gResourceBSPLevel::unload() //данные, загруженые preload() в этой функции не измен€ютс€
 {
+	if (m_pBatchIB)
+		m_pBatchIB->Release();
 	if (m_pVB)
 		m_pVB->Release();
 	if (m_pIB)
@@ -586,6 +604,7 @@ void gResourceBSPLevel::unload() //данные, загруженые preload() в этой функции н
 
 	m_pVB = 0;
 	m_pIB = 0;
+	m_pBatchIB = 0;
 }
 
 void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* cam) const
@@ -604,6 +623,7 @@ void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity
 		}
 	}
 
+	//запись в очередь
 	for( unsigned int i = 0; i < m_bspFacesNum; i++ )
 	{
 		if (!m_rFaces[i].needDraw)
@@ -724,6 +744,16 @@ void* gResourceBSPLevel::getIBuffer() const
 	return m_pIB;
 }
 
+void* gResourceBSPLevel::getBatchIBuffer() const
+{
+	return m_pBatchIB;
+}
+
+unsigned int gResourceBSPLevel::getBatchIBufferSize() const
+{
+	return m_batchIBSize;
+}
+
 GPRIMITIVETYPE gResourceBSPLevel::getPrimitiveType() const
 {
 	return GPRIMITIVETYPE::GPT_TRIANGLELIST;
@@ -805,6 +835,37 @@ bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 	m_pLMapTex->addRef();
 
 	return true;
+}
+
+void gResourceBSPLevel::buildFacePositions()
+{
+	if (m_facePositions)
+		delete [] m_facePositions;
+
+	m_facePositions = new D3DXVECTOR3[m_bspFacesNum];
+
+	gAABB faceBB;
+	D3DXVECTOR3 pos;
+
+	for (unsigned int i = 0; i < m_bspFacesNum; i++)
+	{
+		faceBB.reset();
+
+		for (unsigned int e = m_bspFaces[i].firstedge; e < m_bspFaces[i].numedges +
+			m_bspFaces[i].firstedge; e++)
+		{
+			faceBB.addPoint(D3DXVECTOR3(
+				m_bspVerts[m_bspEdges[abs(m_bspSurfedges[e])].v[0]].point[0],
+				m_bspVerts[m_bspEdges[abs(m_bspSurfedges[e])].v[0]].point[2],
+				m_bspVerts[m_bspEdges[abs(m_bspSurfedges[e])].v[0]].point[1] ) );
+
+			faceBB.addPoint(D3DXVECTOR3(
+				m_bspVerts[m_bspEdges[abs(m_bspSurfedges[e])].v[1]].point[0],
+				m_bspVerts[m_bspEdges[abs(m_bspSurfedges[e])].v[1]].point[2],
+				m_bspVerts[m_bspEdges[abs(m_bspSurfedges[e])].v[1]].point[1]));
+		}
+		faceBB.getCenterPoint( &m_facePositions[i] );
+	}
 }
 
 void* gResourceBSPLevel::getLump(unsigned char lump) const

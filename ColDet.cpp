@@ -113,5 +113,5 @@ void gAABB::getTransformedByMatrix( gAABB* out, const D3DXMATRIX& transform ) co
 
 void gAABB::getCenterPoint( D3DXVECTOR3* outCenter )
 {
-	*outCenter = m_bmax - m_bmin;
+	*outCenter = (m_bmax - m_bmin) * 0.5f + m_bmin;
 }

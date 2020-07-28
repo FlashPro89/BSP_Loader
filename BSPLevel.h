@@ -65,6 +65,9 @@ public:
 	void* getVBuffer() const;
 	void* getIBuffer() const;
 
+	void* getBatchIBuffer() const;
+	unsigned int getBatchIBufferSize() const;
+
 	GPRIMITIVETYPE getPrimitiveType() const;
 	unsigned int getVertexStride() const;
 	GVERTEXFORMAT getVertexFormat() const;
@@ -77,6 +80,7 @@ protected:
 
 	void* getLump(unsigned char lump) const;
 	bool loadLightmaps( unsigned int lightedFacesNum );
+	void buildFacePositions();
 
 	//	BSP format part -----------------------------------------
 	BSPMapHeader_t* m_pBSPHeader;
@@ -126,9 +130,12 @@ protected:
 	//	Rendering part -----------------------------------------
 	unsigned int m_trisNum;
 	unsigned int m_vertsNum;
+	unsigned int m_batchIBSize;
 	IDirect3DVertexBuffer9* m_pVB;
 	IDirect3DIndexBuffer9* m_pIB;
+	IDirect3DIndexBuffer9* m_pBatchIB;
 	gBSPRendingFace* m_rFaces;
+	D3DXVECTOR3* m_facePositions = 0;
 };
 
 #endif

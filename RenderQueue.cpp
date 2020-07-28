@@ -267,6 +267,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	const D3DXMATRIX* matPalete = 0;
 	const gSkinBoneGroup* skinBoneGroup = 0;
 
+	const D3DXMATRIX* pLastMatrix = 0;
 	int m_lastLighting = -1;
 	int m_lastRenderable = -1;
 	int m_lastMaterial = -1;
@@ -309,7 +310,12 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false);
 			}
 			m_lastMatSkinned = false;
-			pDevice->SetTransform(D3DTS_WORLDMATRIX(0), matPalete);
+
+			if (pLastMatrix != &matPalete[0])
+			{
+				pDevice->SetTransform(D3DTS_WORLDMATRIX(0), &matPalete[0]);
+				pLastMatrix = &matPalete[0];
+			}
 		}
 
 		//render it!

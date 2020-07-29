@@ -1542,6 +1542,16 @@ void* gResourceSkinnedMesh::getIBuffer() const
 	return m_pIB;
 }
 
+unsigned int gResourceSkinnedMesh::getIBufferSize() const
+{
+	return m_trisNum * 6;
+}
+
+unsigned int gResourceSkinnedMesh::getVBufferSize() const
+{
+	return sizeof(gSkinVertex) * m_trisNum * 3;
+}
+
 GPRIMITIVETYPE gResourceSkinnedMesh::getPrimitiveType() const
 {
 	return GPRIMITIVETYPE::GPT_TRIANGLELIST;
@@ -2015,6 +2025,16 @@ void* gResourceStaticMesh::getVBuffer() const
 void* gResourceStaticMesh::getIBuffer() const
 {
 	return m_pIB;
+}
+
+unsigned int gResourceStaticMesh::getIBufferSize() const
+{
+	return m_trisNum * 6;
+}
+
+unsigned int gResourceStaticMesh::getVBufferSize() const
+{
+	return sizeof(gSkinVertex) * m_trisNum * 3;
 }
 
 GPRIMITIVETYPE gResourceStaticMesh::getPrimitiveType() const

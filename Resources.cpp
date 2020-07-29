@@ -645,6 +645,16 @@ void* gResourceShape::getIBuffer() const
 	return 0;
 }
 
+unsigned int gResourceShape::getIBufferSize() const
+{
+	return 0;
+}
+
+unsigned int gResourceShape::getVBufferSize() const
+{
+	return 0;
+}
+
 GPRIMITIVETYPE gResourceShape::getPrimitiveType() const
 {
 	return GPRIMITIVETYPE::GPT_D3DXMESH;

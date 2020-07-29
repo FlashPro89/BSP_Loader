@@ -256,6 +256,16 @@ void* gResourceTerrain::getIBuffer() const
 	return m_pIndexBuffer;
 }
 
+unsigned int gResourceTerrain::getIBufferSize() const
+{
+	return (m_width - 1) * (m_depth - 1) * 6 * sizeof(int);
+}
+
+unsigned int gResourceTerrain::getVBufferSize() const
+{
+	return m_width* m_depth * sizeof(gTerrainVertex);
+}
+
 GPRIMITIVETYPE gResourceTerrain::getPrimitiveType() const
 {
 	return GPRIMITIVETYPE::GPT_TRIANGLELIST;

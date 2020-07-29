@@ -667,23 +667,29 @@ int gResourceBSPLevel::getLeafAtPoint( const D3DXVECTOR3& point ) const
 	return  -(node + 1);
 }
 
-void gResourceBSPLevel::drawVisibleLeafs(int leaf, const gCamera& cam ) const
+void gResourceBSPLevel::drawVisibleLeafs( int camLeaf, const gCamera& cam ) const
 {
 	byte pvs[2048];
 	memset(&pvs[0], 0, 2048);
 
 	int decomprSz = 0;
 	if (m_bspVisData > 0)
-		decomprSz = BSPDecompressVisRow( &m_bspVisData[m_bspLeafs[leaf].visofs], &pvs[0], m_visRow );
+		decomprSz = BSPDecompressVisRow( &m_bspVisData[m_bspLeafs[camLeaf].visofs], &pvs[0], m_visRow );
 
+	
 	for (int leaf = 0; leaf < m_visLeafsNum; leaf++)
 	{
 		if (isLeafVisible(&pvs[0], leaf)) //&& isLeafInFrustum(leaf + 1))
 		{
 			if( isLeafInFrustum( (leaf + 1), cam ) )
 				drawLeaf(leaf + 1);
-		//	drawedLeafs++;
 		}
+	}
+	
+
+	for (int leaf = m_visLeafsNum; leaf < m_bspLeafsNum ; leaf++)
+	{
+		drawLeaf(leaf);
 	}
 }
 
@@ -742,6 +748,16 @@ void* gResourceBSPLevel::getVBuffer() const
 void* gResourceBSPLevel::getIBuffer() const
 {
 	return m_pIB;
+}
+
+unsigned int gResourceBSPLevel::getIBufferSize() const
+{
+	return m_trisNum * 3 * sizeof(short); // 16bit indexes
+}
+
+unsigned int gResourceBSPLevel::getVBufferSize() const
+{
+	return m_vertsNum * sizeof(gBSPVertex);
 }
 
 void* gResourceBSPLevel::getBatchIBuffer() const

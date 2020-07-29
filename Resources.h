@@ -170,6 +170,9 @@ public:
 	virtual void* getVBuffer() const = 0;
 	virtual void* getIBuffer() const = 0;
 
+	virtual unsigned int getIBufferSize() const = 0;
+	virtual unsigned int getVBufferSize() const = 0;
+
 	virtual void* getBatchIBuffer() const { return 0; };
 	virtual unsigned int getBatchIBufferSize() const { return 0; };
 
@@ -231,6 +234,9 @@ public:
 
 	void* getVBuffer() const;
 	void* getIBuffer() const;
+
+	unsigned int getIBufferSize() const;
+	unsigned int getVBufferSize() const;
 
 	GPRIMITIVETYPE getPrimitiveType() const;
 	unsigned int getVertexStride() const;

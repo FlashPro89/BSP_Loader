@@ -65,6 +65,9 @@ public:
 	void* getVBuffer() const;
 	void* getIBuffer() const;
 
+	unsigned int getIBufferSize() const;
+	unsigned int getVBufferSize() const;
+
 	void* getBatchIBuffer() const;
 	unsigned int getBatchIBufferSize() const;
 

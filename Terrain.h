@@ -48,6 +48,9 @@ public:
 	void* getVBuffer() const;
 	void* getIBuffer() const;
 
+	unsigned int getIBufferSize() const;
+	unsigned int getVBufferSize() const;
+
 	GPRIMITIVETYPE getPrimitiveType() const;
 	unsigned int getVertexStride() const;
 

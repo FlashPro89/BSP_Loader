@@ -260,6 +260,16 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	if (m_arrayPos == 0)
 		return; //null queue
 
+	LPDIRECT3DINDEXBUFFER9 pSrcIB = 0;
+	LPDIRECT3DINDEXBUFFER9 pDestBatchIB = 0;
+
+	gRenderElement* batch_pFirstElement = 0;
+	bool batch_begin = false;
+	//bool batch_rasterize = false;
+	unsigned int batch_primCount = 0;
+	unsigned short* batch_pDestBuffData = 0;
+	unsigned short* batch_pSrcBuffData = 0;
+
 	gRenderElement* pElement = 0;
 	const gMaterial* pMaterial = 0;
 	const gResource2DTexture* pTex = 0;
@@ -276,10 +286,84 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	int m_lastMatUseBlending = m_elementsPointers[m_arrayPos-1]->getMaterial()->getTransparency() == 0xFF;
 
 	GVERTEXFORMAT lastVF = GVF_NUM;
+	D3DPRIMITIVETYPE pt;
 	
 
 	while (this->popBack(&pElement))
 	{
+		pRenderable = pElement->getRenderable();
+		pMaterial = pElement->getMaterial();
+
+	restart:
+
+		//run batch if available
+		if(  (pRenderable->getBatchIBufferSize() != 0) && !batch_begin )
+		{
+			pSrcIB = (LPDIRECT3DINDEXBUFFER9)pRenderable->getIBuffer();
+			pDestBatchIB = (LPDIRECT3DINDEXBUFFER9)pRenderable->getBatchIBuffer();
+
+			HRESULT hr1 = pSrcIB->Lock(0, pRenderable->getIBufferSize(), (void**)&batch_pSrcBuffData, D3DLOCK_READONLY);
+			HRESULT hr2 = pDestBatchIB->Lock(0, pRenderable->getBatchIBufferSize(), (void**)&batch_pDestBuffData, D3DLOCK_NO_DIRTY_UPDATE);
+
+			batch_pFirstElement = pElement;
+
+
+			if (SUCCEEDED(hr1) && SUCCEEDED(hr2))
+			{
+				batch_primCount = 0;
+				batch_begin = true;
+				//batch_rasterize = false;
+
+				//debug:
+				unsigned short u[3] = {
+					batch_pSrcBuffData[pElement->getStartIndex()],
+					batch_pSrcBuffData[pElement->getStartIndex() + 1],
+					batch_pSrcBuffData[pElement->getStartIndex() + 2] };
+
+				memcpy( &batch_pDestBuffData[batch_primCount * 3 ], &batch_pSrcBuffData[pElement->getStartIndex() ],
+					pElement->getPrimitiveCount() * 3 * sizeof(short) );
+				batch_primCount += pElement->getPrimitiveCount();
+				//goto setparams;
+			}
+			else //неудалось залочить 2 буффера
+			{
+				if (SUCCEEDED(hr1))
+					pSrcIB->Unlock();
+				if (SUCCEEDED(hr2))
+					pDestBatchIB->Unlock();
+			}
+		}
+		// add data to batch
+		else if( batch_begin && 
+			( batch_pFirstElement->getMatrixPalete() == matPalete) &&
+			( pRenderable->getId() == m_lastRenderable) &&
+			( pMaterial->getId() == m_lastMaterial ) )
+		{
+			memcpy( &batch_pDestBuffData[batch_primCount * 3], &batch_pSrcBuffData[pElement->getStartIndex()],
+				pElement->getPrimitiveCount() * 3 * sizeof(short) );
+			batch_primCount += pElement->getPrimitiveCount();
+			continue;
+		}
+
+		else if( batch_begin && (
+			(batch_pFirstElement->getMatrixPalete() != matPalete) ||
+			(pRenderable->getId() != m_lastRenderable) ||
+			(pMaterial->getId() != m_lastMaterial ))) //rasterize batch
+		{
+			HRESULT hr1 = pSrcIB->Unlock();
+			HRESULT hr2 = pDestBatchIB->Unlock();
+
+			pDevice->SetIndices(pDestBatchIB);
+
+			pDevice->DrawIndexedPrimitive( pt, 0, 0, batch_pFirstElement->getVertexesNum(),
+				0, batch_primCount );
+
+			batch_primCount = 0;
+			batch_begin = false;
+
+			goto restart;
+		}
+
 		//set transforms
 		matPalete = pElement->getMatrixPalete();
 		if (pElement->getMatrixPaleteSize() > 1) //skinning
@@ -293,7 +377,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS);
 			}
 			m_lastMatSkinned = true;
-
 
 
 			while (rit != skinBoneGroup->remappedBones.end())
@@ -319,10 +402,8 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		}
 
 		//render it!
-		pRenderable = pElement->getRenderable();
 		if( pRenderable )
 		{
-			D3DPRIMITIVETYPE pt;
 			switch (pRenderable->getPrimitiveType())
 			{
 			case GPT_POINTLIST:
@@ -340,6 +421,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 			if (pRenderable->getId() != m_lastRenderable)
 			{
+
 				//FFP only
 				if (lastVF != pRenderable->getVertexFormat())
 				{
@@ -350,15 +432,15 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				pDevice->SetStreamSource(0, (LPDIRECT3DVERTEXBUFFER9)pRenderable->getVBuffer(),
 					0, pRenderable->getVertexStride() );
 
-				if (pRenderable->getIBuffer() != 0) //draw indexed
-				{
+				if ( (pRenderable->getIBuffer() != 0)  && !batch_begin ) //draw indexed
+				{		
 					pDevice->SetIndices((LPDIRECT3DINDEXBUFFER9)pRenderable->getIBuffer());
 				}
+			
 				m_lastRenderable = pRenderable->getId();
 			}
 
 			//setup material
-			pMaterial = pElement->getMaterial();
 			if (pMaterial)
 			{
 
@@ -431,19 +513,32 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				}
 			}
 
-
-			if (pRenderable->getIBuffer() != 0) //draw indexed
+			if (!batch_begin)
 			{
-				pDevice->DrawIndexedPrimitive(pt, 0, 0, pElement->getVertexesNum(),
-					pElement->getStartIndex(), pElement->getPrimitiveCount());
-			}
-			else // draw noindexed
-			{
-				pDevice->DrawPrimitive(pt, pElement->getStartIndex(), pElement->getPrimitiveCount());
+				if (pRenderable->getIBuffer() != 0) //draw indexed
+				{
+					pDevice->DrawIndexedPrimitive(pt, 0, 0, pElement->getVertexesNum(),
+						pElement->getStartIndex(), pElement->getPrimitiveCount());
+				}
+				else // draw noindexed
+				{
+					pDevice->DrawPrimitive(pt, pElement->getStartIndex(), pElement->getPrimitiveCount());
+				}
 			}
 		}
 	}
-	//this->m_arrayPos = 0;
+	
+
+	if ( batch_begin ) //rasterize batch
+	{
+		HRESULT hr1 = pSrcIB->Unlock();
+		HRESULT hr2 = pDestBatchIB->Unlock();
+
+		pDevice->SetIndices(pDestBatchIB);
+
+		pDevice->DrawIndexedPrimitive(pt, 0, 0, batch_pFirstElement->getVertexesNum(),
+			0, batch_primCount);
+	}
 }
 
 void gRenderQueue::_debugOutSorted( const char* fname )
@@ -457,17 +552,17 @@ void gRenderQueue::_debugOutSorted( const char* fname )
 	{
 		if (m_elementsPointers[i]->getMaterial() != 0)
 		{
-			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i  start:%i num:%i\n",
+			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i  start:%i num:%i batchBufferSize:%i\n",
 				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getMaterial()->getId(), m_elementsPointers[i]->getMaterial()->getName(), m_elementsPointers[i]->getRenderable()->getId(),
 				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance(),
-				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount() );
+				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount(), m_elementsPointers[i]->getRenderable()->getBatchIBufferSize() );
 		}
 		else
 		{
-			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i  start:%i num:%i\n",
+			fprintf(f, "key: %lli mat: 0 res(%i): %s dist:%i  start:%i num:%i batchBufferSize:%i\n",
 				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getRenderable()->getId(),
 				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance(),
-				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount() );
+				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount(), m_elementsPointers[i]->getRenderable()->getBatchIBufferSize());
 		}
 	}
 	fclose(f);

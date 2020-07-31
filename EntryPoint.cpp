@@ -522,7 +522,10 @@ void loadScene( const char* mapname )
 	//sprintf_s(fname, 1024, "../data/maps/%s", mapname);
 	sprintf_s(fname, 1024, "../data/maps/%s", mapname);
 
-	//rmgr.loadTexture2D("../data/textures/lmap.png", "lmap");
+
+	char tmp[1024];
+	sprintf_s( tmp, 1024, "Map: %s", mapname);
+	wnd_setTitle(tmp);
 
 	printf_s("Loading Scene...\n");
 
@@ -712,6 +715,7 @@ void loadScene( const char* mapname )
 	fclose(f);
 	f = 0;
 
+	/*
 	if (bsp_header->version != BSPVERSION) throw("Invalid BSP File Version");
 
 	//swap bytes ?!?!? or no?
@@ -1147,6 +1151,7 @@ void loadScene( const char* mapname )
 	m_VB->Unlock();
 	m_IB->Unlock();
 
+	*/
 
 	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 	pD3DDev9->SetRenderState(D3DRS_AMBIENT, 0xFFFFFFFF);
@@ -1211,7 +1216,7 @@ void loadScene( const char* mapname )
 	pD3DDev9->SetRenderState(D3DRS_LIGHTING, true);
 
 	//WAD TEX LOAD
-	loadWAD();
+	//loadWAD();
 
 	pD3DDev9->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC);
 	pD3DDev9->SetSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
@@ -1571,7 +1576,7 @@ void drawLeaf(int leaf)
 void renderFaces()
 {
 	pD3DDev9->SetSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_GAUSSIANQUAD);
-	pD3DDev9->SetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_NONE);
+	pD3DDev9->SetSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 	pD3DDev9->SetSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 	pD3DDev9->SetSamplerState(1, D3DSAMP_MAXANISOTROPY, 16);
 
@@ -1750,9 +1755,9 @@ void frame_render()
 		pD3DDev9->SetTransform(D3DTS_VIEW, &cam.getViewMatrix());
 		pD3DDev9->SetTransform(D3DTS_PROJECTION, &cam.getProjMatrix());
 
-		pD3DDev9->SetStreamSource(0, m_VB, 0, sizeof(D3DVertex));
-		pD3DDev9->SetIndices(m_IB);
-		pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2);
+		//pD3DDev9->SetStreamSource(0, m_VB, 0, sizeof(D3DVertex));
+		//pD3DDev9->SetIndices(m_IB);
+		//pD3DDev9->SetFVF(D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2);
 
 		int tri_counter = 0;
 		int tris_in_face = 0;
@@ -1762,11 +1767,12 @@ void frame_render()
 		drawedLeafs = 0;
 		numSetTexCalls = 0;
 
-		int steps = 0;
-		currentLeaf = getLeafInCamPosition(&steps);
+		//int steps = 0;
+		//currentLeaf = getLeafInCamPosition(&steps);
 
-		char tmp[1024];
+		
 
+		/*
 		if (bsp_visdatasize != 0)
 		{
 			if (rmodels)
@@ -1774,8 +1780,9 @@ void frame_render()
 		}
 		else
 			drawModels(0, num_models);
-
-
+		*/
+		
+		/*
 		D3DXVECTOR3 p = cam.getPosition();
 		int content = isCollideWithWorld(p, 1500.f);
 
@@ -1791,12 +1798,17 @@ void frame_render()
 			}
 		}
 
+		*/
 		//renderFaces();
 
+		/*
+		char tmp[1024];
 		sprintf_s(tmp, 1024, "Map: %s%s, Num Leafs: %i, Curent Leaf: %i, Steps to find: %i, Visible Leafs: %i, Visible Faces: %i, Frustum: %s, LMaps: %s, Content: %i",
 			filesMapList[currentMap].c_str(), bsp_visdatasize > 0 ? "" : "(NO_VIS)", num_leafs, currentLeaf, steps, drawedLeafs, drawedFaces, useFrustum ? "on" : "off", useLightmaps ? "on" : "off", content);
 		wnd_setTitle(tmp);
+		*/
 
+		/*
 		if (rbboxes)
 		{
 			for (int i = 0; i < num_leafs; i++)
@@ -1804,8 +1816,7 @@ void frame_render()
 				drawAABB(bsp_leafs[i].mins, bsp_leafs[i].maxs, 0xFF00FF00);
 			}
 		}
-
-
+		
 		if ((currentLeaf > 0) && rbboxes)
 		{
 			pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
@@ -1816,12 +1827,11 @@ void frame_render()
 			pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 
 		}
-	}
+		*/
+	
 
-	smgr.frameRender(rqueue);
+		smgr.frameRender(rqueue);
 
-	if (SUCCEEDED(coopLevel))
-	{
 		if (input->isKeyDown(DIK_Y))
 		{
 			rqueue._debugOutSorted("out_queue_sorted.txt");
@@ -1907,9 +1917,7 @@ void frame_move()
 {
 	float dt = timer->getDelta();
 
-	HRESULT coopLevel = pD3DDev9->TestCooperativeLevel();
-	if (FAILED(coopLevel))
-		return;
+
 
 	ti += dt * 0.2f;
 

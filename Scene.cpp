@@ -113,10 +113,10 @@ void gEntity::onFrameRender( gRenderQueue& queue, const gCamera* camera ) const
 				
 				m_pRenderable->onFrameRender( &queue, this, camera );
 
-				D3DXMATRIX mId;
-				D3DXMatrixIdentity(&mId);
-				if (pAnimator->getMixedFrame())
-					pMesh->drawSkeleton(pAnimator->getMixedFrame(), &mId, 0, 0xFFFF0000);
+				//D3DXMATRIX mId;
+				//D3DXMatrixIdentity(&mId);
+				//if (pAnimator->getMixedFrame())
+				//	pMesh->drawSkeleton(pAnimator->getMixedFrame(), &mId, 0, 0xFFFF0000);
 			}
 			else
 				m_pRenderable->onFrameRender( &queue, this, camera );
@@ -786,12 +786,13 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 
 	if (!m_pResMgr || !pD3DDev) return;
 
-	HRESULT hr = pD3DDev->TestCooperativeLevel();
+	//HRESULT hr = pD3DDev->TestCooperativeLevel();
 
-	HRESULT hr1 = D3DERR_DEVICELOST;
-	HRESULT hr2 = D3DERR_DEVICENOTRESET;
-	HRESULT hr3 = D3DERR_DRIVERINTERNALERROR;
+	//HRESULT hr1 = D3DERR_DEVICELOST;
+	//HRESULT hr2 = D3DERR_DEVICENOTRESET;
+	//HRESULT hr3 = D3DERR_DRIVERINTERNALERROR;
 
+	/*
 	switch (hr)
 	{
 	case S_OK:
@@ -810,6 +811,7 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 	case D3DERR_DRIVERINTERNALERROR:
 		throw("d3d9 driver internal error");
 	}
+	*/
 
 	if ( m_activeCam )
 	{

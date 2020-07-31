@@ -619,7 +619,8 @@ void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity
 	{
 		for (int i = 0; i < m_visLeafsNum; i++)
 		{
-			this->drawLeaf(i);
+			if( isLeafInFrustum(i, *cam) )
+				this->drawLeaf(i);
 		}
 	}
 
@@ -675,7 +676,6 @@ void gResourceBSPLevel::drawVisibleLeafs( int camLeaf, const gCamera& cam ) cons
 	int decomprSz = 0;
 	if (m_bspVisData > 0)
 		decomprSz = BSPDecompressVisRow( &m_bspVisData[m_bspLeafs[camLeaf].visofs], &pvs[0], m_visRow );
-
 	
 	for (int leaf = 0; leaf < m_visLeafsNum; leaf++)
 	{
@@ -689,7 +689,8 @@ void gResourceBSPLevel::drawVisibleLeafs( int camLeaf, const gCamera& cam ) cons
 
 	for (int leaf = m_visLeafsNum; leaf < m_bspLeafsNum ; leaf++)
 	{
-		drawLeaf(leaf);
+		if( isLeafInFrustum(leaf, cam) )
+			drawLeaf(leaf);
 	}
 }
 

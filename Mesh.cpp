@@ -1459,8 +1459,8 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 	//pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE );
 	//pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, false );
 	 
-	if (m_pTransformedBones)
-		drawSkeleton(m_pTransformedBones, &matrixes[0], 0, 0xFF00FFFF );
+	//if (m_pTransformedBones)
+	//	drawSkeleton(m_pTransformedBones, &matrixes[0], 0, 0xFF00FFFF );
 	
 	//pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
 }

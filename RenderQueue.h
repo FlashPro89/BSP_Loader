@@ -38,8 +38,12 @@ int comp(const void* i, const void* j)
 */
 
 class gRenderable;
+class gResource2DTexture;
 class gMaterial;
 struct IDirect3DDevice9;
+struct IDirect3DTexture9;
+struct IDirect3DVertexBuffer9;
+struct IDirect3DIndexBuffer9;
 
 typedef unsigned __int64 GRQSORTINGKEY;
 
@@ -115,10 +119,22 @@ protected:
 	gRenderQueue(gRenderQueue&) {};
 	gRenderQueue(const gRenderQueue&) {};
 
+	void _setTexture( unsigned char level, IDirect3DTexture9* tex, IDirect3DDevice9* pDevice);
+	IDirect3DTexture9* m_oldTextures[8];
+
+	void _setIB( IDirect3DIndexBuffer9* pIB, IDirect3DDevice9* pDevice);
+	IDirect3DIndexBuffer9* m_oldIB;
+
+	void _setVB( IDirect3DVertexBuffer9* pVB, unsigned char stride, DWORD fvf, IDirect3DDevice9* pDevice);
+	IDirect3DVertexBuffer9* m_oldVB;
+
 	gRenderElement** m_elementsPointers;
 	gRenderElement* m_elements;
 	unsigned int m_elementsArraySize;
 	unsigned int m_arrayPos;
+
+	unsigned short m_tmpIndexes[0xFFFF];
+	unsigned int m_tmpIndexesNum;
 
 };
 

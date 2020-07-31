@@ -1,8 +1,8 @@
 #include "Camera.h"
 #include "gmath.h"
 
-#define DEFAULT_CAM_TSPEED 800.f
-#define DEFAULT_CAM_RSPEED 0.4f
+#define DEFAULT_CAM_TSPEED 1200.f
+#define DEFAULT_CAM_RSPEED 0.9f
 #define DEFAULT_CAM_FOV    D3DX_PI / 4.0f
 #define DEFAULT_CAM_FPLANE 15000.f
 #define DEFAULT_CAM_NPLANE 1.f

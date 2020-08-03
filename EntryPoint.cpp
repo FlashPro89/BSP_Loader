@@ -507,6 +507,8 @@ void loadFonts()
 
 void loadScene( const char* mapname )
 {
+	unLoadScene();
+
 	rqueue.initialize(0xFFFF);
 
 	currentFace = 0;
@@ -514,7 +516,6 @@ void loadScene( const char* mapname )
 	printf( "===================================================================\n" );
 	printf( "Loading map: %s\n", mapname );
 	printf( "===================================================================\n");
-	unLoadScene();
 
 	loadFonts();
 	//testFileSystem();
@@ -2069,18 +2070,21 @@ bool frame_move()
 	{
 		bFullscreen = !bFullscreen;
 
-		wnd_hide();
+		//wnd_hide();
+		unLoadScene();
+
 		d3d9_setFullScreen(bFullscreen);
 		if (bFullscreen)
 			d3d9_setDisplayWH(1920, 1080);
 		else
 			d3d9_setDisplayWH(1024, 768);
 		
-		unLoadScene();
 		if (d3d9_reset())
 		{
 			loadScene(filesMapList[currentMap].c_str());
-			wnd_show();
+			frame_move();
+			//wnd_show();
+			return true;
 		}
 		return false;
 	}
@@ -2111,40 +2115,36 @@ void fillMapsList()
 	}
 }
 
+void cleanUp()
+{
+	unLoadScene();
+	d3d9_destroy();
+	wnd_destroy();
+}
+
 int wmain(int argc, wchar_t* argv[])
 {
 	try
 	{
 		wnd_create( "BSP LEVEL LOADER", 1024, 768 );
+		wnd_setFrameMoveCallBack(frame_move);
+		wnd_setFrameRenderCallBack(frame_render);
+		wnd_setCleanUpCallBack( cleanUp );
 		d3d9_init(bFullscreen);
 		fillMapsList();
 
 		loadScene(filesMapList[currentMap].c_str());
-		//loadScene("111.bsp");
-
 		wnd_show();
 		wnd_update();
-
 		input->reset();
 
 		MSG msg = {0};
-		while (true)
+		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 		{
-			while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
-			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-
-				switch (msg.message)
-				{
-				case WM_QUIT:
-					break;
-				}
-			}
-
-			if( frame_move() )
-				frame_render();
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
+		
 		unLoadScene();
 		d3d9_destroy();
 		wnd_destroy();

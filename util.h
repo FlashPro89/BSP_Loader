@@ -28,6 +28,9 @@ void wnd_hide();
 void wnd_update();
 void wnd_mode( bool fs );
 void wnd_setTitle( const char* title );
+void wnd_setFrameMoveCallBack(bool (*callback)());
+void wnd_setFrameRenderCallBack(void (*callback)());
+void wnd_setCleanUpCallBack(void (*callback)());
 
 //d3d9
 void d3d9_init( bool fuulscreen );

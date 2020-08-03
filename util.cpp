@@ -3,6 +3,8 @@
 #pragma comment( lib , "d3d9.lib" )
 #pragma comment( lib , "d3dx9.lib" )
 
+#define WIND_STYLE (WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX | WS_CAPTION)
+
 //vars
 extern HWND hwnd = 0;
 extern LPDIRECT3D9 pD3D9 = 0;
@@ -13,37 +15,54 @@ D3DPRESENT_PARAMETERS presParams;
 int l_width = 0;
 int l_height = 0;
 
+bool (*frameMoveCallback)() = 0;
+void (*frameRenderCallback)() = 0;
+void (*cleanUpCallback)() = 0;
+
 //wndproc
 LRESULT WINAPI _wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
     switch( msg )
     {
-		case WM_CLOSE:
-			PostQuitMessage( 0 );
-            return 0;
         case WM_DESTROY:
+			if (cleanUpCallback)
+				cleanUpCallback();
             PostQuitMessage( 0 );
             return 0;
+		case WM_PAINT:
+			if (frameMoveCallback)
+				if (frameMoveCallback())
+					if (frameRenderCallback)
+						frameRenderCallback();
     }
     return DefWindowProc( hWnd, msg, wParam, lParam );
 }
 
-void wnd_create( const char *title, int w, int h )
+void wnd_create(const char* title, int w, int h)
 {
 	hwnd = 0;
 
 	WNDCLASSEX wc;
-	ZeroMemory( &wc, sizeof( wc ) );
-	wc.cbSize = sizeof( wc );
-	wc.hInstance = GetModuleHandle( 0 );
+	ZeroMemory(&wc, sizeof(wc));
+	wc.cbSize = sizeof(wc);
+	wc.hInstance = GetModuleHandle(0);
 	wc.lpfnWndProc = _wndProc;
 	wc.lpszClassName = "UTIL_LIB_WND_CLS";
 
-	if( !RegisterClassEx( &wc ) )
-		throw( "Ошибка при регистрации класса окна!" );
-	
-	
-	hwnd = CreateWindowEx( 0, "UTIL_LIB_WND_CLS", title, WS_OVERLAPPEDWINDOW | WS_SYSMENU, 0, 0, w, h, 0, 0, 0, 0 );
+	if (!RegisterClassEx(&wc))
+		throw("Ошибка при регистрации класса окна!");
+
+	DWORD wStyle = WIND_STYLE;
+	RECT rect;
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = w;
+	rect.bottom = h;
+	AdjustWindowRect(&rect, wStyle, false);
+
+	//SetWindowPos(hwnd, hwnd, 0, 0, w + bw + bw, h + bh + capt, SWP_NOZORDER);
+
+	hwnd = CreateWindowEx(0, "UTIL_LIB_WND_CLS", title, wStyle, 0, 0, rect.right, rect.bottom, 0, 0, 0, 0);
 	if( ! hwnd )
 		throw( "Ошибка при создании окна!" );
 
@@ -81,6 +100,21 @@ void wnd_setTitle(const char* title)
 		SetWindowText(hwnd, title);
 }
 
+void wnd_setFrameMoveCallBack(bool (*callback)())
+{
+	frameMoveCallback = callback;
+}
+
+void wnd_setFrameRenderCallBack(void (*callback)())
+{
+	frameRenderCallback = callback;
+}
+
+void wnd_setCleanUpCallBack(void (*callback)())
+{
+	cleanUpCallback = callback;
+}
+
 void d3d9_init( bool fullscreen )
 {
 	HRESULT hr;
@@ -103,9 +137,9 @@ void d3d9_init( bool fullscreen )
 	presParams.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 	presParams.SwapEffect = D3DSWAPEFFECT_DISCARD;
 	presParams.Windowed = !fullscreen;
-	presParams.BackBufferFormat = D3DFMT_A8R8G8B8;
-	//presParams.BackBufferWidth = 1920;
-	//presParams.BackBufferHeight = 1080;
+	presParams.BackBufferFormat = D3DFMT_X8R8G8B8;
+	presParams.BackBufferWidth = l_width;
+	presParams.BackBufferHeight = l_height;
 
 
 #ifdef D3D9_SHADER_DEBUG
@@ -194,4 +228,21 @@ void d3d9_setDisplayWH(unsigned short w, unsigned short h)
 {
 	presParams.BackBufferWidth = w;
 	presParams.BackBufferHeight = h;
+
+	if (presParams.Windowed)
+	{
+		DWORD wStyle = WIND_STYLE;
+		RECT rect;
+		rect.left = 0;
+		rect.top = 0;
+		rect.right = w;
+		rect.bottom = h;
+		AdjustWindowRect(&rect, wStyle, false);
+
+		SetWindowPos(hwnd, hwnd, 0, 0, rect.right, rect.bottom, SWP_NOZORDER);
+	}
+	else
+	{
+		SetWindowPos(hwnd, hwnd, 0, 0, w, h, SWP_NOZORDER);
+	}
 }

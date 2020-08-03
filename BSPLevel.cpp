@@ -581,8 +581,11 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 			pTex->addRef();
 
 			pMat->setTexture( 0, pTex );
-			if( pFace->styles[0] == 0 )
-				pMat->setTexture( 1, m_pLMapTex );
+			if (pFace->styles[0] == 0)
+			{
+				m_pLMapTex->addRef();
+				pMat->setTexture(1, m_pLMapTex);
+			}
 		}
 		else
 			m_rFaces[i].pMaterial = pMat;

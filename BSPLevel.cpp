@@ -184,6 +184,10 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	m_bspTexDataSize = m_pBSPHeader->lumps[LUMP_TEXTURES].filelen;
 	m_bspTexData = (byte*)getLump(LUMP_TEXTURES);
 
+	//load entityes
+	m_bspEntDataSize = m_pBSPHeader->lumps[LUMP_ENTITIES].filelen;
+	m_bspEntData = (char*)getLump(LUMP_ENTITIES);
+	
 	//load visdata
 	m_bspVisDataSize = m_pBSPHeader->lumps[LUMP_VISIBILITY].filelen;
 	if( m_bspVisDataSize > 0 )
@@ -320,6 +324,15 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 
 	buildFacePositions();
 
+	//debug:
+	FILE* f = 0;
+	errno_t err = fopen_s( &f, "out_entities.txt", "wb");
+	if (!err)
+	{
+		fwrite( m_bspEntData, 1, m_bspEntDataSize, f );
+		fclose(f);
+	}
+
 	return true;
 }
 
@@ -372,7 +385,7 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 	unsigned short tmp[1024];
 	m_rFaces = new gBSPRendingFace[m_bspFacesNum];
 
-	for (int i = 0; i < m_bspFacesNum; i++)
+	for (unsigned int i = 0; i < m_bspFacesNum; i++)
 	{
 		pBounds = &m_faceBounds[i];
 		pTexinfo = &m_bspTexinfs[m_bspFaces[i].texinfo];
@@ -636,7 +649,9 @@ void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity
 		pMat->setLightingEnable(false);
 		const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 
-		queue->pushBack(gRenderElement(this, pMat, 0, 1, 
+		unsigned short dist = cam->getDistanceToPointUS(m_facePositions[i]);
+
+		queue->pushBack(gRenderElement(this, pMat, dist, 1, 
 			&matrix, m_rFaces[i].start_indx, m_rFaces[i].num_prim, m_vertsNum));
 
 		m_rFaces[i].needDraw = false;

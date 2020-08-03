@@ -150,7 +150,7 @@ struct BSPPlane_t
 int BSPCopyLump(BSPMapHeader_t* header, unsigned int lump, void* dest, unsigned int size);
 int BSPGetLumpItemsNum(BSPMapHeader_t* header, unsigned int lump);
 
-int BSPCompressVisRow(byte* vis, byte* dest, int visrow);
-int BSPDecompressVisRow(byte* visCompr, byte* dest, int visrow);
+int BSPCompressVisRow( const byte* vis, byte* dest, int visrow);
+int BSPDecompressVisRow(const byte* visCompr, byte* dest, int visrow);
 
 #endif

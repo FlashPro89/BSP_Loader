@@ -119,6 +119,16 @@ protected:
 	gRenderQueue(gRenderQueue&) {};
 	gRenderQueue(const gRenderQueue&) {};
 
+	void _setTextureStageState( unsigned char level, DWORD state, DWORD value, IDirect3DDevice9* pDevice );
+	std::map< DWORD, DWORD> m_TSS[8];
+
+	void _setSamplerState( unsigned char level, DWORD state, DWORD value, IDirect3DDevice9* pDevice );
+	std::map< DWORD, DWORD> m_SS[8];
+
+	void _setRenderState( DWORD state, DWORD value, IDirect3DDevice9* pDevice );
+	void _forceSetRenderState(DWORD state, DWORD value, IDirect3DDevice9* pDevice );
+	std::map< DWORD, DWORD> m_RS;
+
 	void _setTexture( unsigned char level, IDirect3DTexture9* tex, IDirect3DDevice9* pDevice);
 	IDirect3DTexture9* m_oldTextures[8];
 

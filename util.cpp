@@ -108,7 +108,7 @@ void d3d9_init( bool fullscreen )
 		D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presParams, &pD3DDev9 );
 #else
 	hr = pD3D9->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, 
-		D3DCREATE_HARDWARE_VERTEXPROCESSING, &presParams, &pD3DDev9 );
+		D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE, &presParams, &pD3DDev9 );
 #endif
 
 	if( FAILED( hr ) )

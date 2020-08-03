@@ -20,3 +20,8 @@ float gTimer::getDelta()
 	m_last = current;
 	return delta;
 }
+
+void  gTimer::reset()
+{
+	QueryPerformanceCounter(&m_last);
+}

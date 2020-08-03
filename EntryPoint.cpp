@@ -22,6 +22,8 @@ LPDIRECT3DTEXTURE9 pTexLightsAtlas = 0;
 
 gTextureAtlas atlas;
 
+bool bFullscreen = false;
+
 //вс€кое вс€чино:
 gInput* input = 0;
 gTimer* timer = 0;
@@ -1913,11 +1915,9 @@ void rebuildVB( float dt, float delta_x, float delta_y, float sc )
 	m_VB->Unlock();
 }
 
-void frame_move()
+bool frame_move()
 {
 	float dt = timer->getDelta();
-
-
 
 	ti += dt * 0.2f;
 
@@ -2065,13 +2065,33 @@ void frame_move()
 		frame_move();
 	}
 
+	if (input->isKeyDown(DIK_RETURN) )
+	{
+		bFullscreen = !bFullscreen;
+
+		wnd_hide();
+		d3d9_setFullScreen(bFullscreen);
+		if (bFullscreen)
+			d3d9_setDisplayWH(1920, 1080);
+		else
+			d3d9_setDisplayWH(1024, 768);
+		
+		unLoadScene();
+		if (d3d9_reset())
+		{
+			loadScene(filesMapList[currentMap].c_str());
+			wnd_show();
+		}
+		return false;
+	}
+
 	static bool wf = false;
 	if (input->isKeyDown(DIK_SPACE))
 	{
 		wf = !wf;
 		pD3DDev9->SetRenderState(D3DRS_FILLMODE, wf ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
 	}
-
+	return true;
 }
 
 void fillMapsList()
@@ -2096,11 +2116,11 @@ int wmain(int argc, wchar_t* argv[])
 	try
 	{
 		wnd_create( "BSP LEVEL LOADER", 1024, 768 );
-		d3d9_init(false);
+		d3d9_init(bFullscreen);
 		fillMapsList();
 
-		//loadScene(filesMapList[currentMap].c_str());
-		loadScene("111.bsp");
+		loadScene(filesMapList[currentMap].c_str());
+		//loadScene("111.bsp");
 
 		wnd_show();
 		wnd_update();
@@ -2122,8 +2142,8 @@ int wmain(int argc, wchar_t* argv[])
 				}
 			}
 
-			frame_move();
-			frame_render();
+			if( frame_move() )
+				frame_render();
 		}
 		unLoadScene();
 		d3d9_destroy();

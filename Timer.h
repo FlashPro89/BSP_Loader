@@ -12,6 +12,7 @@ public:
 	~gTimer();
 
 	float getDelta(); // !!! set last perion to current, delta = 0 !!!
+	void reset();
 protected:
 	LARGE_INTEGER m_last;
 	LARGE_INTEGER m_freq;

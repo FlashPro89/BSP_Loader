@@ -75,6 +75,11 @@ void wnd_update()
 	UpdateWindow( hwnd );
 }
 
+void wnd_setTitle(const char* title)
+{
+	if (hwnd)
+		SetWindowText(hwnd, title);
+}
 
 void d3d9_init( bool fullscreen )
 {
@@ -185,8 +190,8 @@ void d3d9_setFullScreen(bool fullscreen)
 	presParams.Windowed = !fullscreen;
 }
 
-void wnd_setTitle(const char* title)
+void d3d9_setDisplayWH(unsigned short w, unsigned short h)
 {
-	if(hwnd)
-		SetWindowText(hwnd, title);
+	presParams.BackBufferWidth = w;
+	presParams.BackBufferHeight = h;
 }

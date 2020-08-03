@@ -35,5 +35,6 @@ void d3d9_destroy();
 bool d3d9_reset();
 bool d3d9_isFullScreen();
 void d3d9_setFullScreen(bool fullscreen);
+void d3d9_setDisplayWH(unsigned short w, unsigned short h);
 
 #endif

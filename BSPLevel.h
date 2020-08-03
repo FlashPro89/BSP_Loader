@@ -113,12 +113,14 @@ protected:
 	unsigned short* m_bspMarksurfaces;
 	BSPClipnode_t* m_bspClipnodes;
 
-	byte* m_bspLightData;
-	byte* m_bspTexData;
-	byte* m_bspVisData;
+	const byte* m_bspLightData;
+	const byte* m_bspTexData;
+	const byte* m_bspVisData;
+	const char* m_bspEntData;
 	int m_bspTexDataSize;
 	int m_bspLightDataSize;
 	int m_bspVisDataSize;
+	int m_bspEntDataSize;
 
 	int m_visLeafsNum;
 	int m_visRow;

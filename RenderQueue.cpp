@@ -269,6 +269,13 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	if (m_arrayPos == 0)
 		return; //null queue
 
+	for (unsigned char i = 0; i < 8; i++)
+	{
+		m_SS[i].clear();
+		m_TSS[i].clear();
+	}
+	m_RS.clear();
+
 	LPDIRECT3DINDEXBUFFER9 pSrcIB = 0;
 	LPDIRECT3DINDEXBUFFER9 pDestBatchIB = 0;
 
@@ -393,11 +400,13 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 			if (!m_lastMatSkinned)
 			{
-				pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE);
-				pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS);
+				//pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE);
+				//pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS);
+				
+				_setRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, true, pDevice );
+				_setRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS, pDevice );
 			}
 			m_lastMatSkinned = true;
-
 
 			while (rit != skinBoneGroup->remappedBones.end())
 			{
@@ -409,8 +418,11 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		{
 			if (m_lastMatSkinned)
 			{
-				pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
-				pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false);
+				//pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
+				//pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false);
+
+				_setRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false, pDevice);
+				_setRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE, pDevice);
 			}
 			m_lastMatSkinned = false;
 
@@ -468,7 +480,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			//setup material
 			if (pMaterial)
 			{
-
+				/*
 				if (m_lastLighting < 0)
 				{
 					m_lastLighting = pMaterial->getLightingEnable();
@@ -484,6 +496,8 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 					m_lastLighting = false;
 					pDevice->SetRenderState(D3DRS_LIGHTING, m_lastLighting);
 				}
+				*/
+				_setRenderState( D3DRS_LIGHTING, pMaterial->getLightingEnable(), pDevice );
 
 				unsigned char transpByte = m_elementsPointers[m_arrayPos]->getMaterial()->getTransparency();
 
@@ -494,41 +508,57 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 					for (unsigned char i = 0; i < pMaterial->getTexturesNum(); i++)
 					{
 						pTex = pMaterial->getTexture(i);
-						//if( pTex ) pDevice->SetTexture(i, pTex->getTexture());
-						_setTexture( i, pTex->getTexture(), pDevice);
+						if( pTex ) 
+							//pDevice->SetTexture(i, pTex->getTexture());
+							_setTexture( i, pTex->getTexture(), pDevice);
 
 						if( pTex )
-							pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_MODULATE );
+							//pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_MODULATE );
+							_setTextureStageState( i, D3DTSS_COLOROP, D3DTOP_MODULATE, pDevice );
 						else
-							pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_DISABLE );
+							//pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_DISABLE );
+							_setTextureStageState(i, D3DTSS_COLOROP, D3DTOP_DISABLE, pDevice);
 					}
 
 					if ( transpByte == 0xFF)
 					{
+						/*
 						if (m_lastMatUseBlending)
 						{
 							pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-							//pDevice->SetRenderState(D3DRS_ZENABLE, true);
 							pDevice->SetRenderState(D3DRS_ZWRITEENABLE, true);
+
 							m_lastMatUseBlending = false;
 						}
+						*/
+						_setRenderState(D3DRS_ALPHABLENDENABLE, false, pDevice);
+						_setRenderState(D3DRS_ZWRITEENABLE, true, pDevice);
 					}
 					else
 					{
 						DWORD blendFactor = transpByte | transpByte << 8 | transpByte << 16 | transpByte << 24;
-						pDevice->SetRenderState(D3DRS_BLENDFACTOR, blendFactor);
+						_setRenderState(D3DRS_BLENDFACTOR, blendFactor, pDevice);
+						//pDevice->SetRenderState(D3DRS_BLENDFACTOR, blendFactor);
 
+						_setRenderState(D3DRS_ALPHABLENDENABLE, true, pDevice);
+						_setRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR, pDevice);
+						_setRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE, pDevice);
+						_setRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD, pDevice);
+						_setRenderState(D3DRS_ZWRITEENABLE, false, pDevice);
+
+						/*
 						if (!m_lastMatUseBlending)
 						{
-
+							
 							pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
 							pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
 							pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
 							pDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-							//pDevice->SetRenderState(D3DRS_ZENABLE, true);
 							pDevice->SetRenderState(D3DRS_ZWRITEENABLE, false);
+							
 							m_lastMatUseBlending = true;
 						}
+						*/
 					}
 				}
 			}
@@ -536,7 +566,8 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			{
 				for (unsigned char i = 0; i < 8; i++)
 				{
-					pDevice->SetTexture(i, 0);
+					_setTexture(i, 0, pDevice);
+					//pDevice->SetTexture(i, 0);
 				}
 			}
 
@@ -635,17 +666,79 @@ void gRenderQueue::_debugOutUnsorted(const char* fname)
 	fclose(f);	
 }
 
+void gRenderQueue::_setTextureStageState(unsigned char level, DWORD state, DWORD value, IDirect3DDevice9* pDevice)
+{
+	auto it = (m_TSS[level]).find(state);
+	if (it == m_TSS[level].end())
+	{
+		pDevice->SetTextureStageState(level, (D3DTEXTURESTAGESTATETYPE)state, value);
+		m_TSS[level][state] = value;
+	}
+	else
+	{
+		if (it->second != value)
+		{
+			pDevice->SetTextureStageState( level, (D3DTEXTURESTAGESTATETYPE)state, value);
+			it->second = value;
+		}
+	}
+}
+
+void gRenderQueue::_setSamplerState( unsigned char level, DWORD state, DWORD value, IDirect3DDevice9* pDevice )
+{
+	auto it = (m_SS[level]).find(state);
+	if (it == m_SS[level].end())
+	{
+		pDevice->SetSamplerState(level, (D3DSAMPLERSTATETYPE)state, value);
+		m_SS[level][state] = value;
+	}
+	else
+	{
+		if (it->second != value)
+		{
+			pDevice->SetSamplerState(level, (D3DSAMPLERSTATETYPE)state, value);
+			it->second = value;
+		}
+	}
+}
+
+void gRenderQueue::_setRenderState(DWORD state, DWORD value, IDirect3DDevice9* pDevice )
+{
+	auto it = m_RS.find(state);
+	if (it == m_RS.end())
+	{
+		pDevice->SetRenderState((D3DRENDERSTATETYPE)state, value);
+		m_RS[state] = value;
+	}
+	else
+	{
+		if (it->second != value)
+		{
+			pDevice->SetRenderState((D3DRENDERSTATETYPE)state, value);
+			it->second = value;
+		}
+	}
+}
+
+void gRenderQueue::_forceSetRenderState(DWORD state, DWORD value, IDirect3DDevice9* pDevice)
+{
+	auto it = m_RS.find(state);
+	if (it == m_RS.end())
+	{
+		m_RS[state] = value;
+	}
+	else
+		it->second = value;
+		
+	pDevice->SetRenderState((D3DRENDERSTATETYPE)state, value);
+}
+
 void gRenderQueue::_setTexture( unsigned char level, IDirect3DTexture9* tex, IDirect3DDevice9* pDevice )
 {
 	if (m_oldTextures[level] != tex)
 	{
-		//LPDIRECT3DDEVICE9 pDevice = 0;
-		//HRESULT hr = tex->GetDevice(&pDevice);
-		//if (SUCCEEDED(hr))
-		//{
-			pDevice->SetTexture(level, tex);
-			m_oldTextures[level] = tex;
-		//}
+		pDevice->SetTexture(level, tex);
+		m_oldTextures[level] = tex;
 	}
 }
 
@@ -653,13 +746,8 @@ void gRenderQueue::_setIB(IDirect3DIndexBuffer9* pIB, IDirect3DDevice9* pDevice)
 {
 	if ( pIB && (m_oldIB!=pIB) )
 	{
-		//LPDIRECT3DDEVICE9 pDevice = 0;
-		//HRESULT hr = pIB->GetDevice(&pDevice);
-		//if (SUCCEEDED(hr))
-		//{
-			pDevice->SetIndices(pIB);
-			m_oldIB = pIB;
-		//}
+		pDevice->SetIndices(pIB);
+		m_oldIB = pIB;
 	}
 }
 
@@ -667,13 +755,9 @@ void gRenderQueue::_setVB( IDirect3DVertexBuffer9* pVB, unsigned char stride, DW
 {
 	if (pVB && (m_oldVB != pVB))
 	{
-		//LPDIRECT3DDEVICE9 pDevice = 0;
-		//HRESULT hr = pVB->GetDevice(&pDevice);
-		//if (SUCCEEDED(hr))
-		//{
-			pDevice->SetStreamSource( 0, pVB, 0, stride );
-			pDevice->SetFVF(fvf);
-			m_oldVB = pVB;
-		//}
+		pDevice->SetStreamSource( 0, pVB, 0, stride );
+		pDevice->SetFVF(fvf);
+		m_oldVB = pVB;
 	}
 }
+

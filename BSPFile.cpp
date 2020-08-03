@@ -51,7 +51,7 @@ int BSPGetLumpItemsNum(BSPMapHeader_t* header, unsigned int lump)
 	return 0;
 }
 
-int BSPCompressVisRow(byte* vis, byte* dest, int visrow)
+int BSPCompressVisRow(const byte* vis, byte* dest, int visrow)
 {
 	int		j;
 	int		rep;
@@ -81,7 +81,7 @@ int BSPCompressVisRow(byte* vis, byte* dest, int visrow)
 	return dest_p - dest;
 }
 
-int BSPDecompressVisRow(byte* visCompr, byte* dest, int visrow)
+int BSPDecompressVisRow(const byte* visCompr, byte* dest, int visrow)
 {
 	//TEST:
 	//int bitbytes = ((visLeafs + 63) & ~63) >> 3;
@@ -89,7 +89,7 @@ int BSPDecompressVisRow(byte* visCompr, byte* dest, int visrow)
 	//int visrow = (visLeafs + 7) >> 3;
 	int counter = 0;
 	byte* p = &dest[0];
-	byte* v = &visCompr[0];
+	const byte* v = &visCompr[0];
 
 	int compReaded = 0;
 

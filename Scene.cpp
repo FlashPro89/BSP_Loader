@@ -250,8 +250,9 @@ gSceneNode::~gSceneNode()
 	detachAllEntities();
 	destroyChildren();
 
-	m_sceneManager->destroyNode(m_name);
-	if (m_parent)
+	//m_sceneManager->destroyNode(m_name);
+
+	if ( ( m_parent!=0 ) && ( m_parent != &m_sceneManager->getRootNode() ) )
 		m_parent->destroyChild(m_name);
 }
 
@@ -752,9 +753,10 @@ bool gSceneManager::destroyNode( const char* name )
 	if( it == m_nodeList.end() )
 		return false;
 
-	auto ptr = it->second;
-	m_nodeList.erase(it);
+	gSceneNode* ptr = it->second;
 	delete ptr;
+	ptr = 0;
+	m_nodeList.erase(it);
 
 	return true;
 }

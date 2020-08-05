@@ -1354,19 +1354,21 @@ void unLoadScene()
 
 	//////////////////////////////////////////////////////////////////
 	//// scene node graph test
-	smgr.destroyNode("new_central");
-	smgr.destroyNode("new_joint1");
-	smgr.destroyNode("new_joint2");
-	smgr.destroyNode("new_joint3");
-	smgr.destroyNode("new_joint4");
-	smgr.destroyNode("new_joint5");
-	smgr.destroyNode("new_joint51");
-	smgr.destroyNode("new_joint52");
-	smgr.destroyNode("new_joint53");
-	smgr.destroyNode("new_skin1");
-	smgr.destroyNode("new_skin2");
-	smgr.destroyNode("new_crystal");
-	smgr.destroyNode("new_terrain");
+	//smgr.destroyNode("new_central");
+	//smgr.destroyNode("new_joint1");
+	//smgr.destroyNode("new_joint2");
+	//smgr.destroyNode("new_joint3");
+	//smgr.destroyNode("new_joint4");
+	//smgr.destroyNode("new_joint5");
+	//smgr.destroyNode("new_joint51");
+	//smgr.destroyNode("new_joint52");
+	//smgr.destroyNode("new_joint53");
+	//smgr.destroyNode("new_skin1");
+	//smgr.destroyNode("new_skin2");
+	//smgr.destroyNode("new_skin3");
+	//smgr.destroyNode("new_crystal");
+	//smgr.destroyNode("new_terrain");
+	smgr.getRootNode().destroyChildren();
 
 	smgr.destroyAllEntities();
 
@@ -2139,29 +2141,29 @@ int wmain(int argc, wchar_t* argv[])
 		input->reset();
 
 		MSG msg = {0};
-		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+		while (true)
 		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				if (msg.message == WM_QUIT)
+				{
+					cleanUp();
+					return 0;
+				};
+
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+			if (frame_move())
+				frame_render();
 		}
-		
-		unLoadScene();
-		d3d9_destroy();
-		wnd_destroy();
 	}
-	catch( char* msg )
+	catch( const char* msg )
 	{
 		wnd_hide();
-		MessageBox( 0, msg, "Util Lib", 
+		MessageBox( 0, msg, "BSP Loader ", 
 			MB_OK | MB_ICONERROR | MB_SYSTEMMODAL );
-
-		unLoadScene();
-		d3d9_destroy();
-		wnd_destroy();
-		if( input )
-			delete input;
-		if( timer )
-			delete timer;
 	}
+	cleanUp();
 	return 0;
 }

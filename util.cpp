@@ -25,15 +25,8 @@ LRESULT WINAPI _wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
     switch( msg )
     {
         case WM_DESTROY:
-			if (cleanUpCallback)
-				cleanUpCallback();
             PostQuitMessage( 0 );
             return 0;
-		case WM_PAINT:
-			if (frameMoveCallback)
-				if (frameMoveCallback())
-					if (frameRenderCallback)
-						frameRenderCallback();
     }
     return DefWindowProc( hWnd, msg, wParam, lParam );
 }
@@ -42,12 +35,9 @@ void wnd_create(const char* title, int w, int h)
 {
 	hwnd = 0;
 
-	WNDCLASSEX wc;
-	ZeroMemory(&wc, sizeof(wc));
-	wc.cbSize = sizeof(wc);
-	wc.hInstance = GetModuleHandle(0);
-	wc.lpfnWndProc = _wndProc;
-	wc.lpszClassName = "UTIL_LIB_WND_CLS";
+	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, _wndProc, 0L, 0L,
+				  GetModuleHandle(NULL), NULL, LoadCursor(NULL, IDC_ARROW), NULL, NULL,
+				  "UTIL_LIB_WND_CLS", NULL };
 
 	if (!RegisterClassEx(&wc))
 		throw("Ошибка при регистрации класса окна!");
@@ -59,8 +49,6 @@ void wnd_create(const char* title, int w, int h)
 	rect.right = w;
 	rect.bottom = h;
 	AdjustWindowRect(&rect, wStyle, false);
-
-	//SetWindowPos(hwnd, hwnd, 0, 0, w + bw + bw, h + bh + capt, SWP_NOZORDER);
 
 	hwnd = CreateWindowEx(0, "UTIL_LIB_WND_CLS", title, wStyle, 0, 0, rect.right, rect.bottom, 0, 0, 0, 0);
 	if( ! hwnd )

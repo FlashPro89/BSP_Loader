@@ -249,7 +249,10 @@ gSceneNode::~gSceneNode()
 {
 	detachAllEntities();
 	destroyChildren();
+
 	m_sceneManager->destroyNode(m_name);
+	if (m_parent)
+		m_parent->destroyChild(m_name);
 }
 
 const char* gSceneNode::getName() const
@@ -313,22 +316,29 @@ bool gSceneNode::destroyChild( const char* name )
 	auto it = m_children.find(name);
 	if (it == m_children.end())
 		return false;
-	return m_sceneManager->destroyNode( name );
+
+	delete it->second;
+	m_children.erase(it);
+	//return m_sceneManager->destroyNode( name );
+	return true;
 }
 
 void gSceneNode::destroyChildren()
 {
 	auto it = m_children.begin();
+
 	while (it != m_children.end())
 	{
 		if (it->second)
 		{
+			delete it->second;
 			//it->second->destroyChildren();
-			m_sceneManager->destroyNode( it->second->getName());
+			//m_sceneManager->destroyNode(it->second->getName());
 		}
 		it++;
 	}
-	m_children.clear();
+	
+	//m_children.clear(); // автоотчистка из родительского узла
 }
 
 void gSceneNode::attachEntity( gEntity* entity )
@@ -729,12 +739,15 @@ gEntity* gSceneManager::createEntity( const char* name )
 // TODO?::
 bool gSceneManager::destroyNode( gSceneNode* node )
 {
-	return false; // TODO?::
+	if (node)
+		return destroyNode(node->getName());
+	else
+		return false;
 }
 
 bool gSceneManager::destroyNode( const char* name )
 {
-	auto it = m_nodeList.find(name);
+	auto it = m_nodeList.find( name );
 	
 	if( it == m_nodeList.end() )
 		return false;

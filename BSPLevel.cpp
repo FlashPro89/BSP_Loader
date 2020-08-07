@@ -960,7 +960,6 @@ void gResourceBSPLevel::parceEntities()
 	}
 
 	m_pResMgr->getFileSystem()->closeFile(pFile);
-
 }
 
 void* gResourceBSPLevel::getLump(unsigned char lump) const

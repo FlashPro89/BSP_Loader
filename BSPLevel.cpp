@@ -333,6 +333,24 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 		fclose(f);
 	}
 
+	//debug models
+	err = fopen_s(&f, "out_models.txt", "wb");
+	if (!err)
+	{
+		fprintf(f, "Map: %s\nModels num:%i\n", m_fileName.c_str(), m_bspModelsNum);
+		fprintf(f, "-------------------------------------------------------------------------------\n");
+		for (unsigned int i = 0; i < m_bspModelsNum; i++)
+		{
+			fprintf(f, "model[%i]: firstface:%i numfaces:%i hnode:(%i,%i,%i,%i) visleafs:%i origin(%f;%f;%f)\n", i, m_bspModels[i].firstface,
+				m_bspModels[i].numfaces, m_bspModels[i].headnode[0], m_bspModels[i].headnode[1], m_bspModels[i].headnode[2],
+				m_bspModels[i].headnode[3], m_bspModels[i].visleafs, m_bspModels[i].origin[0],
+				m_bspModels[i].origin[2], m_bspModels[i].origin[1]);
+		}
+		fclose(f);
+	}
+
+	parceEntities();
+
 	return true;
 }
 
@@ -901,6 +919,48 @@ void gResourceBSPLevel::buildFacePositions()
 		}
 		faceBB.getCenterPoint( &m_facePositions[i] );
 	}
+}
+
+void gResourceBSPLevel::parceEntities()
+{
+	unsigned int pos = 0;
+
+	gFile* pFile = m_pResMgr->getFileSystem()->openFileInMemory(m_bspEntData, m_bspEntDataSize);
+
+	if (!pFile)
+		return;
+
+	char tmp[512] = "";
+	char key[32] = "";
+	char value[256] = "";
+
+	while (!pFile->eof())
+	{
+		gEntityParserBlock block;
+		
+		while ( pFile->gets( tmp, 256 + 32) )
+		{
+			if (pFile->eof())
+				break;
+			if (strcmp(tmp, "{"))
+				break;
+		}
+		while (pFile->getc(true) != '}')
+		{
+			if (pFile->eof())
+				break;
+
+			//parce ents
+			if (!pFile->scanf("\"%[^\"]\" \"%[^\"]\"", key, 32, value, 256))
+				break;
+			block[key] = value;
+		}
+		m_entityTextBlocks.push_back( block );
+		pFile->gets(0,1024);
+	}
+
+	m_pResMgr->getFileSystem()->closeFile(pFile);
+
 }
 
 void* gResourceBSPLevel::getLump(unsigned char lump) const

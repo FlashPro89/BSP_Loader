@@ -97,6 +97,8 @@ public:
 	void detachEntity( gEntity* entity );
 	void detachAllEntities();
 
+	bool onDestroyChild( const char* name );
+
 	void setRelativeScale( const D3DXVECTOR3 scale );
 	void setRelativePosition( const D3DXVECTOR3& position );
 	void setRelativeOrientation( const D3DXQUATERNION& orientation );
@@ -185,7 +187,7 @@ protected:
 	gCamera* m_activeCam;
 	gResourceManager* m_pResMgr;
 	gMaterialFactory* m_pMatFactory;
-	mutable gSceneNode m_rootNode;
+	gSceneNode* m_pRootNode;
 	std::map < std::string, gSceneNode* > m_nodeList;
 	std::map < std::string, gEntity* > m_entList;
 

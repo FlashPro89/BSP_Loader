@@ -22,19 +22,22 @@ public:
 	const bool isWriteable();
 	const char* getFileName(); 
 
-	virtual const unsigned int getFileSize() = 0;
+	virtual const unsigned int getFileSize() const = 0;
 
 	virtual bool seek( gFileSeek mode, unsigned int position = 0 ) = 0;
-	virtual const unsigned int tell() = 0;
+	virtual const unsigned int tell() const = 0;
 
-	virtual const size_t read( void* dst, size_t size ) = 0;
+	virtual const size_t read( void* dst, size_t size ) const = 0;
 	virtual size_t write( void* src, size_t size ) = 0;
 
-	virtual const bool gets( char* dst, size_t buffsz ) = 0;
+	virtual const bool gets( char* dst, size_t buffsz ) const = 0;
 	virtual bool puts( const char* src ) = 0;
 
 	virtual int printf(const char* fmt, ...) = 0;
-	virtual const int scanf(const char* fmt, ...) = 0;
+	virtual const int scanf(const char* fmt, ...) const = 0;
+
+	virtual char getc( bool nostep = true ) const = 0;
+	virtual bool eof() const = 0;
 
 protected:
 	gFile() {};
@@ -51,19 +54,22 @@ public:
 	gFileImpl( const char* filename, bool writeable, bool binary = false, void* data = 0, unsigned int datasize = 0 );
 	~gFileImpl();
 
-	const unsigned int getFileSize();
+	const unsigned int getFileSize() const;
 
 	bool seek( gFileSeek mode, unsigned int position = 0 );
-	const unsigned int tell();
+	const unsigned int tell() const;
 
-	const size_t read( void* dst, size_t size );
+	const size_t read( void* dst, size_t size ) const;
 	size_t write( void* src, size_t size );
 
-	const bool gets( char* dst, size_t buffsz );
+	const bool gets( char* dst, size_t buffsz ) const ;
 	bool puts( const char* src );
 
 	int printf( const char* fmt, ... );
-	const int scanf(const char* fmt, ...);
+	const int scanf(const char* fmt, ...) const;
+
+	char getc( bool nostep = true ) const;
+	bool eof() const;
 
 protected:
 	// from file
@@ -71,7 +77,7 @@ protected:
 
 	//from memory
 	size_t m_memFileSize;
-	size_t m_memCurrentPos;
+	mutable size_t m_memCurrentPos;
 	void* m_memFileData;
 };
 
@@ -81,6 +87,7 @@ public:
 	gFileSystem();
 	~gFileSystem();
 
+	gFile* openFileInMemory( void* data, unsigned int datasize, bool writeable = false );
 	gFile* openFile( const char* filename, bool writeable, bool binary );
 	void closeFile( gFile* file );
 

@@ -5,6 +5,7 @@
 
 #include "Resources.h"
 #include "TextureAtlas.h"
+#include <vector>
 
 struct BSPMapHeader_t;
 struct BSPVertex_t;
@@ -16,7 +17,6 @@ struct BSPModel_t;
 struct BSPNode_t;
 struct BSPLeaf_t;
 struct BSPClipnode_t;
-
 
 struct gBSPFaceBounds
 {
@@ -40,6 +40,9 @@ struct gBSPRendingFace
 	gMaterial* pMaterial;
 	bool needDraw;
 };
+
+
+typedef std::map< std::string, std::string >  gEntityParserBlock;
 
 class gResourceBSPLevel : public gRenderable
 {
@@ -84,6 +87,7 @@ protected:
 	void* getLump(unsigned char lump) const;
 	bool loadLightmaps( unsigned int lightedFacesNum );
 	void buildFacePositions();
+	void parceEntities();
 
 	//	BSP format part -----------------------------------------
 	BSPMapHeader_t* m_pBSPHeader;
@@ -113,10 +117,10 @@ protected:
 	unsigned short* m_bspMarksurfaces;
 	BSPClipnode_t* m_bspClipnodes;
 
-	const byte* m_bspLightData;
-	const byte* m_bspTexData;
-	const byte* m_bspVisData;
-	const char* m_bspEntData;
+	byte* m_bspLightData;
+	byte* m_bspTexData;
+	byte* m_bspVisData;
+	char* m_bspEntData;
 	int m_bspTexDataSize;
 	int m_bspLightDataSize;
 	int m_bspVisDataSize;
@@ -141,6 +145,7 @@ protected:
 	IDirect3DIndexBuffer9* m_pBatchIB;
 	gBSPRendingFace* m_rFaces;
 	D3DXVECTOR3* m_facePositions = 0;
+	std::vector< gEntityParserBlock > m_entityTextBlocks;
 };
 
 #endif

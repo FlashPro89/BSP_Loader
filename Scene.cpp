@@ -250,10 +250,9 @@ gSceneNode::~gSceneNode()
 	detachAllEntities();
 	destroyChildren();
 
-	//m_sceneManager->destroyNode(m_name);
-
-	if ( ( m_parent!=0 ) && ( m_parent != &m_sceneManager->getRootNode() ) )
-		m_parent->destroyChild(m_name);
+	m_sceneManager->destroyNode(m_name);
+	if (m_parent)
+		m_parent->onDestroyChild(m_name);
 }
 
 const char* gSceneNode::getName() const
@@ -332,11 +331,14 @@ void gSceneNode::destroyChildren()
 	{
 		if (it->second)
 		{
-			delete it->second;
-			//it->second->destroyChildren();
-			//m_sceneManager->destroyNode(it->second->getName());
+			//delete it->second;
+			it->second->destroyChildren();
+			const char* nodeName = it->second->getName();
+			it++;
+			m_sceneManager->destroyNode(nodeName);
 		}
-		it++;
+		else
+			it++;
 	}
 	
 	//m_children.clear(); // автоотчистка из родительского узла
@@ -370,6 +372,19 @@ void gSceneNode::detachAllEntities()
 	}
 	m_entList.clear();
 	needTransformParentAABB();
+}
+
+bool gSceneNode::onDestroyChild( const char* name )
+{
+	auto it = m_children.find( name );
+	if (it == m_children.end())
+	{
+		return false;
+	}
+	else
+	{
+		m_children.erase(it);
+	}
 }
 
 void gSceneNode::setRelativeScale(const D3DXVECTOR3 scale)
@@ -652,7 +667,7 @@ void gSceneNode::drawAABB()
 //
 //-----------------------------------------------
 
-gSceneManager::gSceneManager( gResourceManager* rmgr, gMaterialFactory* mfactory ) : m_rootNode( "root", this, 0 )
+gSceneManager::gSceneManager( gResourceManager* rmgr, gMaterialFactory* mfactory )
 {
 	m_pResMgr = rmgr;
 	m_activeCam = 0;
@@ -660,6 +675,8 @@ gSceneManager::gSceneManager( gResourceManager* rmgr, gMaterialFactory* mfactory
 	m_nodesInFrustum = 0;
 
 	m_pMatFactory = mfactory;
+
+	m_pRootNode = new gSceneNode("root", this, 0);
 
 	//test
 	//m_pMatFactory->createMaterial("default");
@@ -669,9 +686,9 @@ gSceneManager::gSceneManager( gResourceManager* rmgr, gMaterialFactory* mfactory
 	//m_pMatFactory->createMaterial("default4");
 }
 
-gSceneManager::~gSceneManager()
+gSceneManager::~gSceneManager() 
 {
-
+	delete m_pRootNode;
 }
 
 gMaterialFactory* gSceneManager::getMaterialFactory() const
@@ -686,7 +703,7 @@ gResourceManager* gSceneManager::getResourseManager() const
 
 gSceneNode& gSceneManager::getRootNode() const
 {
-	return m_rootNode;
+	return *m_pRootNode;
 }
 
 gSceneNode* gSceneManager::getNode( const char* name ) const
@@ -753,10 +770,9 @@ bool gSceneManager::destroyNode( const char* name )
 	if( it == m_nodeList.end() )
 		return false;
 
-	gSceneNode* ptr = it->second;
-	delete ptr;
-	ptr = 0;
+	auto ptr = it->second;
 	m_nodeList.erase(it);
+	delete ptr;
 
 	return true;
 }
@@ -830,8 +846,8 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 
 	if ( m_activeCam )
 	{
-		if (m_activeCam->getViewingFrustum().testAABB(m_rootNode.getAABB()))
-			m_rootNode.onFrameRender( queue, m_activeCam );
+		if (m_activeCam->getViewingFrustum().testAABB(m_pRootNode->getAABB()))
+			m_pRootNode->onFrameRender( queue, m_activeCam );
 	}
 
 	//queue._debugOut("out_queue_not_sorted.txt");
@@ -853,8 +869,8 @@ void gSceneManager::frameMove(float delta)
 	if( m_activeCam )
 		m_activeCam->tick( delta );
 
-	m_rootNode.onFrameMove(delta);
-	m_rootNode.computeTransform();
+	m_pRootNode->onFrameMove(delta);
+	m_pRootNode->computeTransform();
 }
 
 void gSceneManager::setActiveCamera(gCamera* cam)

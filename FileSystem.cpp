@@ -78,7 +78,7 @@ gFileImpl::~gFileImpl()
 		fclose(m_file);
 }
 
-const unsigned int gFileImpl::getFileSize()
+const unsigned int gFileImpl::getFileSize() const
 {
 	if( m_memFileSize )
 		return m_memFileSize;
@@ -110,7 +110,7 @@ bool gFileImpl::seek(gFileSeek mode, unsigned int position)
 	}
 }
 
-const unsigned int gFileImpl::tell()
+const unsigned int gFileImpl::tell() const
 {
 	if (m_memFileSize) //memory file
 	{
@@ -120,7 +120,7 @@ const unsigned int gFileImpl::tell()
 		return ftell( m_file );
 }
 
-const size_t gFileImpl::read(void* dst, size_t size)
+const size_t gFileImpl::read(void* dst, size_t size) const
 {
 	if (!m_binary)
 		return 0;
@@ -157,9 +157,9 @@ size_t gFileImpl::write(void* src, size_t size)
 }
 
 
-const bool gFileImpl::gets(char* dst, size_t buffsz)
+const bool gFileImpl::gets(char* dst, size_t buffsz) const
 {
-	if (m_binary)
+	if (m_binary && !m_memFileSize)
 		return false;
 
 	if (m_memFileSize) //memory file
@@ -175,8 +175,9 @@ const bool gFileImpl::gets(char* dst, size_t buffsz)
 
 		if (sl > buffsz)
 			sl = buffsz-1;
-
-		strncpy_s( dst, buffsz, ptr, sl);
+		
+		if( dst )
+			strncpy_s( dst, buffsz, ptr, sl);
 
 		m_memCurrentPos += sl;
 
@@ -184,7 +185,12 @@ const bool gFileImpl::gets(char* dst, size_t buffsz)
 	}
 	else
 	{
-		return 0 != fgets( dst, buffsz, m_file );
+		if (dst)
+		{
+			return 0 != fgets(dst, buffsz, m_file);
+		}
+		else
+			return false;
 	}
 }
 
@@ -236,9 +242,9 @@ int gFileImpl::printf(const char* fmt, ...)
 	return result;
 }
 
-const int gFileImpl::scanf( const char* fmt, ...)
+const int gFileImpl::scanf( const char* fmt, ...) const
 {
-	if (m_binary)
+	if (m_binary && !m_memFileSize)
 		return 0;
 
 	int result = 0;
@@ -257,6 +263,36 @@ const int gFileImpl::scanf( const char* fmt, ...)
 	return result;
 }
 
+char gFileImpl::getc( bool nostep ) const
+{
+	char t;
+	if (m_memFileSize) //memory file
+	{
+		t = ((char*)m_memFileData)[m_memCurrentPos];
+		if (!nostep)
+			m_memCurrentPos++;
+	}
+	else
+	{
+		t = fgetc(m_file);
+		if (nostep)
+			fseek(m_file, -1, SEEK_CUR);
+	}
+	return t;
+}
+
+bool gFileImpl::eof() const
+{
+	if (m_memFileSize) //memory file
+	{
+		return ( m_memCurrentPos >= m_memFileSize );
+	}
+	else
+	{
+		return feof(m_file) != 0;
+	}
+}
+
 //-----------------------------------------------
 //
 //	CLASS: gFilesSystem
@@ -272,12 +308,17 @@ gFileSystem::~gFileSystem()
 
 }
 
+gFile* gFileSystem::openFileInMemory( void* data, unsigned int datasize, bool writeable )
+{
+	return new gFileImpl( 0, writeable, true, data, datasize );
+}
+
 gFile* gFileSystem::openFile( const char* filename, bool writeable, bool binary )
 {
 	return new gFileImpl( filename, writeable, binary );
 }
 
-void gFileSystem::closeFile(gFile* file)
+void gFileSystem::closeFile( gFile* file )
 {
 	if (file)
 		delete ((gFileImpl*)file);

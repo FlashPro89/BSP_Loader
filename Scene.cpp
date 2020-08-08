@@ -770,9 +770,10 @@ bool gSceneManager::destroyNode( const char* name )
 	if( it == m_nodeList.end() )
 		return false;
 
-	auto ptr = it->second;
-	m_nodeList.erase(it);
+	gSceneNode* ptr = it->second;
 	delete ptr;
+	ptr = 0;
+	m_nodeList.erase(it);
 
 	return true;
 }

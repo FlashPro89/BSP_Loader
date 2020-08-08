@@ -403,8 +403,22 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 	unsigned short tmp[1024];
 	m_rFaces = new gBSPRendingFace[m_bspFacesNum];
 
+	unsigned short modelIndex = 0;
+	char matName[64];
+	unsigned short modelParsedNumber;
+
 	for (unsigned int i = 0; i < m_bspFacesNum; i++)
 	{
+		//find model index of face
+		for (unsigned int j = 0; j < m_bspModelsNum; j++)
+		{
+			if ( (i >= m_bspModels[j].firstface) && (i <= (m_bspModels[j].firstface + m_bspModels[j].numfaces) ) )
+			{
+				modelIndex = j;
+				break;
+			}
+		}	
+
 		pBounds = &m_faceBounds[i];
 		pTexinfo = &m_bspTexinfs[m_bspFaces[i].texinfo];
 		pFace = &m_bspFaces[i];
@@ -586,11 +600,43 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 		m_rFaces[i].miptex = m_bspTexinfs[m_bspFaces[i].texinfo].miptex;
 
 		toUpper(miptex->name);
-		gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
+		strcpy_s(matName, 64, miptex->name);
+		unsigned char renderamt = 0xFF;
+		if (modelIndex != 0)
+		{
+			//get blend mode of model
+			auto it = m_entityTextBlocks.begin();
+			while (it != m_entityTextBlocks.end())
+			{
+				auto mit = it->find("model");
+				if ( mit != it->end() )
+				{
+					sscanf_s( mit->second.c_str(), "*%hi", &modelParsedNumber );
+					if (modelParsedNumber == modelIndex)
+					{
+						mit = it->find("renderamt");
+						if (mit != it->end())
+							renderamt = atoi(mit->second.c_str());
+						else
+							renderamt = 0xFF;
+					}
+					break;
+				}
+				it++;
+			}
+
+			unsigned char l = strlen(matName);
+			sprintf_s( &matName[l], 64 - l, "_M%i", modelIndex );
+		}
+
+		gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(matName);
 		if (!pMat)
 		{
-			pMat = m_pResMgr->getMaterialFactory()->createMaterial(miptex->name);
-			m_defaultMatMap[miptex->name] = pMat;
+			pMat = m_pResMgr->getMaterialFactory()->createMaterial(matName);
+			m_defaultMatMap[matName] = pMat;
+
+			if( renderamt != 0xFF )
+				pMat->setTransparency( renderamt );
 
 			gResource2DTexture* pTex = (gResource2DTexture*)m_pResMgr->getResource(miptex->name, GRESGROUP_2DTEXTURE);
 			if( !pTex )
@@ -604,6 +650,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 				m_pLMapTex->addRef();
 				pMat->setTexture(1, m_pLMapTex);
 			}
+
+			pMat->setLightingEnable(false);
 		}
 		else
 			m_rFaces[i].pMaterial = pMat;
@@ -666,8 +714,9 @@ void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity
 
 		int* offs = (int*)(m_bspTexData + sizeof(int));
 		BSPMiptex_t* miptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
-		gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
-		pMat->setLightingEnable(false);
+		//gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
+		gMaterial* pMat = m_rFaces[i].pMaterial;
+		
 		const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 
 		unsigned short dist = cam->getDistanceToPointUS(m_facePositions[i]);

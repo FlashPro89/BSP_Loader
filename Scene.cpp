@@ -384,6 +384,7 @@ bool gSceneNode::onDestroyChild( const char* name )
 	else
 	{
 		m_children.erase(it);
+		return true;
 	}
 }
 
@@ -771,9 +772,9 @@ bool gSceneManager::destroyNode( const char* name )
 		return false;
 
 	gSceneNode* ptr = it->second;
+	m_nodeList.erase(it);
 	delete ptr;
 	ptr = 0;
-	m_nodeList.erase(it);
 
 	return true;
 }

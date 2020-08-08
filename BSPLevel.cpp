@@ -955,7 +955,8 @@ void gResourceBSPLevel::parceEntities()
 				break;
 			block[key] = value;
 		}
-		m_entityTextBlocks.push_back( block );
+		if( pFile->getc(true) == '}' )
+			m_entityTextBlocks.push_back( block );
 		pFile->gets(0,1024);
 	}
 

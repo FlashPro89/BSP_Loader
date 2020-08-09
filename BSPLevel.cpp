@@ -412,7 +412,7 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 		//find model index of face
 		for (unsigned int j = 0; j < m_bspModelsNum; j++)
 		{
-			if ( (i >= m_bspModels[j].firstface) && (i <= (m_bspModels[j].firstface + m_bspModels[j].numfaces) ) )
+			if ( (i >= m_bspModels[j].firstface) && (i < (m_bspModels[j].firstface + m_bspModels[j].numfaces) ) )
 			{
 				modelIndex = j;
 				break;
@@ -602,8 +602,17 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 		toUpper(miptex->name);
 		strcpy_s(matName, 64, miptex->name);
 		unsigned char renderamt = 0xFF;
+		unsigned char rendermode = 0;
 		if (modelIndex != 0)
 		{
+			/*
+			if (modelIndex == 16)
+			{
+				modelIndex++;
+				modelIndex--;
+			}
+			*/
+
 			//get blend mode of model
 			auto it = m_entityTextBlocks.begin();
 			while (it != m_entityTextBlocks.end())
@@ -614,13 +623,22 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 					sscanf_s( mit->second.c_str(), "*%hi", &modelParsedNumber );
 					if (modelParsedNumber == modelIndex)
 					{
-						mit = it->find("renderamt");
+						mit = it->find("rendermode");
 						if (mit != it->end())
-							renderamt = atoi(mit->second.c_str());
+							rendermode = atoi(mit->second.c_str());
+						else
+							rendermode = 0;
+
+						if (rendermode != 0)
+						{
+							mit = it->find("renderamt");
+							if (mit != it->end())
+								renderamt = atoi(mit->second.c_str());
+						}
 						else
 							renderamt = 0xFF;
+						break;
 					}
-					break;
 				}
 				it++;
 			}
@@ -645,7 +663,7 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 			pTex->addRef();
 
 			pMat->setTexture( 0, pTex );
-			if (pFace->styles[0] == 0)
+			if ( (pFace->styles[0] == 0) && (renderamt == 0xFF) )
 			{
 				m_pLMapTex->addRef();
 				pMat->setTexture(1, m_pLMapTex);
@@ -653,8 +671,7 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 
 			pMat->setLightingEnable(false);
 		}
-		else
-			m_rFaces[i].pMaterial = pMat;
+		m_rFaces[i].pMaterial = pMat;
 
 		first_idx = pre_pos_in_vbuffer;
 		for (int j = 0; j < tris_in_face; j++)

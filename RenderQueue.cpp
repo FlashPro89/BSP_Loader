@@ -423,6 +423,9 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 				_setRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false, pDevice);
 				_setRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE, pDevice);
+
+				pDevice->SetTransform(D3DTS_WORLDMATRIX(0), &matPalete[0]);
+				pLastMatrix = &matPalete[0];
 			}
 			m_lastMatSkinned = false;
 
@@ -505,19 +508,23 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				{
 					m_lastMaterial = pMaterial->getId();
 
-					for (unsigned char i = 0; i < pMaterial->getTexturesNum(); i++)
+					unsigned char samplers = pMaterial->getTexturesNum() < 8 ? pMaterial->getTexturesNum() + 1 : 8;
+
+					for (unsigned char i = 0; i < samplers; i++)
 					{
 						pTex = pMaterial->getTexture(i);
-						if( pTex ) 
-							//pDevice->SetTexture(i, pTex->getTexture());
-							_setTexture( i, pTex->getTexture(), pDevice);
+						if (pTex)
+						{
+							_setTexture(i, pTex->getTexture(), pDevice);
+							_setTextureStageState(i, D3DTSS_COLOROP, D3DTOP_MODULATE, pDevice);
 
-						if( pTex )
-							//pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_MODULATE );
-							_setTextureStageState( i, D3DTSS_COLOROP, D3DTOP_MODULATE, pDevice );
+						}
 						else
-							//pDevice->SetTextureStageState( i, D3DTSS_COLOROP, D3DTOP_DISABLE );
+						{
+							_setTexture(i, 0, pDevice);
 							_setTextureStageState(i, D3DTSS_COLOROP, D3DTOP_DISABLE, pDevice);
+
+						}
 					}
 
 					if ( transpByte == 0xFF)
@@ -623,10 +630,11 @@ void gRenderQueue::_debugOutSorted( const char* fname )
 	{
 		if (m_elementsPointers[i]->getMaterial() != 0)
 		{
-			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i  start:%i num:%i batchBufferSize:%i\n",
+			fprintf(f, "key: %lli mat(%i): %s res(%i): %s dist:%i  start:%i num:%i batchBufferSize:%i renderamt:%i\n",
 				m_elementsPointers[i]->getKey(), m_elementsPointers[i]->getMaterial()->getId(), m_elementsPointers[i]->getMaterial()->getName(), m_elementsPointers[i]->getRenderable()->getId(),
 				m_elementsPointers[i]->getRenderable()->getResourceName(), m_elementsPointers[i]->getDistance(),
-				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount(), m_elementsPointers[i]->getRenderable()->getBatchIBufferSize() );
+				m_elementsPointers[i]->getStartIndex(), m_elementsPointers[i]->getPrimitiveCount(), m_elementsPointers[i]->getRenderable()->getBatchIBufferSize(),
+				m_elementsPointers[i]->getMaterial()->getTransparency());
 		}
 		else
 		{

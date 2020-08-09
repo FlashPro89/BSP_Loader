@@ -1158,6 +1158,8 @@ void loadScene( const char* mapname )
 
 	pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 	pD3DDev9->SetRenderState(D3DRS_AMBIENT, 0xFFFFFFFF);
+	pD3DDev9->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESS);
+
 
 	pD3DDev9->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
 	pD3DDev9->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);

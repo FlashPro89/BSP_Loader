@@ -540,6 +540,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 						*/
 						_setRenderState(D3DRS_ALPHABLENDENABLE, false, pDevice);
 						_setRenderState(D3DRS_ZWRITEENABLE, true, pDevice);
+						//_setRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL, pDevice );
 					}
 					else
 					{
@@ -552,6 +553,8 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 						_setRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE, pDevice);
 						_setRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD, pDevice);
 						_setRenderState(D3DRS_ZWRITEENABLE, false, pDevice);
+						//_setRenderState(D3DRS_ZFUNC, D3DCMP_LESS, pDevice);
+
 
 						/*
 						if (!m_lastMatUseBlending)

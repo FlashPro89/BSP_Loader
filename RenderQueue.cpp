@@ -550,7 +550,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 						_setRenderState(D3DRS_ALPHABLENDENABLE, true, pDevice);
 						_setRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR, pDevice);
-						_setRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE, pDevice);
+						_setRenderState(D3DRS_DESTBLEND, D3DBLEND_INVBLENDFACTOR, pDevice);
 						_setRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD, pDevice);
 						_setRenderState(D3DRS_ZWRITEENABLE, false, pDevice);
 						//_setRenderState(D3DRS_ZFUNC, D3DCMP_LESS, pDevice);

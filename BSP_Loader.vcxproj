@@ -164,6 +164,7 @@
     <ClCompile Include="RenderQueue.cpp" />
     <ClCompile Include="Resources.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="Terrain.cpp" />
     <ClCompile Include="TextureAtlas.cpp" />
     <ClCompile Include="Timer.cpp" />
@@ -186,6 +187,7 @@
     <ClInclude Include="RenderQueue.h" />
     <ClInclude Include="Resources.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="Skybox.h" />
     <ClInclude Include="Terrain.h" />
     <ClInclude Include="TextureAtlas.h" />
     <ClInclude Include="Timer.h" />

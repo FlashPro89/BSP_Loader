@@ -64,6 +64,9 @@ unsigned int getVertexFormatStride(GVERTEXFORMAT fmt)
 	case GVF_SKINNED0WEIGHTS:
 		//return D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1;
 		return 9 * sizeof(float);
+	case GVF_SKYBOX:
+		//return D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE3(0);
+		return 9 * sizeof(float);
 	default:
 		return 0;
 	}

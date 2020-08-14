@@ -653,8 +653,11 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 			pMat = m_pResMgr->getMaterialFactory()->createMaterial(matName);
 			m_defaultMatMap[matName] = pMat;
 
-			if( renderamt != 0xFF )
-				pMat->setTransparency( renderamt );
+			if (renderamt != 0xFF)
+			{
+				pMat->setZWriteEnable(false);
+				pMat->setTransparency(renderamt);
+			}
 
 			gResource2DTexture* pTex = (gResource2DTexture*)m_pResMgr->getResource(miptex->name, GRESGROUP_2DTEXTURE);
 			if( !pTex )

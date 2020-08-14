@@ -10,7 +10,7 @@ struct gSkyBoxVertex
 {
 	gSkyBoxVertex(float _x, float _y, float _z, float _tu, float _tv, float _tw)
 	{
-		x = _x; y = _y; z = _z; tu = _tu; tv = _tv; _tw = _tw;
+		x = _x; y = _y; z = _z; tu = _tu; tv = _tv; tw = _tw;
 	}
 
 	union
@@ -37,6 +37,8 @@ gResourceSkyBox::gResourceSkyBox( gResourceManager* mgr, GRESOURCEGROUP group, c
 	m_pVB = 0;
 	m_pIB = 0;
 	m_pTex = 0;
+	m_AABB.setMaxBounds(99999.f, 99999.f, 99999.f);
+	m_AABB.setMinBounds(-99999.f, -99999.f, -99999.f);
 }
 
 gResourceSkyBox::~gResourceSkyBox()
@@ -46,35 +48,59 @@ gResourceSkyBox::~gResourceSkyBox()
 
 bool gResourceSkyBox::preload()
 {
+	//TODO: apply actual resource name
+	char matName[1024] = "";
+	sprintf_s( matName, 1024, "%s_mat", m_resName.c_str() );
+
+	gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(matName);
+	if (!pMat) 
+	{
+		//create material
+		char texName[1024] = "";
+		sprintf_s( texName, 1024, "%s_tex", m_resName.c_str() );
+
+		gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube( m_fileName.c_str(), texName );
+		if (pTex)
+			pTex->addRef();
+		pMat = m_pResMgr->getMaterialFactory()->createMaterial( matName );
+		pMat->setTexture(0, pTex);
+		pMat->setZWriteEnable(false);
+	}
+	else
+	{
+		//use existed mat
+		pMat->addRef();
+	}
+	m_defaultMatMap[matName] = pMat;
+
 	return true;
 }
 
 bool gResourceSkyBox::load()
 {
-
 	gSkyBoxVertex cubeVerts[8] =
 	{ 
-		gSkyBoxVertex( -1.f, -1.f, -1.f,	-1.f, -1.f, -1.f ),
-		gSkyBoxVertex(  1.f, -1.f, -1.f,	 1.f, -1.f, -1.f ),
-		gSkyBoxVertex(  1.f, 1.f, -1.f,		 1.f, 1.f, -1.f  ),
-		gSkyBoxVertex( -1.f, 1.f, -1.f,		-1.f, 1.f, -1.f  ),
+		gSkyBoxVertex( -100.f, -100.f, -100.f,	-1.f, -1.f, -1.f ),
+		gSkyBoxVertex(  100.f, -100.f, -100.f,	 1.f, -1.f, -1.f ),
+		gSkyBoxVertex(  100.f,  100.f, -100.f,	 1.f,  1.f, -1.f ),
+		gSkyBoxVertex( -100.f,  100.f, -100.f,	-1.f,  1.f, -1.f ),
 
-		gSkyBoxVertex( -1.f, -1.f, 1.f,		-1.f, -1.f, 1.f ),
-		gSkyBoxVertex(  1.f, -1.f, 1.f,		 1.f, -1.f, 1.f ),
-		gSkyBoxVertex(  1.f, 1.f, 1.f,		 1.f, 1.f, 1.f  ),
-		gSkyBoxVertex( -1.f, 1.f, 1.f,		-1.f, 1.f, 1.f  ),
+		gSkyBoxVertex( -100.f, -100.f,  100.f,	-1.f, -1.f,  1.f ),
+		gSkyBoxVertex(  100.f, -100.f,  100.f,	 1.f, -1.f,  1.f ),
+		gSkyBoxVertex(  100.f,  100.f,  100.f,	 1.f,  1.f,  1.f ),
+		gSkyBoxVertex( -100.f,  100.f,  100.f,	-1.f,  1.f,  1.f ),
 	};
 
 	unsigned short cubeIndexes[36] =
 	{
-		0, 2, 1,  0, 3, 2,  // back
-		4, 5, 6,  4, 6, 7,  // front
+		0, 1, 2,  0, 2, 3,  // back
+		4, 6, 5,  4, 7, 6,  // front
 
-		1, 6, 5,  1, 2, 6,  // right
-		0, 4, 7,  0, 7, 3,  // left 
+		1, 5, 6,  1, 6, 2,  // right
+		0, 7, 4,  0, 3, 7,  // left 
 
-		3, 2, 6,  3, 6, 7,  // top
-		0, 1, 5,  0, 5, 4   // bottom
+		3, 2, 6,  3, 6, 7,  // up
+		0, 5, 1,  0, 4, 5   // down
 	};
 
 	HRESULT hr;
@@ -111,14 +137,6 @@ bool gResourceSkyBox::load()
 	if (FAILED(hr))
 		return false;
 
-	//TODO: apply actual resource name
-	//create material
-	gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube(m_fileName.c_str() , "skybox_tex");
-
-	gMaterial* pMat = m_pResMgr->getMaterialFactory()->createMaterial("skybox_mat");
-	pMat->setTexture(0, pTex);
-	m_defaultMatMap["skybox_mat"] = pMat;
-
 	m_isLoaded = true;
 	return true;
 }
@@ -142,11 +160,12 @@ void gResourceSkyBox::unload()
 void gResourceSkyBox::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* camera) const
 {
 	D3DXVECTOR3 vCamPos = camera->getPosition();
-	D3DXMatrixTranslation( &m_invCamPosMat, -vCamPos.x, -vCamPos.y, -vCamPos.z);
+	D3DXMatrixTranslation( &m_invCamPosMat, vCamPos.x, vCamPos.y, vCamPos.z);
 	
-	gMaterial* pMaterial = m_defaultMatMap.begin()->second;
+	auto it = m_defaultMatMap.begin();
+	gMaterial* pMaterial = it->second;
 
-	gRenderElement element = gRenderElement( this, pMaterial, 0, 1, &m_invCamPosMat, 0, 12 );
+	gRenderElement element = gRenderElement( this, pMaterial, 0, 1, &m_invCamPosMat, 0, 12, 8 );
 	queue->pushBack(element);
 }
 

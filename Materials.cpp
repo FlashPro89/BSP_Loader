@@ -125,6 +125,9 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 	}
 	else
 		throw("Material name null pointer!");
+
+	m_zEnable = true;
+	m_zWriteEnable = true;
 }
 
 gMaterial::gMaterial( gMaterial* other, gMaterialFactory* factory, const char* name, unsigned short id)
@@ -147,6 +150,8 @@ gMaterial::gMaterial( gMaterial* other, gMaterialFactory* factory, const char* n
 
 	m_transparency = other->getTransparency();
 	m_lightingEnable = other->getLightingEnable();
+	m_zEnable = other->getZEnable();
+	m_zWriteEnable = other->getZWriteEnable();
 
 	m_pMaterialId = id;
 
@@ -287,4 +292,23 @@ unsigned char gMaterial::getTransparency() const
 void gMaterial::setTransparency(unsigned char transparency)
 {
 	m_transparency = transparency;
+}
+
+void gMaterial::setZWriteEnable(bool zwrite)
+{
+	m_zWriteEnable = zwrite;
+}
+bool gMaterial::getZWriteEnable() const
+{
+	return m_zWriteEnable;
+}
+
+void gMaterial::setZEnable(bool zenable)
+{
+	m_zEnable = zenable;
+}
+
+bool gMaterial::getZEnable() const
+{
+	return m_zEnable;
 }

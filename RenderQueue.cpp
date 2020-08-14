@@ -320,6 +320,12 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		pRenderable = pElement->getRenderable();
 		pMaterial = pElement->getMaterial();
 
+		if (pMaterial->getId() == 5)
+		{
+			int g = 3;
+			g *= 4;
+		}
+
 	restart:
 
 		//run batch if available
@@ -507,6 +513,8 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				}
 				*/
 				_setRenderState( D3DRS_LIGHTING, pMaterial->getLightingEnable(), pDevice );
+				_setRenderState(D3DRS_ZENABLE, pMaterial->getZEnable(), pDevice);
+				_setRenderState( D3DRS_ZWRITEENABLE, pMaterial->getZWriteEnable(), pDevice );
 
 				unsigned char transpByte = m_elementsPointers[m_arrayPos]->getMaterial()->getTransparency();
 

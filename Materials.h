@@ -68,6 +68,12 @@ public:
 	unsigned char getTransparency() const;
 	void setTransparency( unsigned char transparency );
 
+	void setZWriteEnable( bool zwrite );
+	bool getZWriteEnable() const;
+
+	void setZEnable(bool zenable);
+	bool getZEnable() const;
+
 protected:
 
 	gMaterial(gMaterial&) {}
@@ -75,6 +81,9 @@ protected:
 	char* m_name;
 	gMaterialFactory* m_factory;
 	unsigned char m_transparency;
+
+	bool m_zEnable;
+	bool m_zWriteEnable;
 
 	unsigned short m_pMaterialId; // only 65536 materials
 	bool m_lightingEnable;

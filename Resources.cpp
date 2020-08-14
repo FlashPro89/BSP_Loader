@@ -66,7 +66,7 @@ unsigned int getVertexFormatStride(GVERTEXFORMAT fmt)
 		return 9 * sizeof(float);
 	case GVF_SKYBOX:
 		//return D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE3(0);
-		return 9 * sizeof(float);
+		return 6 * sizeof(float);
 	default:
 		return 0;
 	}
@@ -583,6 +583,16 @@ void* gResourceCubeTexture::getTexture() const
 
 bool gResourceCubeTexture::preload() //загрузка статических данных
 {
+	//check cubemap
+	D3DXIMAGE_INFO inf;
+	D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
+
+	if (inf.ResourceType != D3DRTYPE_CUBETEXTURE)
+		return false;
+	
+	m_width = inf.Width;
+	m_height = inf.Height;
+
 	return true;
 }
 
@@ -591,20 +601,11 @@ bool gResourceCubeTexture::load()
 	if (m_isLoaded)
 		return true;
 
-	//check cubemap
-	D3DXIMAGE_INFO inf;
-	D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
-
-	if (inf.ResourceType != D3DRTYPE_CUBETEXTURE)
-		return false;
-
-	m_width = inf.Width;
-	m_height = inf.Height;
-
 	LPDIRECT3DDEVICE9 pDev = m_pResMgr->getDevice();
 
 	HRESULT hr;
-	hr = D3DXCreateCubeTextureFromFileEx( pDev, m_fileName.c_str(), 0, 0, D3DUSAGE_AUTOGENMIPMAP, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, 0, 0, 0, 0, 0, &m_pTex);
+	hr = D3DXCreateCubeTextureFromFileEx( pDev, m_fileName.c_str(), 0, 0, 0, 
+		D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, 0, 0, &m_pTex);
 
 	if (FAILED(hr))
 		return false;
@@ -1209,6 +1210,7 @@ gResource* gResourceManager::loadSkyBox(const char* filename, const char* name)
 	gResourceSkyBox* pRes = new gResourceSkyBox( this, GRESGROUP_SKYBOX, filename, name );
 	m_resources[GRESGROUP_SKYBOX][name] = (gResource*)pRes;
 
+	pRes->preload();
 	return (gResource*)pRes;
 }
 

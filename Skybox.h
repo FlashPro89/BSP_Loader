@@ -5,11 +5,15 @@
 
 #include "Resources.h"
 
-class gSkybox : public gRenderable
+class gResourceSkyBox : public gRenderable
 {
 public:
-	gSkybox( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
-	~gSkybox();
+	gResourceSkyBox( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
+	~gResourceSkyBox();
+
+	bool preload(); //загрузка статических данных
+	bool load(); //загрузка видеоданных POOL_DEFAULT
+	void unload(); //данные, загруженые preload() в этой функции не изменяются
 
 	void onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* camera) const;
 	void onFrameMove(float delta);
@@ -28,6 +32,12 @@ public:
 	GVERTEXFORMAT getVertexFormat() const;
 
 	bool isUseUserMemoryPointer();
+
+protected:
+	IDirect3DVertexBuffer9* m_pVB;
+	IDirect3DIndexBuffer9* m_pIB;
+	IDirect3DCubeTexture9* m_pTex;
+	mutable D3DXMATRIX m_invCamPosMat;
 };
 
 #endif

@@ -243,7 +243,7 @@ unsigned char gMaterial::getTexturesNum() const
 	return 0;
 }
 
-gResource2DTexture* gMaterial::getTexture(unsigned char level) const
+gResourceTexture* gMaterial::getTexture(unsigned char level) const
 {
 	//if (level > 7)
 	//	return;
@@ -254,7 +254,7 @@ gResource2DTexture* gMaterial::getTexture(unsigned char level) const
 	return m_textures[level];
 }
 
-void gMaterial::setTexture(unsigned char level, gResource2DTexture* texture)
+void gMaterial::setTexture(unsigned char level, gResourceTexture* texture)
 {
 	//if (level > 7)
 	//	return;

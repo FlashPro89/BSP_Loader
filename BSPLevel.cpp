@@ -391,7 +391,7 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 
 	gBSPFaceBounds* pBounds;
 	BSPTexinfo_t* pTexinfo;
-	BSPVertex_t* pVertex;
+	//BSPVertex_t* pVertex;
 	BSPFace_t* pFace;
 	BSPMiptex_t* pMiptex;
 	int* offs = (int*)(m_bspTexData + sizeof(int));

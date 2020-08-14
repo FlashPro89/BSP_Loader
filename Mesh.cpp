@@ -1341,7 +1341,7 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
 	if (!pD3DDev9) 
 		return;
-	HRESULT hr;
+	//HRESULT hr;
 
 	//DWORD oldLightingState;
 	//pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);

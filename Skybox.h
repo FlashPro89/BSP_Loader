@@ -28,6 +28,8 @@ public:
 	GVERTEXFORMAT getVertexFormat() const;
 
 	bool isUseUserMemoryPointer();
+
+protected:
 };
 
 #endif

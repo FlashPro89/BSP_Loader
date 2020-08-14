@@ -38,10 +38,10 @@ int comp(const void* i, const void* j)
 */
 
 class gRenderable;
-class gResource2DTexture;
+class gResourceTexture;
 class gMaterial;
 struct IDirect3DDevice9;
-struct IDirect3DTexture9;
+struct IDirect3DBaseTexture9;
 struct IDirect3DVertexBuffer9;
 struct IDirect3DIndexBuffer9;
 
@@ -129,8 +129,8 @@ protected:
 	void _forceSetRenderState(DWORD state, DWORD value, IDirect3DDevice9* pDevice );
 	std::map< DWORD, DWORD> m_RS;
 
-	void _setTexture( unsigned char level, IDirect3DTexture9* tex, IDirect3DDevice9* pDevice);
-	IDirect3DTexture9* m_oldTextures[8];
+	void _setTexture( unsigned char level, IDirect3DBaseTexture9* tex, IDirect3DDevice9* pDevice);
+	IDirect3DBaseTexture9* m_oldTextures[8];
 
 	void _setIB( IDirect3DIndexBuffer9* pIB, IDirect3DDevice9* pDevice);
 	IDirect3DIndexBuffer9* m_oldIB;

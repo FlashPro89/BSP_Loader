@@ -27,7 +27,7 @@ enum  GVERTEXFORMAT
 	GVF_STATICMESH,		 // D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX1
 	GVF_SHAPE,
 	GVF_SKINNED0WEIGHTS, // D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1 
-	GVF_SKYBOX,         // D3DFVF_XYZ | D3DFVF_TEX1 
+	GVF_SKYBOX,         // D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE3(0)
 	GVF_RESERVED1,
 	GVF_NUM
 };
@@ -61,6 +61,7 @@ struct gFontParameters
 class gEntity;
 class gResourceSkinnedMesh;
 class gResource2DTexture;
+class gResourceCubeTexture;
 
 enum GRESOURCEGROUP
 {
@@ -71,12 +72,12 @@ enum GRESOURCEGROUP
 	GRESGROUP_SKINNEDMESH,
 	GRESGROUP_SKINEDANIMATION,
 	GRESGROUP_TEXTDRAWER,
+	GRESGROUP_VOLUMETEXTURE,
 	GRESGROUP_CUBETEXTURE,
 	GRESGROUP_2DTEXTURE,
 	GRESGROUP_SHADERSET,
+	GRESGROUP_SKYBOX,
 	GRESGROUP_RESERVED_1,
-	GRESGROUP_RESERVED_2,
-	GRESGROUP_RESERVED_3,
 	GRESGROUP_NUM
 };
 
@@ -190,7 +191,34 @@ protected:
 	std::map< std::string, gMaterial* > m_defaultMatMap;
 };
 
-class gResource2DTexture : public gResource
+enum class gTextureType
+{
+	GTT_2DTEXTURE,
+	GTT_CUBETEXTURE,
+	GTT_VOLUMETEXTURE
+};
+
+class gResourceTexture : public gResource
+{
+public:
+
+	gResourceTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
+	virtual ~gResourceTexture() {};
+
+	virtual gTextureType getTextureType() const = 0;
+	virtual void* getTexture() const = 0;
+
+	virtual unsigned short getTextureWidth() const;
+	virtual unsigned short getTextureHeight() const;
+	virtual unsigned short getTextureDepth() const;
+
+protected:
+	unsigned short m_width;
+	unsigned short m_height;
+	unsigned short m_depth;
+};
+
+class gResource2DTexture : public gResourceTexture
 {
 public:
 	//gResource2DTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
@@ -198,22 +226,34 @@ public:
 		const char* name = 0, WADLumpInfo_t* lumpinfo = 0, gBMPFile* bitmap = 0 );
 	~gResource2DTexture();
 
+	gTextureType getTextureType() const;
+	void* getTexture() const;
+
 	bool preload();//загрузка статических данных
 	bool load();
 	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
 
-	const LPDIRECT3DTEXTURE9 getTexture() const;
-
-	unsigned short getTextureWidth() const;
-	unsigned short getTextureHeight() const;
-
 protected:
 	WADLumpInfo_t* m_pLumpInfo;
 	gBMPFile* m_pBitmap;
-	//bool m_isTexFromWAD;
 	LPDIRECT3DTEXTURE9 m_pTex;
-	unsigned short m_width;
-	unsigned short m_height;
+};
+
+class gResourceCubeTexture : public gResourceTexture
+{
+public:
+	gResourceCubeTexture(gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
+	~gResourceCubeTexture();
+
+	gTextureType getTextureType() const;
+	void* getTexture() const;
+
+	bool preload();//загрузка статических данных
+	bool load();
+	void unload(); //данные, загруженые preload() в этой функции не измен€ютс€
+
+protected:
+	LPDIRECT3DCUBETEXTURE9 m_pTex;
 };
 
 class gResourceShape :  public gRenderable
@@ -299,11 +339,13 @@ public:
 	gResource* loadTexture2DFromWADList( const char* name );
 	gResource* loadTextureFromBitmap( gBMPFile* bitmap, const char* name );
 	gResource* loadTexture2D( const char* filename, const char* name = 0 );
-	gResource* loadStaticMesh( const char* filename, const char* name = 0 );
+	gResource* loadTextureCube(const char* filename, const char* name = 0);
+	gResource* loadStaticMeshSMD( const char* filename, const char* name = 0 );
 	gResource* loadSkinnedMeshSMD( const char* filename, const char* name );
 	gResource* loadTerrain( const char* filename, const char* name );
 	gResource* loadBSPLevel( const char* filename, const char* name );
 	gResource* loadSkinnedAnimationSMD( const char* filename, const char* name, gResourceSkinnedMesh* ref );
+	gResource* loadSkyBox( const char* filename, const char* name );
 	gResource* createShape( const char* name, gShapeType type );
 	gResource* createTextDrawer( const char* name, const gFontParameters& params);
 	gResourceLineDrawer* getLineDrawer() const;

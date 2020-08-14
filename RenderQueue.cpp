@@ -117,6 +117,8 @@ void gRenderElement::_buildKey()
 		throw("no mat!");
 
 	unsigned __int64 alphaMask = ((unsigned __int64)1 << 60);
+	unsigned __int64 skyMask = ((unsigned __int64)1 << 61);
+
 
 	if( m_pMaterial->getTransparency() != 0xFF )
 		alphaMask = 0;
@@ -151,6 +153,10 @@ void gRenderElement::_buildKey()
 
 	//alphablend bit
 	m_key |= alphaMask;
+
+	//skybox bit
+	if( m_pRenderable->getGroup() != GRESOURCEGROUP::GRESGROUP_SKYBOX )
+		m_key |= skyMask;
 }
 
 //-----------------------------------------------
@@ -288,7 +294,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 	gRenderElement* pElement = 0;
 	const gMaterial* pMaterial = 0;
-	const gResource2DTexture* pTex = 0;
+	const gResourceTexture* pTex = 0;
 	const gRenderable* pRenderable = 0;
 	const D3DXMATRIX* matPalete = 0;
 	const gSkinBoneGroup* skinBoneGroup = 0;
@@ -515,7 +521,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 						pTex = pMaterial->getTexture(i);
 						if (pTex)
 						{
-							_setTexture(i, pTex->getTexture(), pDevice);
+							_setTexture(i, (LPDIRECT3DBASETEXTURE9)pTex->getTexture(), pDevice);
 							_setTextureStageState(i, D3DTSS_COLOROP, D3DTOP_MODULATE, pDevice);
 
 						}
@@ -744,7 +750,7 @@ void gRenderQueue::_forceSetRenderState(DWORD state, DWORD value, IDirect3DDevic
 	pDevice->SetRenderState((D3DRENDERSTATETYPE)state, value);
 }
 
-void gRenderQueue::_setTexture( unsigned char level, IDirect3DTexture9* tex, IDirect3DDevice9* pDevice )
+void gRenderQueue::_setTexture( unsigned char level, IDirect3DBaseTexture9* tex, IDirect3DDevice9* pDevice )
 {
 	if (m_oldTextures[level] != tex)
 	{

@@ -568,7 +568,7 @@ void loadScene( const char* mapname )
 		*/
 
 
-		gResourceStaticMesh* pStaticMesh = (gResourceStaticMesh*)rmgr.loadStaticMesh("../data/models/crystal/crystal_reference.smd", "crystal");
+		gResourceStaticMesh* pStaticMesh = (gResourceStaticMesh*)rmgr.loadStaticMeshSMD("../data/models/crystal/crystal_reference.smd", "crystal");
 
 		//gResourceShape* shape = (gResourceShape*)rmgr.createShape("box_1", GSHAPE_BOX);
 		//shape->setSizes(40, 40, 40, 10, 10);
@@ -701,6 +701,13 @@ void loadScene( const char* mapname )
 		ent->setRenderable(pTerr);
 		node_terrain->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
+
+	//skybox
+	ent = smgr.createEntity("ent_skybox");
+	gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox( "../data/env/skybox.dds", "skybox" );
+	ent->setRenderable( pSkyBoxRenderable );
+	smgr.getRootNode().attachEntity(ent);
+
 
 	FILE* f = 0;
 
@@ -1631,10 +1638,10 @@ void renderFaces()
 
 		if (rfaces[i].miptex != last_tex)
 		{
-			gResource2DTexture* res = (gResource2DTexture*)tmap[rfaces[i].miptex];
-			LPDIRECT3DTEXTURE9 tex = 0;
+			gResourceTexture* res = (gResourceTexture*)tmap[rfaces[i].miptex];
+			LPDIRECT3DBASETEXTURE9 tex = 0;
 
-			if (res) tex = res->getTexture();
+			if (res) tex = (LPDIRECT3DBASETEXTURE9)res->getTexture();
 
 			last_tex = rfaces[i].miptex;
 			pD3DDev9->SetTexture(0, tex);

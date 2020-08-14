@@ -32,7 +32,7 @@ struct gTrisGroup
 	unsigned int trisNum;
 	unsigned int textureIndex;
 	unsigned int trisOffsetInBuff;
-	gResource2DTexture* pTex;
+	gResourceTexture* pTex;
 	gMaterial* pMat;
 	gSkinIndexRemapedSubsets remapedSubsets;
 

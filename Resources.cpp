@@ -5,6 +5,7 @@
 #include "Terrain.h"
 #include "BSPLevel.h"
 #include "BMPFile.h"
+#include "Skybox.h"
 #include <stdio.h>
 
 iwadcolor colormap[256];
@@ -33,6 +34,8 @@ DWORD getFVF( GVERTEXFORMAT fmt )
 		return D3DFVF_XYZ | D3DFVF_NORMAL;
 	case GVF_SKINNED0WEIGHTS:
 		return D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1;
+	case GVF_SKYBOX:
+		return D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE3(0);
 
 	default:
 		return 0;
@@ -60,6 +63,9 @@ unsigned int getVertexFormatStride(GVERTEXFORMAT fmt)
 		return 6 * sizeof(float);
 	case GVF_SKINNED0WEIGHTS:
 		//return D3DFVF_XYZB1 | D3DFVF_LASTBETA_UBYTE4 | D3DFVF_NORMAL | D3DFVF_TEX1;
+		return 9 * sizeof(float);
+	case GVF_SKYBOX:
+		//return D3DFVF_XYZ | D3DFVF_TEX1 | D3DFVF_TEXCOORDSIZE3(0);
 		return 9 * sizeof(float);
 	default:
 		return 0;
@@ -239,6 +245,32 @@ bool gResource::isLoaded() const
 
 //-----------------------------------------------
 //
+//	CLASS: gResourceTexture
+//
+//-----------------------------------------------
+gResourceTexture::gResourceTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name )
+	: gResource(mgr, group, filename, name)
+{
+	m_width = m_height = m_depth = 0;
+}
+
+unsigned short gResourceTexture::getTextureWidth() const
+{
+	return m_width;
+}
+
+unsigned short gResourceTexture::getTextureHeight() const
+{
+	return m_height;
+}
+
+unsigned short gResourceTexture::getTextureDepth() const
+{
+	return m_depth;
+}
+
+//-----------------------------------------------
+//
 //	CLASS: gResource2DTexture
 //
 //-----------------------------------------------
@@ -265,14 +297,12 @@ gResource2DTexture::gResource2DTexture( gResourceManager* mgr, GRESOURCEGROUP gr
 */
 
 gResource2DTexture::gResource2DTexture(gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, 
-	const char* name, WADLumpInfo_t* lumpinfo, gBMPFile* bitmap ) : gResource(mgr, group, filename, name)
+	const char* name, WADLumpInfo_t* lumpinfo, gBMPFile* bitmap ) : gResourceTexture(mgr, group, filename, name)
 {
 	m_pTex = 0;
 	m_isRenderable = false;
 	m_pLumpInfo = lumpinfo;
 	m_pBitmap = bitmap;
-	m_width = 0;
-	m_height = 0;
 }
 
 gResource2DTexture::~gResource2DTexture()
@@ -280,6 +310,16 @@ gResource2DTexture::~gResource2DTexture()
 	unload();
 	if (m_pTex)
 		m_pTex->Release();
+}
+
+gTextureType gResource2DTexture::getTextureType() const
+{
+	return gTextureType::GTT_2DTEXTURE;
+}
+
+void* gResource2DTexture::getTexture() const
+{
+	return m_pTex;
 }
 
 bool gResource2DTexture::preload()
@@ -513,19 +553,74 @@ void gResource2DTexture::unload() //данные, загруженые preload() в этой функции 
 	}
 }
 
-const LPDIRECT3DTEXTURE9 gResource2DTexture::getTexture() const
+//-----------------------------------------------
+//
+//	CLASS: gResourceCubeTexture
+//
+//-----------------------------------------------
+
+gResourceCubeTexture::gResourceCubeTexture(gResourceManager* mgr, GRESOURCEGROUP group, 
+	const char* filename, const char* name ) : gResourceTexture(mgr, group, filename, name)
+
+{
+	m_pTex = 0;
+}
+
+gResourceCubeTexture::~gResourceCubeTexture()
+{
+	unload();
+}
+
+gTextureType gResourceCubeTexture::getTextureType() const
+{
+	return gTextureType::GTT_CUBETEXTURE;
+}
+
+void* gResourceCubeTexture::getTexture() const
 {
 	return m_pTex;
 }
 
-unsigned short gResource2DTexture::getTextureWidth() const
+bool gResourceCubeTexture::preload() //загрузка статических данных
 {
-	return m_width;
+	return true;
 }
 
-unsigned short gResource2DTexture::getTextureHeight() const
+bool gResourceCubeTexture::load()
 {
-	return m_height;
+	if (m_isLoaded)
+		return true;
+
+	//check cubemap
+	D3DXIMAGE_INFO inf;
+	D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
+
+	if (inf.ResourceType != D3DRTYPE_CUBETEXTURE)
+		return false;
+
+	m_width = inf.Width;
+	m_height = inf.Height;
+
+	LPDIRECT3DDEVICE9 pDev = m_pResMgr->getDevice();
+
+	HRESULT hr;
+	hr = D3DXCreateCubeTextureFromFileEx( pDev, m_fileName.c_str(), 0, 0, D3DUSAGE_AUTOGENMIPMAP, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, 0, 0, 0, 0, 0, &m_pTex);
+
+	if (FAILED(hr))
+		return false;
+	else
+		m_isLoaded = true;
+
+	return m_isLoaded;
+}
+
+void gResourceCubeTexture::unload() //данные, загруженые preload() в этой функции не измен€ютс€
+{
+	if (m_pTex)
+		m_pTex->Release();
+	m_pTex = 0;
+
+	m_isLoaded = false;
 }
 
 //-----------------------------------------------
@@ -1037,7 +1132,18 @@ gResource* gResourceManager::loadTexture2D( const char* filename, const char* na
 	return pRes;
 }
 
-gResource* gResourceManager::loadStaticMesh(const char* filename, const char* name)
+gResource* gResourceManager::loadTextureCube( const char* filename, const char* name )
+{
+	gResource* pRes = new gResourceCubeTexture(this, GRESGROUP_CUBETEXTURE, filename, name);
+	if (name == 0)
+		m_resources[GRESGROUP_CUBETEXTURE][filename] = pRes;
+	else
+		m_resources[GRESGROUP_CUBETEXTURE][name] = pRes;
+	pRes->preload();
+	return pRes;
+}
+
+gResource* gResourceManager::loadStaticMeshSMD( const char* filename, const char* name )
 {
 	gResource* pRes = new gResourceStaticMesh(this, GRESGROUP_STATICMESH, filename, name);
 	if (name == 0)
@@ -1098,14 +1204,18 @@ gResource* gResourceManager::loadSkinnedAnimationSMD( const char* filename, cons
 	return pRes;
 }
 
+gResource* gResourceManager::loadSkyBox(const char* filename, const char* name)
+{
+	gResourceSkyBox* pRes = new gResourceSkyBox( this, GRESGROUP_SKYBOX, filename, name );
+	m_resources[GRESGROUP_SKYBOX][name] = (gResource*)pRes;
+
+	return (gResource*)pRes;
+}
+
 gResource* gResourceManager::createShape( const char* name, gShapeType type )
 {
 	gResourceShape* pRes = new gResourceShape( this, GRESGROUP_SHAPE, type, name );
 	m_resources[GRESGROUP_SHAPE][name] = (gResource*)pRes;
-
-	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	//if (!pMaterial)
-	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
 
 	return (gResource*)pRes;
 }

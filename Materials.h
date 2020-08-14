@@ -7,7 +7,7 @@
 #include <map>
 #include <string>
 
-class gResource2DTexture;
+class gResourceTexture;
 typedef unsigned __int32 GCOLOR;
 
 class gMaterial;
@@ -58,8 +58,8 @@ public:
 	float getSpecularPower() const;
 
 	unsigned char getTexturesNum() const;
-	gResource2DTexture* getTexture(unsigned char level) const;
-	void setTexture(unsigned char level, gResource2DTexture* texture);
+	gResourceTexture* getTexture(unsigned char level) const;
+	void setTexture(unsigned char level, gResourceTexture* texture);
 	
 	unsigned short getId() const;
 
@@ -82,7 +82,7 @@ protected:
 	GCOLOR m_specular;
 	GCOLOR m_emissive;
 	float m_specularPower;
-	gResource2DTexture* m_textures[8];
+	gResourceTexture* m_textures[8];
 };
 
 #endif

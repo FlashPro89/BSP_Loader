@@ -702,6 +702,13 @@ void loadScene( const char* mapname )
 		node_terrain->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
 
+	//skybox
+	ent = smgr.createEntity("ent_skybox");
+	gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox( "../data/env/skybox.dds", "skybox" );
+	ent->setRenderable( pSkyBoxRenderable );
+	smgr.getRootNode().attachEntity(ent);
+
+
 	FILE* f = 0;
 
 	errno_t err = fopen_s( &f, fname, "rb" );

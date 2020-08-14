@@ -111,10 +111,12 @@ bool gResourceSkyBox::load()
 	if (FAILED(hr))
 		return false;
 
+	//TODO: apply actual resource name
 	//create material
-	gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube("../data/env/skybox.dds", "skybox_tex");
+	gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube(m_fileName.c_str() , "skybox_tex");
 
 	gMaterial* pMat = m_pResMgr->getMaterialFactory()->createMaterial("skybox_mat");
+	pMat->setTexture(0, pTex);
 	m_defaultMatMap["skybox_mat"] = pMat;
 
 	m_isLoaded = true;
@@ -144,7 +146,7 @@ void gResourceSkyBox::onFrameRender(gRenderQueue* queue, const gEntity* entity, 
 	
 	gMaterial* pMaterial = m_defaultMatMap.begin()->second;
 
-	gRenderElement element = gRenderElement( this, 0, 0, 1, &m_invCamPosMat, 0, 12 );
+	gRenderElement element = gRenderElement( this, pMaterial, 0, 1, &m_invCamPosMat, 0, 12 );
 	queue->pushBack(element);
 }
 

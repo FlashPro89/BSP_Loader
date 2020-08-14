@@ -117,6 +117,8 @@ void gRenderElement::_buildKey()
 		throw("no mat!");
 
 	unsigned __int64 alphaMask = ((unsigned __int64)1 << 60);
+	unsigned __int64 skyMask = ((unsigned __int64)1 << 61);
+
 
 	if( m_pMaterial->getTransparency() != 0xFF )
 		alphaMask = 0;
@@ -151,6 +153,10 @@ void gRenderElement::_buildKey()
 
 	//alphablend bit
 	m_key |= alphaMask;
+
+	//skybox bit
+	if( m_pRenderable->getGroup() != GRESOURCEGROUP::GRESGROUP_SKYBOX )
+		m_key |= skyMask;
 }
 
 //-----------------------------------------------

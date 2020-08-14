@@ -5,6 +5,7 @@
 #include "Terrain.h"
 #include "BSPLevel.h"
 #include "BMPFile.h"
+#include "Skybox.h"
 #include <stdio.h>
 
 iwadcolor colormap[256];
@@ -1200,14 +1201,18 @@ gResource* gResourceManager::loadSkinnedAnimationSMD( const char* filename, cons
 	return pRes;
 }
 
+gResource* gResourceManager::loadSkyBox(const char* filename, const char* name)
+{
+	gResourceSkyBox* pRes = new gResourceSkyBox( this, GRESGROUP_SKYBOX, filename, name );
+	m_resources[GRESGROUP_SKYBOX][name] = (gResource*)pRes;
+
+	return (gResource*)pRes;
+}
+
 gResource* gResourceManager::createShape( const char* name, gShapeType type )
 {
 	gResourceShape* pRes = new gResourceShape( this, GRESGROUP_SHAPE, type, name );
 	m_resources[GRESGROUP_SHAPE][name] = (gResource*)pRes;
-
-	//gMaterial* pMaterial = m_pMatFactory->getMaterial(pRes->getResourceName());
-	//if (!pMaterial)
-	//	pMaterial = m_pMatFactory->createMaterial(pRes->getResourceName());
 
 	return (gResource*)pRes;
 }

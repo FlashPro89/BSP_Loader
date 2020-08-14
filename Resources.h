@@ -72,12 +72,12 @@ enum GRESOURCEGROUP
 	GRESGROUP_SKINNEDMESH,
 	GRESGROUP_SKINEDANIMATION,
 	GRESGROUP_TEXTDRAWER,
+	GRESGROUP_VOLUMETEXTURE,
 	GRESGROUP_CUBETEXTURE,
 	GRESGROUP_2DTEXTURE,
 	GRESGROUP_SHADERSET,
+	GRESGROUP_SKYBOX,
 	GRESGROUP_RESERVED_1,
-	GRESGROUP_RESERVED_2,
-	GRESGROUP_RESERVED_3,
 	GRESGROUP_NUM
 };
 
@@ -345,6 +345,7 @@ public:
 	gResource* loadTerrain( const char* filename, const char* name );
 	gResource* loadBSPLevel( const char* filename, const char* name );
 	gResource* loadSkinnedAnimationSMD( const char* filename, const char* name, gResourceSkinnedMesh* ref );
+	gResource* loadSkyBox( const char* filename, const char* name );
 	gResource* createShape( const char* name, gShapeType type );
 	gResource* createTextDrawer( const char* name, const gFontParameters& params);
 	gResourceLineDrawer* getLineDrawer() const;

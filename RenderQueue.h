@@ -119,6 +119,9 @@ protected:
 	gRenderQueue(gRenderQueue&) {};
 	gRenderQueue(const gRenderQueue&) {};
 
+	void _setTransform( DWORD transform, const D3DXMATRIX* matrix, IDirect3DDevice9* pDevice );
+	std::map< DWORD, const D3DXMATRIX*> m_Transform;
+
 	void _setTextureStageState( unsigned char level, DWORD state, DWORD value, IDirect3DDevice9* pDevice );
 	std::map< DWORD, DWORD> m_TSS[8];
 

@@ -275,12 +275,19 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	if (m_arrayPos == 0)
 		return; //null queue
 
+	D3DXMATRIX mId;
+	D3DXMatrixIdentity(&mId);
+
 	for (unsigned char i = 0; i < 8; i++)
 	{
 		m_SS[i].clear();
 		m_TSS[i].clear();
 	}
 	m_RS.clear();
+	m_Transform.clear();
+
+	_setTransform(D3DTS_TEXTURE0, &mId, pDevice);
+	_setTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2, pDevice);
 
 	LPDIRECT3DINDEXBUFFER9 pSrcIB = 0;
 	LPDIRECT3DINDEXBUFFER9 pDestBatchIB = 0;
@@ -405,47 +412,39 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 		//set transforms
 		matPalete = pElement->getMatrixPalete();
-		if (pElement->getMatrixPaleteSize() > 1) //skinning
+		if (pElement->getMatrixPaleteSize() > 2) //skinning
 		{
 			skinBoneGroup = pElement->getSkinBoneGroup();
 			auto rit = skinBoneGroup->remappedBones.begin();
 
-			if (!m_lastMatSkinned)
-			{
-				//pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE);
-				//pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS);
-				
-				_setRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, true, pDevice );
-				_setRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS, pDevice );
-			}
-			m_lastMatSkinned = true;
+
+			_setRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, true, pDevice );
+			_setRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS, pDevice );
+
 
 			while (rit != skinBoneGroup->remappedBones.end())
 			{
-				pDevice->SetTransform(D3DTS_WORLDMATRIX(rit->second), &matPalete[rit->first]);
+				_setTransform(D3DTS_WORLDMATRIX(rit->second), &matPalete[rit->first], pDevice);
 				rit++;
 			}
 		}
+		else if (pElement->getMatrixPaleteSize() == 2) 
+		// skybox рисуем последним, поэтому D3DTS_TEXTURE0 можно не возвращать в Idenity
+		{
+			//_setTransform( D3DTS_WORLDMATRIX(0), &matPalete[0], pDevice );
+			_setTransform( D3DTS_WORLD, &mId, pDevice );
+			_setTransform( D3DTS_VIEW, &mId, pDevice);
+			_setTransform( D3DTS_PROJECTION, &mId, pDevice);
+
+			_setTransform( D3DTS_TEXTURE0, &matPalete[1], pDevice );
+			_setTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT3, pDevice );
+
+		}
 		else
 		{
-			if (m_lastMatSkinned)
-			{
-				//pDevice->SetRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
-				//pDevice->SetRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false);
-
-				_setRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false, pDevice);
-				_setRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE, pDevice);
-
-				pDevice->SetTransform(D3DTS_WORLDMATRIX(0), &matPalete[0]);
-				pLastMatrix = &matPalete[0];
-			}
-			m_lastMatSkinned = false;
-
-			if (pLastMatrix != &matPalete[0])
-			{
-				pDevice->SetTransform(D3DTS_WORLDMATRIX(0), &matPalete[0]);
-				pLastMatrix = &matPalete[0];
-			}
+			_setRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false, pDevice);
+			_setRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE, pDevice);
+			_setTransform(D3DTS_WORLDMATRIX(0), &matPalete[0], pDevice);
 		}
 
 		//render it!
@@ -495,23 +494,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			//setup material
 			if (pMaterial)
 			{
-				/*
-				if (m_lastLighting < 0)
-				{
-					m_lastLighting = pMaterial->getLightingEnable();
-					pDevice->SetRenderState(D3DRS_LIGHTING, m_lastLighting);
-				}
-				else if ( (m_lastLighting == 0) && pMaterial->getLightingEnable() )
-				{
-					m_lastLighting = true;
-					pDevice->SetRenderState(D3DRS_LIGHTING, m_lastLighting);
-				}
-				else if ((m_lastLighting == 1) && !pMaterial->getLightingEnable())
-				{
-					m_lastLighting = false;
-					pDevice->SetRenderState(D3DRS_LIGHTING, m_lastLighting);
-				}
-				*/
 				_setRenderState( D3DRS_LIGHTING, pMaterial->getLightingEnable(), pDevice );
 				_setRenderState(D3DRS_ZENABLE, pMaterial->getZEnable(), pDevice);
 				_setRenderState( D3DRS_ZWRITEENABLE, pMaterial->getZWriteEnable(), pDevice );
@@ -689,6 +671,24 @@ void gRenderQueue::_debugOutUnsorted(const char* fname)
 		}
 	}
 	fclose(f);	
+}
+
+void gRenderQueue::_setTransform(DWORD transform, const D3DXMATRIX* matrix, IDirect3DDevice9* pDevice)
+{
+	auto it = (m_Transform).find(transform);
+	if (it == m_Transform.end())
+	{
+		pDevice->SetTransform((D3DTRANSFORMSTATETYPE)transform, matrix );
+		m_Transform[transform] = matrix;
+	}
+	else
+	{
+		if ( it->second != matrix )
+		{
+			pDevice->SetTransform( (D3DTRANSFORMSTATETYPE)transform, matrix );
+			it->second = matrix;
+		}
+	}
 }
 
 void gRenderQueue::_setTextureStageState(unsigned char level, DWORD state, DWORD value, IDirect3DDevice9* pDevice)

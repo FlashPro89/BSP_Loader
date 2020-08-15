@@ -37,7 +37,7 @@ protected:
 	IDirect3DVertexBuffer9* m_pVB;
 	IDirect3DIndexBuffer9* m_pIB;
 	IDirect3DCubeTexture9* m_pTex;
-	mutable D3DXMATRIX m_invCamPosMat;
+	mutable D3DXMATRIX m_tranformMatrixes[2]; //first - world transform, second - texcoord0 transform
 };
 
 #endif

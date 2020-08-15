@@ -103,9 +103,6 @@ public:
 	virtual bool preload() { return true; } //загрузка статических данных
 	virtual bool load() = 0;
 	virtual void unload() = 0; //данные, загруженые preload() в этой функции не измен€ютс€
-
-	//void setResourceName( const char* name );
-	//void setFileName( const char* name );
 	
 	const char* getResourceName() const;
 	const char* getFileName() const;
@@ -340,6 +337,8 @@ public:
 	gResource* loadTextureFromBitmap( gBMPFile* bitmap, const char* name );
 	gResource* loadTexture2D( const char* filename, const char* name = 0 );
 	gResource* loadTextureCube(const char* filename, const char* name = 0);
+	gResource* loadTextureCubeApart(const char* ftname, const char* bkname, const char* ltname, const char rtname, 
+		const char upname, const char dnname, const char* name);
 	gResource* loadStaticMeshSMD( const char* filename, const char* name = 0 );
 	gResource* loadSkinnedMeshSMD( const char* filename, const char* name );
 	gResource* loadTerrain( const char* filename, const char* name );

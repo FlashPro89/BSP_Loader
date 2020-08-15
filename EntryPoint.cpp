@@ -704,7 +704,7 @@ void loadScene( const char* mapname )
 
 	//skybox
 	ent = smgr.createEntity("ent_skybox");
-	gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox( "../data/env/skybox.dds", "skybox" );
+	gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox( "../data/env/sky_xzy.dds", "skybox" );
 	ent->setRenderable( pSkyBoxRenderable );
 	smgr.getRootNode().attachEntity(ent);
 

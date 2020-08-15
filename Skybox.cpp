@@ -48,23 +48,40 @@ gResourceSkyBox::~gResourceSkyBox()
 
 bool gResourceSkyBox::preload()
 {
+	//разделный порядок загрузки:
+	//pos_Z = right
+	//neg_Z = left
+	//pos_X = front
+	//neg_X = back
+	//pos_Y = up
+	//pos_Z = down
+
 	//TODO: apply actual resource name
 	char matName[1024] = "";
 	sprintf_s( matName, 1024, "%s_mat", m_resName.c_str() );
 
 	gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(matName);
-	if (!pMat) 
+	if (!pMat)
 	{
-		//create material
+		//create materials
 		char texName[1024] = "";
 		sprintf_s( texName, 1024, "%s_tex", m_resName.c_str() );
 
+		//пробуем грузить из dds
 		gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube( m_fileName.c_str(), texName );
 		if (pTex)
+		{
 			pTex->addRef();
+		}
+		else // составляем кубмап из 6 частей
+		{
+			gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube(m_fileName.c_str(), texName);
+		}
+
 		pMat = m_pResMgr->getMaterialFactory()->createMaterial( matName );
 		pMat->setTexture(0, pTex);
-		pMat->setZWriteEnable(false);
+		pMat->setLightingEnable(false);
+		//pMat->setZWriteEnable(false);
 	}
 	else
 	{
@@ -78,17 +95,18 @@ bool gResourceSkyBox::preload()
 
 bool gResourceSkyBox::load()
 {
+	const float s = 0.99999f;
 	gSkyBoxVertex cubeVerts[8] =
 	{ 
-		gSkyBoxVertex( -100.f, -100.f, -100.f,	-1.f, -1.f, -1.f ),
-		gSkyBoxVertex(  100.f, -100.f, -100.f,	 1.f, -1.f, -1.f ),
-		gSkyBoxVertex(  100.f,  100.f, -100.f,	 1.f,  1.f, -1.f ),
-		gSkyBoxVertex( -100.f,  100.f, -100.f,	-1.f,  1.f, -1.f ),
+		gSkyBoxVertex( -s, -s, -s,	-1.f, -1.f, -1.f ), //0
+		gSkyBoxVertex(  s, -s, -s,	 1.f, -1.f, -1.f ), //1
+		gSkyBoxVertex(  s,  s, -s,	 1.f,  1.f, -1.f ), //2
+		gSkyBoxVertex( -s,  s, -s,	-1.f,  1.f, -1.f ), //3
 
-		gSkyBoxVertex( -100.f, -100.f,  100.f,	-1.f, -1.f,  1.f ),
-		gSkyBoxVertex(  100.f, -100.f,  100.f,	 1.f, -1.f,  1.f ),
-		gSkyBoxVertex(  100.f,  100.f,  100.f,	 1.f,  1.f,  1.f ),
-		gSkyBoxVertex( -100.f,  100.f,  100.f,	-1.f,  1.f,  1.f ),
+		gSkyBoxVertex( -s, -s,  s,	-1.f, -1.f,  1.f ), //4
+		gSkyBoxVertex(  s, -s,  s,	 1.f, -1.f,  1.f ), //5
+		gSkyBoxVertex(  s,  s,  s,	 1.f,  1.f,  1.f ), //6
+		gSkyBoxVertex( -s,  s,  s,	-1.f,  1.f,  1.f ), //7
 	};
 
 	unsigned short cubeIndexes[36] =
@@ -159,13 +177,18 @@ void gResourceSkyBox::unload()
 
 void gResourceSkyBox::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* camera) const
 {
-	D3DXVECTOR3 vCamPos = camera->getPosition();
-	D3DXMatrixTranslation( &m_invCamPosMat, vCamPos.x, vCamPos.y, vCamPos.z);
-	
+	float det;
+	D3DXMatrixInverse( &m_tranformMatrixes[0], &det, &camera->getViewProjMatrix());
+
+	D3DXQUATERNION qrot;
+	//D3DXQuaternionInverse(&qrot, &camera->getOrientation());
+	qrot = camera->getOrientation();
+	D3DXMatrixRotationQuaternion( &m_tranformMatrixes[1], &qrot );
+
 	auto it = m_defaultMatMap.begin();
 	gMaterial* pMaterial = it->second;
 
-	gRenderElement element = gRenderElement( this, pMaterial, 0, 1, &m_invCamPosMat, 0, 12, 8 );
+	gRenderElement element = gRenderElement( this, pMaterial, 0, 2, m_tranformMatrixes, 0, 12, 8 );
 	queue->pushBack(element);
 }
 

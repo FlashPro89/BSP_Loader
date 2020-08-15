@@ -64,18 +64,37 @@ bool gResourceSkyBox::preload()
 	if (!pMat)
 	{
 		//create materials
-		char texName[1024] = "";
-		sprintf_s( texName, 1024, "%s_tex", m_resName.c_str() );
+		char texResName[1024] = "";
+		sprintf_s( texResName, 1024, "%s_tex", m_resName.c_str() );
 
 		//пробуем грузить из dds
-		gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube( m_fileName.c_str(), texName );
+		gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube( m_fileName.c_str(), texResName );
 		if (pTex)
 		{
 			pTex->addRef();
 		}
 		else // составл€ем кубмап из 6 частей
 		{
-			gResourceTexture* pTex = (gResourceTexture*)m_pResMgr->loadTextureCube(m_fileName.c_str(), texName);
+			char texFrontFileName[1024];
+			char texBackFileName[1024];
+			char texLeftFileName[1024];
+			char texRightFileName[1024];
+			char texUpFileName[1024];
+			char texDownFileName[1024];
+
+			sprintf_s(texFrontFileName, 1024, "../data/env/%srt.tga", m_fileName.c_str());
+			sprintf_s(texBackFileName, 1024, "../data/env/%slf.tga", m_fileName.c_str());
+			sprintf_s(texRightFileName, 1024, "../data/env/%sft.tga", m_fileName.c_str());
+			sprintf_s(texLeftFileName, 1024, "../data/env/%sbk.tga", m_fileName.c_str());
+			sprintf_s(texUpFileName, 1024, "../data/env/%sup.tga", m_fileName.c_str());
+			sprintf_s(texDownFileName, 1024, "../data/env/%sdn.tga", m_fileName.c_str());
+
+
+			pTex = (gResourceTexture*)m_pResMgr->loadTextureCubeSeparately(
+				texFrontFileName, texBackFileName, texRightFileName, texLeftFileName, 
+				texUpFileName, texDownFileName, texResName );
+			if (pTex)
+				pTex->addRef();
 		}
 
 		pMat = m_pResMgr->getMaterialFactory()->createMaterial( matName );
@@ -95,7 +114,7 @@ bool gResourceSkyBox::preload()
 
 bool gResourceSkyBox::load()
 {
-	const float s = 0.99999f;
+	const float s = 0.9999999f;
 	gSkyBoxVertex cubeVerts[8] =
 	{ 
 		gSkyBoxVertex( -s, -s, -s,	-1.f, -1.f, -1.f ), //0
@@ -177,18 +196,18 @@ void gResourceSkyBox::unload()
 
 void gResourceSkyBox::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* camera) const
 {
-	float det;
-	D3DXMatrixInverse( &m_tranformMatrixes[0], &det, &camera->getViewProjMatrix());
+	//float det;
+	//D3DXMatrixInverse( &m_tranformMatrixes[0], &det, &camera->getViewProjMatrix());
 
 	D3DXQUATERNION qrot;
 	//D3DXQuaternionInverse(&qrot, &camera->getOrientation());
 	qrot = camera->getOrientation();
-	D3DXMatrixRotationQuaternion( &m_tranformMatrixes[1], &qrot );
+	D3DXMatrixRotationQuaternion( &m_texcoordTransform, &qrot );
 
 	auto it = m_defaultMatMap.begin();
 	gMaterial* pMaterial = it->second;
 
-	gRenderElement element = gRenderElement( this, pMaterial, 0, 2, m_tranformMatrixes, 0, 12, 8 );
+	gRenderElement element = gRenderElement( this, pMaterial, 0, 1, &m_texcoordTransform, 2*3, 2, 8 );
 	queue->pushBack(element);
 }
 

@@ -239,7 +239,10 @@ protected:
 class gResourceCubeTexture : public gResourceTexture
 {
 public:
-	gResourceCubeTexture(gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
+	gResourceCubeTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* filename, const char* name = 0 );
+	gResourceCubeTexture( gResourceManager* mgr, GRESOURCEGROUP group, const char* ftname, const char* bkname, const char* ltname, const char* rtname,
+		const char* upname, const char* dnname, const char* name = 0);
+
 	~gResourceCubeTexture();
 
 	gTextureType getTextureType() const;
@@ -251,6 +254,11 @@ public:
 
 protected:
 	LPDIRECT3DCUBETEXTURE9 m_pTex;
+	std::string m_backName;
+	std::string m_leftName;
+	std::string m_rightName;
+	std::string m_upName;
+	std::string m_downName;
 };
 
 class gResourceShape :  public gRenderable
@@ -337,8 +345,8 @@ public:
 	gResource* loadTextureFromBitmap( gBMPFile* bitmap, const char* name );
 	gResource* loadTexture2D( const char* filename, const char* name = 0 );
 	gResource* loadTextureCube(const char* filename, const char* name = 0);
-	gResource* loadTextureCubeApart(const char* ftname, const char* bkname, const char* ltname, const char rtname, 
-		const char upname, const char dnname, const char* name);
+	gResource* loadTextureCubeSeparately(const char* ftname, const char* bkname, const char* rtname, 
+		const char* ltname, const char* upname, const char* dnname, const char* name);
 	gResource* loadStaticMeshSMD( const char* filename, const char* name = 0 );
 	gResource* loadSkinnedMeshSMD( const char* filename, const char* name );
 	gResource* loadTerrain( const char* filename, const char* name );

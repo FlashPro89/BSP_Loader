@@ -566,6 +566,20 @@ gResourceCubeTexture::gResourceCubeTexture(gResourceManager* mgr, GRESOURCEGROUP
 	m_pTex = 0;
 }
 
+gResourceCubeTexture::gResourceCubeTexture(gResourceManager* mgr, GRESOURCEGROUP group, const char* ftname, 
+	const char* bkname, const char* ltname, const char* rtname, const char* upname, const char* dnname, 
+	const char* name ) : gResourceTexture(mgr, group, ftname, name)
+{
+	m_pTex = 0;
+
+	m_fileName = ftname;
+	m_backName = bkname;
+	m_leftName = ltname;
+	m_rightName = rtname;
+	m_upName = upname;
+	m_downName = dnname;
+}
+
 gResourceCubeTexture::~gResourceCubeTexture()
 {
 	unload();
@@ -583,16 +597,76 @@ void* gResourceCubeTexture::getTexture() const
 
 bool gResourceCubeTexture::preload() //загрузка статических данных
 {
-	//check cubemap
+	HRESULT hr;
 	D3DXIMAGE_INFO inf;
-	D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
 
-	if (inf.ResourceType != D3DRTYPE_CUBETEXTURE)
-		return false;
-	
-	m_width = inf.Width;
-	m_height = inf.Height;
+	if (m_backName == "")
+	{
+		//check cubemap
+		hr = D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
+		
+		if (FAILED(hr))
+			return false;
+		else
+			if (inf.ResourceType != D3DRTYPE_CUBETEXTURE)
+				return false;
 
+		m_width = inf.Width;
+		m_height = inf.Height;
+	}
+	else //check side textures
+	{
+		//front
+		hr = D3DXGetImageInfoFromFile(m_fileName.c_str(), &inf);
+		if (FAILED(hr)) 
+			return false;
+		else
+			if( (inf.ResourceType != D3DRTYPE_TEXTURE ) || ( inf.Width != inf.Height ) )
+				return false;
+
+		m_width = inf.Width;
+		m_height = inf.Height;
+
+		//back
+		hr = D3DXGetImageInfoFromFile(m_backName.c_str(), &inf);
+		if (FAILED(hr))
+			return false;
+		else
+			if ((inf.ResourceType != D3DRTYPE_TEXTURE) || (m_width != inf.Width) || (m_height != inf.Height))
+				return false;
+
+		//left
+		hr = D3DXGetImageInfoFromFile(m_leftName.c_str(), &inf);
+		if (FAILED(hr))
+			return false;
+		else
+			if ((inf.ResourceType != D3DRTYPE_TEXTURE) || (m_width != inf.Width) || (m_height != inf.Height))
+				return false;
+
+		//right
+		hr = D3DXGetImageInfoFromFile(m_rightName.c_str(), &inf);
+		if (FAILED(hr))
+			return false;
+		else
+			if ((inf.ResourceType != D3DRTYPE_TEXTURE) || (m_width != inf.Width) || (m_height != inf.Height))
+				return false;
+
+		//up
+		hr = D3DXGetImageInfoFromFile(m_upName.c_str(), &inf);
+		if (FAILED(hr))
+			return false;
+		else
+			if ((inf.ResourceType != D3DRTYPE_TEXTURE) || (m_width != inf.Width) || (m_height != inf.Height))
+				return false;
+
+		//down
+		hr = D3DXGetImageInfoFromFile(m_downName.c_str(), &inf);
+		if (FAILED(hr))
+			return false;
+		else
+			if ((inf.ResourceType != D3DRTYPE_TEXTURE) || (m_width != inf.Width) || (m_height != inf.Height))
+				return false;
+	}
 	return true;
 }
 
@@ -601,18 +675,125 @@ bool gResourceCubeTexture::load()
 	if (m_isLoaded)
 		return true;
 
+	HRESULT hr;
 	LPDIRECT3DDEVICE9 pDev = m_pResMgr->getDevice();
 
-	HRESULT hr;
-	hr = D3DXCreateCubeTextureFromFileEx( pDev, m_fileName.c_str(), 0, 0, 0, 
-		D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, 0, 0, &m_pTex);
+	LPDIRECT3DSURFACE9 pCubeSurface = 0;
+	LPDIRECT3DCUBETEXTURE9 pTmpTex = 0;
 
-	if (FAILED(hr))
-		return false;
-	else
-		m_isLoaded = true;
+	if (m_backName == "")
+	{
+		hr = D3DXCreateCubeTextureFromFileEx(pDev, m_fileName.c_str(), 0, 1, 0,
+			D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, 0, 0, &m_pTex);
+
+		if (FAILED(hr))
+			return false;
+		else
+			m_isLoaded = true;
+	}
+	else //separate loading
+	{
+		hr = pDev->CreateCubeTexture( m_width, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &m_pTex, 0 );
+		if (FAILED(hr))
+			return false;
+
+		hr = pDev->CreateCubeTexture( m_width, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, &pTmpTex, 0 );
+		if (FAILED(hr))
+		{
+			m_pTex->Release();
+			m_pTex = 0;
+			return false;
+		}
+
+		//front
+		hr = pTmpTex->GetCubeMapSurface(D3DCUBEMAP_FACE_POSITIVE_Z, 0, &pCubeSurface );
+		if (FAILED(hr)) 
+			goto release;
+
+		hr = D3DXLoadSurfaceFromFile( pCubeSurface, 0, 0, m_fileName.c_str(), 0, D3DX_DEFAULT, 0, 0 );
+		if (FAILED(hr)) 
+			goto release;
+
+		pCubeSurface->Release();
+		pCubeSurface = 0;
+
+		//back
+		hr = pTmpTex->GetCubeMapSurface(D3DCUBEMAP_FACE_NEGATIVE_Z, 0, &pCubeSurface);
+		if (FAILED(hr))
+			goto release;
+
+		hr = D3DXLoadSurfaceFromFile(pCubeSurface, 0, 0, m_backName.c_str(), 0, D3DX_DEFAULT, 0, 0);
+		if (FAILED(hr))
+			goto release;
+
+		pCubeSurface->Release();
+		pCubeSurface = 0;
+
+		//right
+		hr = pTmpTex->GetCubeMapSurface(D3DCUBEMAP_FACE_POSITIVE_X, 0, &pCubeSurface);
+		if (FAILED(hr))
+			goto release;
+
+		hr = D3DXLoadSurfaceFromFile(pCubeSurface, 0, 0, m_rightName.c_str(), 0, D3DX_DEFAULT, 0, 0);
+		if (FAILED(hr))
+			goto release;
+		pCubeSurface->Release();
+		pCubeSurface = 0;
+
+		//left
+		hr = pTmpTex->GetCubeMapSurface(D3DCUBEMAP_FACE_NEGATIVE_X, 0, &pCubeSurface);
+		if (FAILED(hr))
+			goto release;
+
+		hr = D3DXLoadSurfaceFromFile(pCubeSurface, 0, 0, m_leftName.c_str(), 0, D3DX_DEFAULT, 0, 0);
+		if (FAILED(hr))
+			goto release;
+		pCubeSurface->Release();
+		pCubeSurface = 0;
+
+		//up
+		hr = pTmpTex->GetCubeMapSurface(D3DCUBEMAP_FACE_POSITIVE_Y, 0, &pCubeSurface);
+		if (FAILED(hr))
+			goto release;
+
+		hr = D3DXLoadSurfaceFromFile(pCubeSurface, 0, 0, m_upName.c_str(), 0, D3DX_DEFAULT, 0, 0);
+		if (FAILED(hr))
+			goto release;
+		pCubeSurface->Release();
+		pCubeSurface = 0;
+
+		//down
+		hr = pTmpTex->GetCubeMapSurface(D3DCUBEMAP_FACE_NEGATIVE_Y, 0, &pCubeSurface);
+		if (FAILED(hr))
+			goto release;
+
+		hr = D3DXLoadSurfaceFromFile(pCubeSurface, 0, 0, m_downName.c_str(), 0, D3DX_DEFAULT, 0, 0);
+		if (FAILED(hr))
+			goto release;
+		pCubeSurface->Release();
+		pCubeSurface = 0;
+
+
+		hr = pDev->UpdateTexture(pTmpTex, m_pTex);
+		if (FAILED(hr))
+			goto release;
+
+		pTmpTex->Release();
+		pTmpTex = 0;
+
+		//debug
+		hr = D3DXSaveTextureToFile( "../out_cube.dds", D3DXIFF_DDS, m_pTex, 0 );
+
+		m_isLoaded = SUCCEEDED(hr);
+	}
 
 	return m_isLoaded;
+
+release:
+	if (pTmpTex) pTmpTex->Release();
+	if (pCubeSurface) pCubeSurface->Release();
+	if (m_pTex) m_pTex->Release();
+	m_pTex = 0;
 }
 
 void gResourceCubeTexture::unload() //данные, загруженые preload() в этой функции не измен€ютс€
@@ -1038,30 +1219,24 @@ gResource* gResourceManager::loadTexture2DFromWADList( const char* name )
 	FILE* f = 0;
 	std::string tmp;
 
-	//if (!strcmp("06_CHALETI_WOO", name))
-	//	int i = 23 * 73;
-
-	//if (!strcmp("06_CHALETI_WOO", name))
-	//	fopen_s( &f, "out_06.txt", "wt" );
-
 	auto it = m_wadFiles.begin();
 	while (it != m_wadFiles.end()) 
 	{
-		//if (!strcmp("06_CHALETI_WOO", name))
-		//	fprintf( f, "wad: %s\n", it->first.c_str());
 
 		for (int i = 0; i < it->second->header.numlumps; i++)
 		{
 			toUpper( it->second->lumpInfo[i].name );
-			
-			//if (!strcmp("06_CHALETI_WOO", name))
-			//	fprintf( f, "miptex: %s\n", it->second->lumpInfo[i].name );
 
 			if (!strcmp(name, it->second->lumpInfo[i].name)) // текстура найдена в текущем WAD файле
 			{
 				gResource* pRes = new gResource2DTexture(this, GRESGROUP_2DTEXTURE, it->first.c_str(), name, &it->second->lumpInfo[i]);
+				if (!pRes->preload())
+				{
+					delete pRes;
+					return 0;
+				}
+
 				m_resources[GRESGROUP_2DTEXTURE][name] = pRes;
-				pRes->preload();
 				return pRes;
 
 				/*
@@ -1116,79 +1291,140 @@ gResource* gResourceManager::loadTexture2DFromWADList( const char* name )
 gResource* gResourceManager::loadTextureFromBitmap( gBMPFile* bitmap, const char* name )
 {
 	gResource* pRes = new gResource2DTexture( this, GRESGROUP_2DTEXTURE, name, name, 0, bitmap );
-	m_resources[GRESGROUP_2DTEXTURE][name] = pRes;
 
-	pRes->preload();
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+	m_resources[GRESGROUP_2DTEXTURE][name] = pRes;
 	return pRes;
 }
 
 gResource* gResourceManager::loadTexture2D( const char* filename, const char* name )
 {
 	gResource* pRes = new gResource2DTexture(this, GRESGROUP_2DTEXTURE, filename, name);
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	if (name == 0)
 		m_resources[GRESGROUP_2DTEXTURE][filename] = pRes;
 	else
 		m_resources[GRESGROUP_2DTEXTURE][name] = pRes;
-	pRes->preload(); 
+
 	return pRes;
 }
 
 gResource* gResourceManager::loadTextureCube( const char* filename, const char* name )
 {
 	gResource* pRes = new gResourceCubeTexture(this, GRESGROUP_CUBETEXTURE, filename, name);
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	if (name == 0)
 		m_resources[GRESGROUP_CUBETEXTURE][filename] = pRes;
 	else
 		m_resources[GRESGROUP_CUBETEXTURE][name] = pRes;
-	pRes->preload();
+
+	return pRes;
+}
+
+gResource* gResourceManager::loadTextureCubeSeparately( const char* ftname, const char* bkname, 
+	const char* rtname, const char* ltname, const char* upname, const char* dnname, const char* name )
+{
+	gResource* pRes = new gResourceCubeTexture( this, GRESGROUP_CUBETEXTURE, ftname,bkname,
+		ltname, rtname, upname, dnname, name );
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
+	if (name == 0)
+		m_resources[GRESGROUP_CUBETEXTURE][ftname] = pRes;
+	else
+		m_resources[GRESGROUP_CUBETEXTURE][name] = pRes;
 	return pRes;
 }
 
 gResource* gResourceManager::loadStaticMeshSMD( const char* filename, const char* name )
 {
 	gResource* pRes = new gResourceStaticMesh(this, GRESGROUP_STATICMESH, filename, name);
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	if (name == 0)
 		m_resources[GRESGROUP_STATICMESH][filename] = pRes;
 	else
 		m_resources[GRESGROUP_STATICMESH][name] = pRes;
 
-	pRes->preload();
 	return pRes;
 }
 
 gResource* gResourceManager::loadSkinnedMeshSMD(const char* filename, const char* name )
 {
 	gResource* pRes = new gResourceSkinnedMesh(this, GRESGROUP_SKINNEDMESH, filename, name);
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	if (name == 0)
 		m_resources[GRESGROUP_SKINNEDMESH][filename] = pRes;
 	else
 		m_resources[GRESGROUP_SKINNEDMESH][name] = pRes;
 
-	pRes->preload();
 	return pRes;
 }
 
 gResource* gResourceManager::loadTerrain(const char* filename, const char* name)
 {
 	gResource* pRes = new gResourceTerrain(this, GRESGROUP_TERRAIN, filename, name);
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	if (name == 0)
 		m_resources[GRESGROUP_TERRAIN][filename] = pRes;
 	else
 		m_resources[GRESGROUP_TERRAIN][name] = pRes;
 
-	pRes->preload();
 	return pRes;
 }
 
 gResource* gResourceManager::loadBSPLevel(const char* filename, const char* name)
 {
 	gResource* pRes = new gResourceBSPLevel(this, GRESGROUP_BSPLEVEL, filename, name);
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	if (name == 0)
 		m_resources[GRESGROUP_BSPLEVEL][filename] = pRes;
 	else
 		m_resources[GRESGROUP_BSPLEVEL][name] = pRes;
 
-	pRes->preload();
 	return pRes;
 }
 
@@ -1196,27 +1432,46 @@ gResource* gResourceManager::loadBSPLevel(const char* filename, const char* name
 gResource* gResourceManager::loadSkinnedAnimationSMD( const char* filename, const char* name, gResourceSkinnedMesh* ref )
 {
 	gResource* pRes = new gResourceSkinAnimation( this, GRESGROUP_SKINEDANIMATION, filename, name, ref);
+	
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+	
 	if (name == 0)
 		m_resources[GRESGROUP_SKINEDANIMATION][filename] = pRes;
 	else
 		m_resources[GRESGROUP_SKINEDANIMATION][name] = pRes;
 
-	pRes->preload();
 	return pRes;
 }
 
 gResource* gResourceManager::loadSkyBox(const char* filename, const char* name)
 {
 	gResourceSkyBox* pRes = new gResourceSkyBox( this, GRESGROUP_SKYBOX, filename, name );
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	m_resources[GRESGROUP_SKYBOX][name] = (gResource*)pRes;
 
-	pRes->preload();
 	return (gResource*)pRes;
 }
 
 gResource* gResourceManager::createShape( const char* name, gShapeType type )
 {
 	gResourceShape* pRes = new gResourceShape( this, GRESGROUP_SHAPE, type, name );
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	m_resources[GRESGROUP_SHAPE][name] = (gResource*)pRes;
 
 	return (gResource*)pRes;
@@ -1225,6 +1480,13 @@ gResource* gResourceManager::createShape( const char* name, gShapeType type )
 gResource* gResourceManager::createTextDrawer( const char* name, const gFontParameters& params )
 {
 	gResourceTextDrawer* pRes = new gResourceTextDrawer( this, GRESGROUP_TEXTDRAWER, name, params );
+
+	if (!pRes->preload())
+	{
+		delete pRes;
+		return 0;
+	}
+
 	m_resources[GRESGROUP_TEXTDRAWER][name] = (gResource*)pRes;
 
 	return (gResource*)pRes;

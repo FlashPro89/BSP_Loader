@@ -576,6 +576,8 @@ void loadScene( const char* mapname )
 		gRenderable* shape = pStaticMesh;
 
 		shape->getDefaultMaterialByIndex(0)->setTransparency(0xC0);
+		shape->getDefaultMaterialByIndex(0)->setZWriteEnable(false);
+
 
 		gEntity* ent = smgr.createEntity("box__root");
 		ent->setRenderable(shape);
@@ -673,6 +675,7 @@ void loadScene( const char* mapname )
 		ent->setRenderable(pSMesh2);
 		gMaterial* opaqMat = pSMesh2->getDefaultMaterialByIndex(0)->cloneMaterial("zom_opaq");
 		opaqMat->setTransparency(0x40);
+		opaqMat->setZWriteEnable(false);
 		ent->setMaterial(opaqMat);
 		node_skin2->attachEntity(ent);
 		opaqMat->release(); //free mat pointer
@@ -704,7 +707,7 @@ void loadScene( const char* mapname )
 
 	//skybox
 	ent = smgr.createEntity("ent_skybox");
-	gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox( "../data/env/sky_xzy.dds", "skybox" );
+	gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox( "xen9", "skybox" );
 	ent->setRenderable( pSkyBoxRenderable );
 	smgr.getRootNode().attachEntity(ent);
 

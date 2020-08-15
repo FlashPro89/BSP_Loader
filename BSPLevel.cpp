@@ -736,6 +736,9 @@ void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity
 		BSPMiptex_t* miptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
 		//gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
 		gMaterial* pMat = m_rFaces[i].pMaterial;
+
+		if (!strcmp(miptex->name, "SKY"))
+			continue;
 		
 		const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 

@@ -801,7 +801,9 @@ void gSceneManager::destroyAllEntities( )
 	{
 		if (it->second)
 		{
-			
+			gSceneNode* pNode = it->second->getHoldingNode();
+			if (pNode)
+				pNode->detachEntity(it->second);
 			delete it->second;
 		}
 		it++;

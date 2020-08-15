@@ -117,7 +117,7 @@ void gRenderElement::_buildKey()
 		throw("no mat!");
 
 	unsigned __int64 alphaMask = ((unsigned __int64)1 << 60);
-	unsigned __int64 skyMask = ((unsigned __int64)1 << 61);
+	unsigned __int64 skyMask = ((unsigned __int64)1 << 59);
 
 
 	if( m_pMaterial->getTransparency() != 0xFF )
@@ -278,6 +278,10 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 	D3DXMATRIX mId;
 	D3DXMatrixIdentity(&mId);
 
+	D3DXMATRIX mView, mProj;
+	pDevice->GetTransform(D3DTS_VIEW, &mView);
+	pDevice->GetTransform(D3DTS_PROJECTION, &mProj);
+
 	for (unsigned char i = 0; i < 8; i++)
 	{
 		m_SS[i].clear();
@@ -412,7 +416,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 		//set transforms
 		matPalete = pElement->getMatrixPalete();
-		if (pElement->getMatrixPaleteSize() > 2) //skinning
+		if (pElement->getMatrixPaleteSize() > 1) //skinning
 		{
 			skinBoneGroup = pElement->getSkinBoneGroup();
 			auto rit = skinBoneGroup->remappedBones.begin();
@@ -420,6 +424,10 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 			_setRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, true, pDevice );
 			_setRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS, pDevice );
+			_setTransform( D3DTS_VIEW, &mView, pDevice );
+			_setTransform( D3DTS_PROJECTION, &mProj, pDevice );
+			_setTransform(D3DTS_TEXTURE0, &mId, pDevice);
+			_setTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2, pDevice);
 
 
 			while (rit != skinBoneGroup->remappedBones.end())
@@ -428,7 +436,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				rit++;
 			}
 		}
-		else if (pElement->getMatrixPaleteSize() == 2) 
+		else if ( pElement->getRenderable()->getGroup() == GRESGROUP_SKYBOX ) 
 		// skybox рисуем последним, поэтому D3DTS_TEXTURE0 можно не возвращать в Idenity
 		{
 			//_setTransform( D3DTS_WORLDMATRIX(0), &matPalete[0], pDevice );
@@ -436,7 +444,7 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			_setTransform( D3DTS_VIEW, &mId, pDevice);
 			_setTransform( D3DTS_PROJECTION, &mId, pDevice);
 
-			_setTransform( D3DTS_TEXTURE0, &matPalete[1], pDevice );
+			_setTransform( D3DTS_TEXTURE0, &matPalete[0], pDevice );
 			_setTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT3, pDevice );
 
 		}
@@ -444,7 +452,11 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		{
 			_setRenderState(D3DRS_INDEXEDVERTEXBLENDENABLE, false, pDevice);
 			_setRenderState(D3DRS_VERTEXBLEND, D3DVBF_DISABLE, pDevice);
+			_setTransform(D3DTS_VIEW, &mView, pDevice);
+			_setTransform(D3DTS_PROJECTION, &mProj, pDevice);
 			_setTransform(D3DTS_WORLDMATRIX(0), &matPalete[0], pDevice);
+			_setTransform(D3DTS_TEXTURE0, &mId, pDevice);
+			_setTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2, pDevice);
 		}
 
 		//render it!

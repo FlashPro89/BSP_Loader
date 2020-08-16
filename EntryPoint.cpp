@@ -2,6 +2,7 @@
 #include "input.h"
 #include "timer.h"
 #include "BSPFile.h"
+#include "BSPLevel.h"
 #include "Camera.h"
 #include "Terrain.h"
 #include "Resources.h"
@@ -23,6 +24,7 @@ LPDIRECT3DTEXTURE9 pTexLightsAtlas = 0;
 gTextureAtlas atlas;
 
 bool bFullscreen = false;
+bool autoRotate = true;
 
 //всякое всячино:
 gInput* input = 0;
@@ -642,7 +644,7 @@ void loadScene( const char* mapname )
 
 		//BSPLevel renderable
 		gEntity* pEnt = smgr.createEntity("ent_world");
-		gRenderable* pBSPLevel = (gRenderable * )rmgr.loadBSPLevel(fname, "bspLevel");
+		gResourceBSPLevel* pBSPLevel = (gResourceBSPLevel* )rmgr.loadBSPLevel(fname, "bspLevel");
 		pEnt->setRenderable(pBSPLevel);
 		smgr.getRootNode().attachEntity(pEnt);
 
@@ -673,12 +675,12 @@ void loadScene( const char* mapname )
 
 		ent = smgr.createEntity("ent__skinning2");
 		ent->setRenderable(pSMesh2);
-		gMaterial* opaqMat = pSMesh2->getDefaultMaterialByIndex(0)->cloneMaterial("zom_opaq");
-		opaqMat->setTransparency(0x40);
-		opaqMat->setZWriteEnable(false);
-		ent->setMaterial(opaqMat);
+		gMaterial* transpMat = pSMesh2->getDefaultMaterialByIndex(0)->cloneMaterial("zom_transp");
+		transpMat->setTransparency(0x40);
+		transpMat->setZWriteEnable(false);
+		ent->setMaterial(transpMat);
 		node_skin2->attachEntity(ent);
-		opaqMat->release(); //free mat pointer
+		transpMat->release(); //free mat pointer
 
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("idle1", GSKINANIM_LOOP)->play();
@@ -706,11 +708,16 @@ void loadScene( const char* mapname )
 		////////////////////////////////////////////////////////////////////
 
 	//skybox
-	ent = smgr.createEntity("ent_skybox");
-	gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox( "xen9", "skybox" );
-	ent->setRenderable( pSkyBoxRenderable );
-	smgr.getRootNode().attachEntity(ent);
+	const char* skyBoxName = pBSPLevel->getSkyBoxName();
+	if (skyBoxName != 0)
+	{
+		ent = smgr.createEntity("ent_skybox");
+		gRenderable* pSkyBoxRenderable = (gRenderable*)rmgr.loadSkyBox(skyBoxName, "skybox");
+		ent->setRenderable(pSkyBoxRenderable);
+		smgr.getRootNode().attachEntity(ent);
+	}
 
+	//cam.setFOV(3.1415f / 4);
 
 	FILE* f = 0;
 
@@ -1932,9 +1939,42 @@ void rebuildVB( float dt, float delta_x, float delta_y, float sc )
 
 bool frame_move()
 {
+	input->update();
 	float dt = timer->getDelta();
 
-	ti += dt * 0.2f;
+	if (input->isKeyPressed(DIK_RIGHT))
+	{
+		autoRotate = false;
+		ti += dt * 0.05f;
+	}
+
+	if (input->isKeyPressed(DIK_LEFT))
+	{
+		autoRotate = false;
+		ti -= dt * 0.05f;
+	}
+
+	if (input->isKeyPressed(DIK_UP))
+	{
+		autoRotate = false;
+		ti += dt * 0.35f;
+	}
+
+	if (input->isKeyPressed(DIK_DOWN))
+	{
+		autoRotate = false;
+		ti -= dt * 0.35f;
+	}
+
+	if (input->isKeyPressed(DIK_R))
+	{
+		autoRotate = true;
+	}
+
+	if (autoRotate)
+	{
+		ti += dt * 0.15f;
+	}
 
 	D3DXQUATERNION q;
 
@@ -1958,99 +1998,13 @@ bool frame_move()
 		node->setRelativeOrientation(q);
 	}
 
-	//node = smgr.getNode("new_joint5");
-	//if (node)
-	//{
-	//	D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 20.5f);
-	//	node->setRelativeOrientation(q);
-	//}
-
-	input->update();
-	//cam.tick(dt);
-
-	//smgr.getRootNode().computeTransform();
 	smgr.frameMove(dt);
-
-
-
-	//cam.setRelativePosition(D3DXVECTOR3(-3000, 300, -3000));
-	//if( cam.getViewingFrustum().testAABB( D3DXVECTOR3( -3000, 300, -3000 ), D3DXVECTOR3( -3010, -300, -3010 ) ) )
-	//	wnd_setTitle("Видимо");
-	//else
-	//	wnd_setTitle("Не видимо");
-
-	//set transform used in smrg
-	//pD3DDev9->SetTransform(D3DTS_VIEW, &cam.getViewMatrix());
-	//pD3DDev9->SetTransform(D3DTS_PROJECTION, &cam.getProjMatrix());
-
-	if (input->isKeyPressed(DIK_RIGHT))
-	{
-		if (currentFace < num_faces)
-			currentFace++;
-	}
-
-	if (input->isKeyPressed(DIK_LEFT))
-	{
-		if (currentFace > 0)
-			currentFace--;
-	}
-
-	if (input->isKeyDown(DIK_UP))
-	{
-		if (currentFace < num_faces)
-			currentFace++;
-	}
-		
-	if (input->isKeyDown(DIK_DOWN))
-	{
-		if (currentFace > 0)
-			currentFace--;
-	}
-
-	if (input->isKeyPressed(DIK_P))
-		rebuildVB(dt, 0.f, 0.0f, 0.1f);
-	if (input->isKeyPressed(DIK_O))
-		rebuildVB(dt, 0.f, 0.0f, -0.1f);
-
-	if (input->isKeyDown(DIK_Q))
-		if (currentLeaf > 0)
-			currentLeaf--;
-	if (input->isKeyDown(DIK_E))
-		if (currentLeaf < num_leafs)
-			currentLeaf++;
 
 	if (input->isKeyDown(DIK_G))
 		cam.lookAt(D3DXVECTOR3(0, 0, 0));
 
 	if (input->isKeyDown(DIK_F))
 		cam.setOrientation(D3DXVECTOR3(0, 0, 1));
-
-	if (input->isKeyPressed(DIK_R))
-		if (currentLeaf > 0)
-			currentLeaf--;
-	if (input->isKeyPressed(DIK_T))
-		if (currentLeaf < num_nodes)
-			currentLeaf++;
-
-	if (input->isKeyPressed(DIK_Y))
-		if (currentNode > 0)
-			currentNode--;
-	if (input->isKeyPressed(DIK_U))
-		if (currentNode < num_nodes)
-			currentNode++;
-
-	if (input->isKeyDown(DIK_B))
-		rbboxes = !rbboxes;
-
-	if (input->isKeyDown(DIK_F))
-		useFrustum = !useFrustum;
-
-	if (input->isKeyDown(DIK_M))
-		rmodels = !rmodels;
-
-	if (input->isKeyDown(DIK_L))
-		useLightmaps = !useLightmaps;
-	
 
 	if ( input->isKeyDown(DIK_F1) )
 	{

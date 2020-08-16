@@ -196,13 +196,13 @@ void gResourceSkyBox::unload()
 
 void gResourceSkyBox::onFrameRender(gRenderQueue* queue, const gEntity* entity, const gCamera* camera) const
 {
-	//float det;
-	//D3DXMatrixInverse( &m_tranformMatrixes[0], &det, &camera->getViewProjMatrix());
-
+	D3DXMATRIX mScale;
+	D3DXMatrixScaling( &mScale, 1.f, 1.f / camera->getAspectRatio(), 1.f ); // ?? TODO: skybox coords persp correction
 	D3DXQUATERNION qrot;
-	//D3DXQuaternionInverse(&qrot, &camera->getOrientation());
 	qrot = camera->getOrientation();
+
 	D3DXMatrixRotationQuaternion( &m_texcoordTransform, &qrot );
+	D3DXMatrixMultiply(&m_texcoordTransform, &mScale, &m_texcoordTransform);
 
 	auto it = m_defaultMatMap.begin();
 	gMaterial* pMaterial = it->second;

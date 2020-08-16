@@ -220,6 +220,17 @@ const D3DXQUATERNION& gCamera::getOrientation()  const
 	return m_rot;
 }
 
+float gCamera::getAspectRatio() const
+{
+	return m_aspect;
+}
+
+float gCamera::getFOV() const
+{
+	return m_FOV;
+}
+
+
 float gCamera::getYaw() const
 {
 	return m_yaw;
@@ -253,6 +264,19 @@ void gCamera::setOrientation(const D3DXVECTOR3& dir)
 	m_pitch = pitch;
 	_YPtoQuat();
 
+	recompMatrices();
+}
+
+void gCamera::setAspectRatio(float aspectRatio)
+{
+	m_aspect = aspectRatio;
+
+	recompMatrices();
+}
+
+void gCamera::setFOV(float FOV)
+{
+	m_FOV = FOV;
 	recompMatrices();
 }
 

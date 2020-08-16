@@ -331,12 +331,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		pRenderable = pElement->getRenderable();
 		pMaterial = pElement->getMaterial();
 
-		if (pMaterial->getId() == 5)
-		{
-			int g = 3;
-			g *= 4;
-		}
-
 	restart:
 
 		//run batch if available
@@ -346,7 +340,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			pDestBatchIB = (LPDIRECT3DINDEXBUFFER9)pRenderable->getBatchIBuffer();
 
 			HRESULT hr1 = pSrcIB->Lock(0, pRenderable->getIBufferSize(), (void**)&batch_pSrcBuffData, D3DLOCK_READONLY);
-			//HRESULT hr2 = pDestBatchIB->Lock(0, pRenderable->getBatchIBufferSize(), (void**)&batch_pDestBuffData, D3DLOCK_NO_DIRTY_UPDATE);
 
 			batch_pFirstElement = pElement;
 
@@ -356,9 +349,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			{
 				batch_primCount = 0;
 				batch_begin = true;
-
-				//memcpy( &batch_pDestBuffData[batch_primCount * 3 ], &batch_pSrcBuffData[pElement->getStartIndex() ],
-				//	pElement->getPrimitiveCount() * 3 * sizeof(short) );
 
 				memcpy(&m_tmpIndexes[m_tmpIndexesNum], &batch_pSrcBuffData[pElement->getStartIndex()],
 					pElement->getPrimitiveCount() * 3 * sizeof(short));
@@ -370,8 +360,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			{
 				if (SUCCEEDED(hr1))
 					pSrcIB->Unlock();
-				//if (SUCCEEDED(hr2))
-					//pDestBatchIB->Unlock();
 			}
 		}
 		// add data to batch
@@ -380,9 +368,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			( pRenderable->getId() == m_lastRenderable) &&
 			( pMaterial->getId() == m_lastMaterial ) )
 		{
-			//memcpy( &batch_pDestBuffData[batch_primCount * 3], &batch_pSrcBuffData[pElement->getStartIndex()],
-			//	pElement->getPrimitiveCount() * 3 * sizeof(short) );
-
 			memcpy( &m_tmpIndexes[m_tmpIndexesNum], &batch_pSrcBuffData[pElement->getStartIndex()],
 				pElement->getPrimitiveCount() * 3 * sizeof(short) );
 
@@ -401,7 +386,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 			memcpy( batch_pDestBuffData, m_tmpIndexes, m_tmpIndexesNum * sizeof(short) );
 			hr2 = pDestBatchIB->Unlock();
-			//pDevice->SetIndices(pDestBatchIB);
 			_setIB(pDestBatchIB, pDevice);
 
 			pDevice->DrawIndexedPrimitive( pt, 0, 0, batch_pFirstElement->getVertexesNum(),
@@ -437,9 +421,9 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 			}
 		}
 		else if ( pElement->getRenderable()->getGroup() == GRESGROUP_SKYBOX ) 
-		// skybox рисуем последним, поэтому D3DTS_TEXTURE0 можно не возвращать в Idenity
 		{
-			//_setTransform( D3DTS_WORLDMATRIX(0), &matPalete[0], pDevice );
+			_setRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, false, pDevice );
+			_setRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE, pDevice );
 			_setTransform( D3DTS_WORLD, &mId, pDevice );
 			_setTransform( D3DTS_VIEW, &mId, pDevice);
 			_setTransform( D3DTS_PROJECTION, &mId, pDevice);
@@ -479,24 +463,11 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 			if (pRenderable->getId() != m_lastRenderable)
 			{
-				/*
-				//FFP only
-				if (lastVF != pRenderable->getVertexFormat())
-				{
-					pDevice->SetFVF(getFVF(pRenderable->getVertexFormat()));
-					lastVF = pRenderable->getVertexFormat();
-				}
-
-				pDevice->SetStreamSource(0, (LPDIRECT3DVERTEXBUFFER9)pRenderable->getVBuffer(),
-					0, pRenderable->getVertexStride() );
-				*/
-
 				_setVB((LPDIRECT3DVERTEXBUFFER9)pRenderable->getVBuffer(), pRenderable->getVertexStride(),
 					getFVF(pRenderable->getVertexFormat()), pDevice);
 
 				if ( (pRenderable->getIBuffer() != 0)  && !batch_begin ) //draw indexed
 				{		
-					//pDevice->SetIndices((LPDIRECT3DINDEXBUFFER9)pRenderable->getIBuffer());
 					_setIB((LPDIRECT3DINDEXBUFFER9)pRenderable->getIBuffer(), pDevice);
 				}
 			
@@ -537,46 +508,17 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 					if ( transpByte == 0xFF)
 					{
-						/*
-						if (m_lastMatUseBlending)
-						{
-							pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
-							pDevice->SetRenderState(D3DRS_ZWRITEENABLE, true);
-
-							m_lastMatUseBlending = false;
-						}
-						*/
 						_setRenderState(D3DRS_ALPHABLENDENABLE, false, pDevice);
-						_setRenderState(D3DRS_ZWRITEENABLE, true, pDevice);
-						//_setRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL, pDevice );
-					}
+						_setRenderState(D3DRS_ZWRITEENABLE, true, pDevice);					}
 					else
 					{
 						DWORD blendFactor = transpByte | transpByte << 8 | transpByte << 16 | transpByte << 24;
 						_setRenderState(D3DRS_BLENDFACTOR, blendFactor, pDevice);
-						//pDevice->SetRenderState(D3DRS_BLENDFACTOR, blendFactor);
-
 						_setRenderState(D3DRS_ALPHABLENDENABLE, true, pDevice);
 						_setRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR, pDevice);
 						_setRenderState(D3DRS_DESTBLEND, D3DBLEND_INVBLENDFACTOR, pDevice);
 						_setRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD, pDevice);
 						_setRenderState(D3DRS_ZWRITEENABLE, false, pDevice);
-						//_setRenderState(D3DRS_ZFUNC, D3DCMP_LESS, pDevice);
-
-
-						/*
-						if (!m_lastMatUseBlending)
-						{
-							
-							pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-							pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
-							pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-							pDevice->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-							pDevice->SetRenderState(D3DRS_ZWRITEENABLE, false);
-							
-							m_lastMatUseBlending = true;
-						}
-						*/
 					}
 				}
 			}
@@ -585,7 +527,6 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 				for (unsigned char i = 0; i < 8; i++)
 				{
 					_setTexture(i, 0, pDevice);
-					//pDevice->SetTexture(i, 0);
 				}
 			}
 
@@ -607,22 +548,12 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 
 	if ( batch_begin ) //rasterize batch
 	{
-		/*
-		HRESULT hr1 = pSrcIB->Unlock();
-		HRESULT hr2 = pDestBatchIB->Unlock();
-
-		pDevice->SetIndices(pDestBatchIB);
-
-		pDevice->DrawIndexedPrimitive(pt, 0, 0, batch_pFirstElement->getVertexesNum(),
-			0, batch_primCount);
-			*/
 
 		HRESULT hr1 = pSrcIB->Unlock();
 		HRESULT hr2 = pDestBatchIB->Lock(0, m_tmpIndexesNum * sizeof(short), (void**)&batch_pDestBuffData, D3DLOCK_DISCARD);
 
 		memcpy(batch_pDestBuffData, m_tmpIndexes, m_tmpIndexesNum * sizeof(short));
 		hr2 = pDestBatchIB->Unlock();
-		//pDevice->SetIndices(pDestBatchIB);
 		_setIB(pDestBatchIB, pDevice );
 
 		pDevice->DrawIndexedPrimitive(pt, 0, 0, batch_pFirstElement->getVertexesNum(),

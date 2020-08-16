@@ -54,6 +54,8 @@ public:
 
 	const D3DXVECTOR3& getPosition( ) const;
 	const D3DXQUATERNION& getOrientation( ) const;
+	float getAspectRatio() const;
+	float getFOV() const;
 
 	//test
 	float getYaw() const;
@@ -64,6 +66,9 @@ public:
 	void setPosition( const D3DXVECTOR3& vec );
 	void setOrientation( const D3DXQUATERNION& q );
 	void setOrientation(const D3DXVECTOR3& dir);
+	void setAspectRatio( float aspectRatio );
+	void setFOV( float FOV );
+
 
 	void lookAt( const D3DXVECTOR3& target );
 	void lookAt( const D3DXVECTOR3& target, const D3DXVECTOR3& newCamPosition );

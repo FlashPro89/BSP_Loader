@@ -80,6 +80,8 @@ public:
 
 	bool isUseUserMemoryPointer();
 
+	const char* getSkyBoxName() const;
+
 protected:
 	gResourceBSPLevel();
 	gResourceBSPLevel(gResourceBSPLevel&);

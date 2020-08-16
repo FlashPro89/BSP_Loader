@@ -663,7 +663,8 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 			if( !pTex )
 				pTex = (gResource2DTexture*)m_pResMgr->loadTexture2DFromWADList(miptex->name);
 
-			pTex->addRef();
+			if( pTex )
+				pTex->addRef();
 
 			pMat->setTexture( 0, pTex );
 			if ( (pFace->styles[0] == 0) && (renderamt == 0xFF) )
@@ -897,6 +898,29 @@ unsigned int gResourceBSPLevel::getVertexStride() const
 bool gResourceBSPLevel::isUseUserMemoryPointer()
 {
 	return false;
+}
+
+const char* gResourceBSPLevel::getSkyBoxName() const
+{
+	//find default skybox name
+	auto it = m_entityTextBlocks.begin();
+	while (it != m_entityTextBlocks.end())
+	{
+		auto mit = it->find("classname");
+		if ( mit != it->end())
+		{
+			if ( !strcmp( mit->second.c_str(), "worldspawn") )
+			{
+				auto sit = it->find("skyname");
+				if (sit == it->end())
+					break;
+				else
+					return sit->second.c_str();
+			}
+		}
+		it++;
+	}
+	return 0;
 }
 
 bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )

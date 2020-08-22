@@ -91,12 +91,16 @@ void gSkinnedMeshAnimator::tick(float delta)
 	}
 
 	//apply node transform
-	for (int i = 0; i < m_bonesNum; i++)
+	bool entWithOffsetTransform = m_pEntity->isNeedOffsetTransform();
+	if ( !entWithOffsetTransform )
 	{
-		if (m_mixedFrame[i].getParentId() == -1)
+		for (int i = 0; i < m_bonesNum; i++)
 		{
-			m_mixedFrame[i].setPosition( m_pEntity->getHoldingNode()->getAbsolutePosition() );
-			m_mixedFrame[i].setOrientation( m_pEntity->getHoldingNode()->getAbsoluteOrientation() );
+			if (m_mixedFrame[i].getParentId() == -1)
+			{
+				m_mixedFrame[i].setPosition(m_pEntity->getHoldingNode()->getAbsolutePosition());
+				m_mixedFrame[i].setOrientation(m_pEntity->getHoldingNode()->getAbsoluteOrientation());
+			}
 		}
 	}
 
@@ -110,23 +114,20 @@ void gSkinnedMeshAnimator::tick(float delta)
 	gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)m_pEntity->getRenderable();
 	const D3DXMATRIX* mInverted = pSMesh->getInvertedMatrixes();
 
+	const D3DXMATRIX& mAbsEntity = m_pEntity->getAbsoluteMatrix();
+
 	for (int i = 0; i < m_bonesNum; i++ )
 	{
 		v = m_mixedFrame[i].getPosition();
 		q = m_mixedFrame[i].getOrientation();
 
-		//D3DXMatrixTranslation(&mTr, v.x, v.y, v.z);
-		//D3DXMatrixRotationQuaternion(&mRot, &q);
-		//D3DXMatrixMultiply(&mAbs, &mRot, &mTr);
-
 		D3DXMatrixRotationQuaternion(&mAbs, &q);
 		mAbs._41 = v.x; mAbs._42 = v.y; mAbs._43 = v.z;
 		D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &mInverted[i], &mAbs );
-		//D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &m_worldBonesMatrixes[i], 
-		//	&m_pEntity->getHoldingNode()->getAbsoluteMatrix() ); 
-	}
 
-	//m_worldBonesMatrixes[m_bonesNum] = m_pEntity->getHoldingNode()->getAbsoluteMatrix(); // HACK
+		if (entWithOffsetTransform)
+			D3DXMatrixMultiply( &m_worldBonesMatrixes[i], &m_worldBonesMatrixes[i], &mAbsEntity );
+	}
 }
 
 void gSkinnedMeshAnimator::clear()

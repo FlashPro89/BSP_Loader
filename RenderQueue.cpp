@@ -331,6 +331,9 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 		pRenderable = pElement->getRenderable();
 		pMaterial = pElement->getMaterial();
 
+		if (pMaterial->isVisible() == false)
+			continue;
+
 	restart:
 
 		//run batch if available

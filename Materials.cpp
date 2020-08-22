@@ -128,6 +128,7 @@ gMaterial::gMaterial( gMaterialFactory* factory, const char* name, unsigned shor
 
 	m_zEnable = true;
 	m_zWriteEnable = true;
+	m_visibility = true;
 }
 
 gMaterial::gMaterial( gMaterial* other, gMaterialFactory* factory, const char* name, unsigned short id)
@@ -152,6 +153,8 @@ gMaterial::gMaterial( gMaterial* other, gMaterialFactory* factory, const char* n
 	m_lightingEnable = other->getLightingEnable();
 	m_zEnable = other->getZEnable();
 	m_zWriteEnable = other->getZWriteEnable();
+
+	m_visibility = other->isVisible();
 
 	m_pMaterialId = id;
 
@@ -273,6 +276,104 @@ void gMaterial::setTexture(unsigned char level, gResourceTexture* texture)
 		m_textures[level]->addRef();
 }
 
+void gMaterial::setTextureStageState(unsigned char level, unsigned long state, unsigned long value)
+{
+	if (level >= 8) return;
+	auto it = m_TSS[level].find(state);
+
+	if (it != m_TSS[level].end())
+	{
+		it->second = value;
+	}
+	else
+	{
+		(m_TSS[level])[state] = value;
+	}
+}
+
+void gMaterial::setSamplerState(unsigned char level, unsigned long state, unsigned long value)
+{
+	if (level >= 8) return;
+	auto it = m_SS[level].find(state);
+
+	if (it != m_SS[level].end())
+	{
+		it->second = value;
+	}
+	else
+	{
+		(m_SS[level])[state] = value;
+	}
+}
+
+void gMaterial::setRenderState(unsigned long state, unsigned long value)
+{
+	auto it = m_RS.find(state);
+
+	if (it != m_RS.end())
+	{
+		it->second = value;
+	}
+	else
+	{
+		m_RS[state] = value;
+	}
+}
+
+bool gMaterial::getTextureStageState(unsigned long* outValue, unsigned char level, unsigned long state) const
+{
+	auto it = m_TSS[level].find(state);
+
+	if (it != m_TSS[level].end())
+	{
+		*outValue = it->second;
+		return true;
+	}
+	else
+		return false;
+}
+
+bool gMaterial::getSamplerState(unsigned long* outValue, unsigned char level, unsigned long state) const
+{
+	auto it = m_SS[level].find(state);
+
+	if (it != m_SS[level].end())
+	{
+		*outValue = it->second;
+		return true;
+	}
+	else
+		return false;
+}
+
+bool gMaterial::getRenderState(unsigned long* outValue, unsigned long state) const
+{
+	auto it = m_RS.find(state);
+
+	if (it != m_RS.end())
+	{
+		*outValue = it->second;
+		return true;
+	}
+	else
+		return false;
+}
+
+const gMaterialStateMap& gMaterial::getTextureStageStateMap(unsigned char level) const
+{
+	return m_TSS[level];
+}
+
+const gMaterialStateMap& gMaterial::getSamplerStateMap(unsigned char level) const
+{
+	return m_SS[level];
+}
+
+const gMaterialStateMap& gMaterial::getRenderState() const
+{
+	return m_RS;
+}
+
 unsigned short gMaterial::getId() const
 {
 	return m_pMaterialId;
@@ -282,7 +383,6 @@ const char* gMaterial::getName() const
 {
 	return m_name;
 }
-
 
 unsigned char gMaterial::getTransparency() const
 {
@@ -311,4 +411,14 @@ void gMaterial::setZEnable(bool zenable)
 bool gMaterial::getZEnable() const
 {
 	return m_zEnable;
+}
+
+void gMaterial::setVisibility( bool visibility )
+{
+	m_visibility = visibility;
+}
+
+bool gMaterial::isVisible() const
+{
+	return m_visibility;
 }

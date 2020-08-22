@@ -158,6 +158,11 @@ const gAABB& gRenderable::getAABB()
 	return m_AABB;
 }
 
+void  gRenderable::getTransformedAABB(gAABB& outAABB, D3DXMATRIX* transform) const
+{
+
+}
+
 unsigned short gRenderable::getDefaultMaterialsNum() const
 { 
 	return (unsigned short)m_defaultMatMap.size();
@@ -794,6 +799,8 @@ release:
 	if (pCubeSurface) pCubeSurface->Release();
 	if (m_pTex) m_pTex->Release();
 	m_pTex = 0;
+
+	return false;
 }
 
 void gResourceCubeTexture::unload() //данные, загруженые preload() в этой функции не измен€ютс€

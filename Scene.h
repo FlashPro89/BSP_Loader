@@ -34,9 +34,11 @@ public:
 	~gEntity();
 
 	void onAttachToNode( gSceneNode* node );
-	void onDetachFromNode( );
+	void onDetachFromNode();
+	void onHoldingNodeTransformed();
 
 	gSceneNode* getHoldingNode() const;
+	const D3DXMATRIX& getAbsoluteMatrix() const; // use entity offset transform if needed
 	const char* getName() const;
 
 	void setRenderable( gRenderable* resource );
@@ -46,6 +48,7 @@ public:
 	void onFrameRender( gRenderQueue& queue, const gCamera* camera ) const;
 
 	const gAABB& getAABB();
+
 	gAnimator* getAnimator( GANIMATOR_TYPE type ) const;
 	
 	//index -1 set All subMesh Materials to this
@@ -54,11 +57,24 @@ public:
 	gMaterial* getMaterial( short matIndex ) const;
 	gMaterial* getMaterialByName( const char* name ) const;
 
+	void setRenderableOffsetPosition( const D3DXVECTOR3& offsetPosition );
+	void setRenderableOffsetScale( const D3DXVECTOR3& offsetScale );
+	void setRenderableOffsetOrientaion( const D3DXQUATERNION& offsetOrientation );
+
+	const D3DXVECTOR3& getRenderableOffsetPosition( ) const;
+	const D3DXVECTOR3& getRenderableOffsetScale( ) const;
+	const D3DXQUATERNION& getRenderableOffsetOrientaion( ) const;
+
+	bool isNeedOffsetTransform() const;
+
 protected:
 	gEntity() { }
 	gEntity( gEntity& ) { }
 
-	void deleteAnimators();
+	void _deleteAnimators();
+	bool _checkIsNeedOffsetTransform();
+	void _rebuildOffsetTransformMatrix();
+	void _rebuildAbsoluteTransformMatrix();
 
 	std::map< std::string, gMaterial* > m_userMaterials;
 
@@ -68,6 +84,13 @@ protected:
 	gAnimator* m_animators[GANIMATOR_NUM];
 	gAABB m_AABB;
 
+	D3DXVECTOR3 m_offsetScale;
+	D3DXVECTOR3 m_offsetPosition;
+	D3DXQUATERNION m_offsetOrientation;
+	bool m_isNeedOffsetTransform;
+
+	D3DXMATRIX m_asboluteTransformMatrix;
+	D3DXMATRIX m_offsetMatrix;
 };
 
 class gSceneNode

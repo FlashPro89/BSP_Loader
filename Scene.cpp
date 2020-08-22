@@ -15,14 +15,22 @@ gEntity::gEntity( const char* name )
 	m_pHoldingNode = 0;
 	m_pRenderable = 0;
 
-	deleteAnimators();
+	m_offsetScale = D3DXVECTOR3( 1.f, 1.f, 1.f );
+	m_offsetPosition = D3DXVECTOR3(0.f, 0.f, 0.f);
+	m_offsetOrientation = D3DXQUATERNION( 0.f, 0.f, 0.f, 1.f );
+	m_isNeedOffsetTransform = false;
+
+	D3DXMatrixIdentity( &m_offsetMatrix );
+	D3DXMatrixIdentity(&m_asboluteTransformMatrix);
+
+	_deleteAnimators();
 }
 
 gEntity::~gEntity()
 {
 	setRenderable(0); //renderable->release();
 
-	deleteAnimators();
+	_deleteAnimators();
 	auto it = m_userMaterials.begin();
 	while ( it != m_userMaterials.end() )
 	{
@@ -44,6 +52,7 @@ const char* gEntity::getName() const
 void gEntity::onAttachToNode( gSceneNode* node )
 {
 	m_pHoldingNode = node;
+	onHoldingNodeTransformed();
 }
 
 void gEntity::onDetachFromNode()
@@ -51,16 +60,31 @@ void gEntity::onDetachFromNode()
 	m_pHoldingNode = 0;
 }
 
+void gEntity::onHoldingNodeTransformed()
+{
+	_rebuildAbsoluteTransformMatrix();
+
+	if (m_pRenderable)
+	{
+		m_pRenderable->getAABB().getTransformedByMatrix( m_AABB, m_asboluteTransformMatrix );
+	}
+}
+
 gSceneNode* gEntity::getHoldingNode() const
 {
 	return m_pHoldingNode;
+}
+
+const D3DXMATRIX& gEntity::getAbsoluteMatrix() const // use entity offset transform if needed
+{
+	return m_asboluteTransformMatrix; 
 }
 
 void gEntity::setRenderable( gRenderable* renderable )
 {
 	if (m_pRenderable)
 	{
-		deleteAnimators();
+		_deleteAnimators();
 
 		m_pRenderable->release();
 
@@ -126,9 +150,6 @@ void gEntity::onFrameRender( gRenderQueue& queue, const gCamera* camera ) const
 
 const gAABB& gEntity::getAABB()
 {
-	m_AABB.reset();
-	if (m_pRenderable)
-		m_AABB =  m_pRenderable->getAABB();
 	return m_AABB;
 }
 
@@ -209,7 +230,48 @@ gMaterial* gEntity::getMaterialByName( const char* name ) const
 		return 0;
 }
 
-void gEntity::deleteAnimators()
+void gEntity::setRenderableOffsetPosition(const D3DXVECTOR3& offsetPosition)
+{
+	m_offsetPosition = offsetPosition;
+	if ( _checkIsNeedOffsetTransform() )
+		_rebuildOffsetTransformMatrix();
+}
+
+void gEntity::setRenderableOffsetScale(const D3DXVECTOR3& offsetScale)
+{
+	m_offsetScale = offsetScale;
+	if (_checkIsNeedOffsetTransform())
+		_rebuildOffsetTransformMatrix();
+}
+
+void gEntity::setRenderableOffsetOrientaion(const D3DXQUATERNION& offsetOrientation)
+{
+	m_offsetOrientation = offsetOrientation;
+	if (_checkIsNeedOffsetTransform())
+		_rebuildOffsetTransformMatrix();
+}
+
+const D3DXVECTOR3& gEntity::getRenderableOffsetPosition() const
+{
+	return m_offsetPosition;
+}
+
+const D3DXVECTOR3& gEntity::getRenderableOffsetScale() const
+{
+	return m_offsetScale;
+}
+
+const D3DXQUATERNION& gEntity::getRenderableOffsetOrientaion() const
+{
+	return m_offsetOrientation;
+}
+
+bool gEntity::isNeedOffsetTransform() const
+{
+	return m_isNeedOffsetTransform;
+}
+
+void gEntity::_deleteAnimators()
 {
 	for (unsigned int i = 0; i < GANIMATOR_NUM; i++)
 	{
@@ -218,6 +280,49 @@ void gEntity::deleteAnimators()
 			delete m_animators[i];
 			m_animators[i] = 0;
 		}
+	}
+}
+
+bool gEntity::_checkIsNeedOffsetTransform()
+{
+	if (	( m_offsetScale == D3DXVECTOR3(1.f, 1.f, 1.f) ) &&
+			( m_offsetPosition == D3DXVECTOR3(0.f, 0.f, 0.f) ) &&
+			( m_offsetOrientation == D3DXQUATERNION(0.f, 0.f, 0.f, 1.f) )  )
+		m_isNeedOffsetTransform = false;
+	else
+		m_isNeedOffsetTransform = true;
+	return m_isNeedOffsetTransform;
+}
+
+void gEntity::_rebuildOffsetTransformMatrix()
+{
+	if (m_isNeedOffsetTransform)
+	{
+		D3DXMATRIX mRot, mTrans; // first: use m_offsetMatrix as scaleMatrix
+		D3DXMatrixScaling(&m_offsetMatrix, m_offsetScale.x, m_offsetScale.y, m_offsetScale.z);
+		D3DXMatrixRotationQuaternion(&mRot, &m_offsetOrientation);
+		D3DXMatrixTranslation(&mTrans, m_offsetPosition.x, m_offsetPosition.y, m_offsetPosition.z);
+		D3DXMatrixMultiply(&m_offsetMatrix, &mRot, &m_offsetMatrix);
+		D3DXMatrixMultiply(&m_offsetMatrix, &mTrans, &m_offsetMatrix);
+	}
+	else
+	{
+		D3DXMatrixIdentity(&m_offsetMatrix);
+	}
+}
+
+void gEntity::_rebuildAbsoluteTransformMatrix()
+{
+	if (!m_pHoldingNode)
+		return;
+
+	if (m_isNeedOffsetTransform)
+	{
+		D3DXMatrixMultiply( &m_asboluteTransformMatrix, &m_offsetMatrix, &m_pHoldingNode->getAbsoluteMatrix() );
+	}
+	else
+	{
+		m_asboluteTransformMatrix = m_pHoldingNode->getAbsoluteMatrix();
 	}
 }
 
@@ -235,7 +340,7 @@ gSceneNode::gSceneNode( const char* name, gSceneManager* mgr, gSceneNode* parent
 	m_name[NAME_LENGHT - 1] = 0;
 	m_parent = parent;
 	m_isTransformed = true;
-	m_isAABBVisible = false; // false need
+	m_isAABBVisible = true; // false need
 	m_isAABBChanged = false; // при создании узел не изменяет AABB предка
 
 	D3DXQuaternionIdentity( &m_relOrientation );
@@ -476,6 +581,15 @@ void gSceneNode::computeTransform()
 			m_absScale = D3DXVECTOR3( scaleX, scaleY, scaleZ );
 			D3DXQuaternionRotationMatrix( &m_absOrientation, &m_absoluteMatrix );
 		}
+
+		auto it = m_entList.begin();
+		while (it != m_entList.end())
+		{
+			if (it->second)
+				it->second->onHoldingNodeTransformed();
+			it++;
+		}
+
 		m_isTransformed = false;
 	}
 
@@ -544,8 +658,9 @@ void gSceneNode::nodeAABBChanged()
 		{
 			if (!it_ent->second->getAABB().isEmpty())
 			{
-				it_ent->second->getAABB().getTransformedByMatrix( &tmp, m_absoluteMatrix );
-				m_AABB.addAABB( tmp );
+				//it_ent->second->getAABB().getTransformedByMatrix( tmp, m_absoluteMatrix );
+				//m_AABB.addAABB( tmp );
+				m_AABB.addAABB(it_ent->second->getAABB());
 			}
 		}
 		it_ent++;
@@ -580,7 +695,7 @@ void gSceneNode::drawEntityList( gRenderQueue& queue )
 			cam = m_sceneManager->getActiveCamera();
 			if (cam)
 			{
-				it->second->getAABB().getTransformedByMatrix(&tmp, m_absoluteMatrix);
+				it->second->getAABB().getTransformedByMatrix(tmp, m_absoluteMatrix);
 				if (cam->getViewingFrustum().testAABB(tmp))
 				{
 					m_sceneManager->__statEntDraw();
@@ -817,55 +932,13 @@ void gSceneManager::frameRender( gRenderQueue& queue )
 	m_entsInFrustum = 0;
 	m_nodesInFrustum = 0;
 
-	LPDIRECT3DDEVICE9 pD3DDev = m_pResMgr->getDevice();
-
-	if (!m_pResMgr || !pD3DDev) return;
-
-	//HRESULT hr = pD3DDev->TestCooperativeLevel();
-
-	//HRESULT hr1 = D3DERR_DEVICELOST;
-	//HRESULT hr2 = D3DERR_DEVICENOTRESET;
-	//HRESULT hr3 = D3DERR_DRIVERINTERNALERROR;
-
-	/*
-	switch (hr)
-	{
-	case S_OK:
-		break;
-	case D3DERR_DEVICELOST:
-		m_pResMgr->onRenderDeviceLost();
-		return;
-	case D3DERR_DEVICENOTRESET:
-		if (d3d9_reset())
-		{
-			m_pResMgr->onRenderDeviceReset();
-			break;
-		}
-		else
-			return;
-	case D3DERR_DRIVERINTERNALERROR:
-		throw("d3d9 driver internal error");
-	}
-	*/
-
 	if ( m_activeCam )
 	{
 		if (m_activeCam->getViewingFrustum().testAABB(m_pRootNode->getAABB()))
 			m_pRootNode->onFrameRender( queue, m_activeCam );
 	}
 
-	//queue._debugOut("out_queue_not_sorted.txt");
 	queue.sort();
-	//queue._debugOut("out_queue_sorted.txt");
-
-	//queue.render(pD3DDev);
-
-//	gRenderElement* pElement = 0;
-//	int counter = 0;
-//	while (queue.popBack(&pElement))
-//	{
-//		counter++;
-//	}
 }
 
 void gSceneManager::frameMove(float delta)

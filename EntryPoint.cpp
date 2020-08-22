@@ -11,6 +11,7 @@
 #include "TextureAtlas.h"
 #include "BMPFile.h"
 #include "RenderQueue.h"
+#include "gmath.h"
 #include <cstdio>
 #include <map>
 #include <string>
@@ -590,6 +591,13 @@ void loadScene( const char* mapname )
 		ent = smgr.createEntity("box__center");
 		ent->setRenderable(shape);
 		node_centr->attachEntity( ent );
+		
+		//test entity offset transform
+		D3DXQUATERNION qC;
+		_YawPitchRolltoQuat( qC, 3.1415f / 8.f, 3.1415f / 8.f, 3.1415f / 8.f);
+		ent->setRenderableOffsetOrientaion( qC);
+		ent->setRenderableOffsetScale(D3DXVECTOR3(0.5f, 0.5f, 0.5f));
+		ent->setRenderableOffsetPosition( D3DXVECTOR3(0.f, 100.f, 0.f));
 
 		ent = smgr.createEntity("box__1");
 		ent->setRenderable(shape);
@@ -681,6 +689,9 @@ void loadScene( const char* mapname )
 		ent->setMaterial(transpMat);
 		node_skin2->attachEntity(ent);
 		transpMat->release(); //free mat pointer
+		ent->setRenderableOffsetOrientaion(qC);
+		ent->setRenderableOffsetScale(D3DXVECTOR3(1.5f, 1.5f, 1.5f));
+		ent->setRenderableOffsetPosition(D3DXVECTOR3(0.f, 350.f, 0.f));
 
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("idle1", GSKINANIM_LOOP)->play();

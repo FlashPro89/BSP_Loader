@@ -160,6 +160,7 @@ public:
 	void setVisible(bool visible);
 
 	const gAABB& getAABB();
+	void getTransformedAABB( gAABB& outAABB, D3DXMATRIX* transform ) const;
 
 	virtual unsigned short getDefaultMaterialsNum() const;
 	virtual gMaterial* getDefaultMaterialByIndex(unsigned short subMeshIndex) const;

@@ -6,6 +6,9 @@
 #include "Scene.h"
 #include "Materials.h"
 
+#pragma warning( disable : 4018 )
+#pragma warning( disable : 4267 )
+
 #define GBSP_FVF D3DUSAGE_WRITEONLY, D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX2
 
 typedef struct
@@ -653,6 +656,11 @@ bool gResourceBSPLevel::load() //загрузка видеоданных POOL_DEFAULT
 			pMat = m_pResMgr->getMaterialFactory()->createMaterial(matName);
 			m_defaultMatMap[matName] = pMat;
 
+			if (!strcmp(miptex->name, "SKY") ||
+				!strcmp(miptex->name, "AAATRIGGER") ||
+				!strcmp(miptex->name, "ORIGIN"))
+				pMat->setVisibility(false);
+
 			if (renderamt != 0xFF)
 			{
 				pMat->setZWriteEnable(false);
@@ -733,13 +741,14 @@ void gResourceBSPLevel::onFrameRender(gRenderQueue* queue, const gEntity* entity
 		if (!m_rFaces[i].needDraw)
 			continue;
 
-		int* offs = (int*)(m_bspTexData + sizeof(int));
-		BSPMiptex_t* miptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
 		//gMaterial* pMat = m_pResMgr->getMaterialFactory()->getMaterial(miptex->name);
 		gMaterial* pMat = m_rFaces[i].pMaterial;
 
-		if (!strcmp(miptex->name, "SKY"))
+		if (!pMat->isVisible())
 			continue;
+
+		int* offs = (int*)(m_bspTexData + sizeof(int));
+		BSPMiptex_t* miptex = (BSPMiptex_t*)(m_bspTexData + offs[m_bspTexinfs[m_bspFaces[i].texinfo].miptex]);
 		
 		const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
 

@@ -3,6 +3,8 @@
 #ifndef _BSP_LEVEL_H_
 #define _BSP_LEVEL_H_
 
+#pragma warning ( disable : 4244 ) //conv ushort to uchar
+
 #include "Resources.h"
 #include "TextureAtlas.h"
 #include <vector>

@@ -81,11 +81,8 @@ bool gAABB::isEmpty() const
 			 (m_bmax.x <= -MAX_WORLD_SIZE) && (m_bmax.y <= -MAX_WORLD_SIZE) && (m_bmax.z <= -MAX_WORLD_SIZE) );
 }
 
-void gAABB::getTransformedByMatrix( gAABB* out, const D3DXMATRIX& transform ) const
+void gAABB::getTransformedByMatrix( gAABB& out, const D3DXMATRIX& transform ) const
 {
-	if (!out)
-		return;
-
 	D3DXVECTOR3 points[8] =
 	{
 		D3DXVECTOR3(m_bmin.x, m_bmin.y, m_bmin.z),
@@ -105,13 +102,20 @@ void gAABB::getTransformedByMatrix( gAABB* out, const D3DXMATRIX& transform ) co
 		(const D3DXVECTOR3*)&points[0], sizeof(D3DXVECTOR3), &transform, 8);
 
 
-	out->reset();
+	out.reset();
 
 	for( int i = 0; i<8; i++ )
-		out->addPoint(out_points[i]);
+		out.addPoint(out_points[i]);
 }
 
 void gAABB::getCenterPoint( D3DXVECTOR3* outCenter )
 {
 	*outCenter = (m_bmax - m_bmin) * 0.5f + m_bmin;
+}
+
+void gAABB::setScale( float scale )
+{
+	D3DXVECTOR3 scaledBound = ( m_bmax - m_bmin ) * ( scale - 1 ); // TODO ??:
+	m_bmax += scaledBound;
+	m_bmin -= scaledBound;
 }

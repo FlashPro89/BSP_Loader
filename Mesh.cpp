@@ -70,17 +70,6 @@ void gSkinBone::setParentId( int parent )
 }
 void gSkinBone::setName( const char* name )
 {
-	/*
-	if (m_name)
-		delete[] m_name;
-
-	unsigned int l = strlen(name);
-	m_name = new char[l + 1];
-	m_name[0] = 0;
-	strcpy_s( m_name, l+1, name);
-	m_name[l] = 0;
-	*/
-
 	m_name = name;
 }
 void gSkinBone::setPosition( const D3DXVECTOR3& position )
@@ -228,7 +217,6 @@ bool gResourceSkinAnimation::load()
 	//выделим память
 	m_frames = new gSkinBone[m_framesNum * m_bonesNum];
 	m_nullFrame = new gSkinBone[m_bonesNum];
-	//m_hierarchyTransformedCurrentFrame = new gSkinBone[m_bonesNum];
 
 	//find nodes block
 	while (fgets(buffer, BUFSZ, f))
@@ -1338,94 +1326,19 @@ void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функци
 
 void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* entity, const gCamera* cam ) const
 {
-	LPDIRECT3DDEVICE9 pD3DDev9 = m_pResMgr->getDevice();
-	if (!pD3DDev9) 
-		return;
-	//HRESULT hr;
-
-	//DWORD oldLightingState;
-	//pD3DDev9->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
-	
-	//pD3DDev9->SetRenderState(D3DRS_LIGHTING, true);
-	//pD3DDev9->SetTransform( D3DTS_WORLD, &matrixes[0] );
-	//pD3DDev9->SetFVF( GSKIN_FVF );
-	//pD3DDev9->SetStreamSource( 0, m_pVB, 0, sizeof(gSkinVertex) );
-	//pD3DDev9->SetIndices( m_pIB );
-
-	//pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, TRUE );
-	//pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_0WEIGHTS );
 
 	gSkinnedMeshAnimator* animator = (gSkinnedMeshAnimator*)entity->getAnimator(GANIMATOR_SKINNED);
 	const D3DXMATRIX* matrixes = animator->getWordBonesMatrixes();
 
-/*
-	auto ait = m_animMap.find("idle1");
-	gResourceSkinAnimation* anim = ait->second;
-
-	pD3DDev9->SetFVF(GSKIN_FVF);
-
-	D3DXMATRIX* mAbs = anim->getAbsoluteMatrixes(_time);
-
-	auto it = m_trisCacher.begin();
-	while ( it != m_trisCacher.end() )
-	{
-		if( it->second.pTex )
-			pD3DDev9->SetTexture( 0, it->second.pTex->getTexture() );
-
-		if (anim->isLoaded())
-		{
-			D3DXMATRIX mOut;
-			unsigned int pos_in_remap_buffer = 0;
-
-			auto remapSit = it->second.remapedSubsets.begin();
-
-			while ( remapSit != it->second.remapedSubsets.end())
-			{
-				auto remapIt = remapSit->remapedIndexes.begin();
-				while (remapIt != remapSit->remapedIndexes.end())
-				{
-
-					D3DXMatrixMultiply(&mOut, &m_pMatInverted[remapIt->first], &mAbs[remapIt->first]);
-					D3DXMatrixMultiply(&mOut, &mOut, &transform);
-					hr = pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(remapIt->second), &mOut);
-
-					remapIt++;
-				}
-				
-				pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0,
-					m_trisNum * 3, remapSit->indexBufferOffset, remapSit->primitivesNum );
-
-				remapSit++;
-			}
-		}
-
-
-		//pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0,
-		//	m_trisNum * 3, it->second.trisOffsetInBuff, it->second.trisNum );
-	
-		it++;
-	}
-*/
 
 	D3DXMATRIX mId;
 	D3DXMatrixIdentity(&mId);
 	if (m_pAtlasTexture)
 	{
-		//pD3DDev9->SetTexture(0, m_pAtlasTexture->getTexture());
-
 		auto it = m_skinBoneGroups.begin();
 		while (it != m_skinBoneGroups.end())
 		{
 			auto rit = it->remappedBones.begin();
-		
-			while (rit != it->remappedBones.end())
-			{
-				//if( !matrixes )
-				//	pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &mId);
-				//else
-				//	pD3DDev9->SetTransform(D3DTS_WORLDMATRIX(rit->second), &matrixes[rit->first]);
-				rit++;
-			}
 
 			gMaterial* entMat = entity->getMaterial(0);
 			if (entMat == 0)
@@ -1435,34 +1348,9 @@ void gResourceSkinnedMesh::onFrameRender( gRenderQueue* queue, const gEntity* en
 			gRenderElement re( this, entMat, distance, m_bonesNum, matrixes, it->firstTriangle * 3, it->TrianglesNum, m_vertexesNum, &(*it) );
 			queue->pushBack(re);
 
-			//позже удалить
-			//pD3DDev9->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 
-			//	it->firstTriangle*3, it->TrianglesNum );
-
 			it++;
 		}
 	}
-	else
-	{
-		auto it = m_trisCacher.begin();
-		while (it != m_trisCacher.end())
-		{
-			//if (it->second.pTex)
-			//pD3DDev9->SetTexture(0, it->second.pTex->getTexture());
-			
-			//pD3DDev9->DrawIndexedPrimitive( D3DPT_TRIANGLELIST, 0, 0, m_vertexesNum, 
-			//	it->second.trisOffsetInBuff, it->second.trisNum );
-			it++;
-		}
-	}
-
-	//pD3DDev9->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE );
-	//pD3DDev9->SetRenderState( D3DRS_INDEXEDVERTEXBLENDENABLE, false );
-	 
-	//if (m_pTransformedBones)
-	//	drawSkeleton(m_pTransformedBones, &matrixes[0], 0, 0xFF00FFFF );
-	
-	//pD3DDev9->SetRenderState(D3DRS_LIGHTING, oldLightingState);
 }
 
 bool gResourceSkinnedMesh::addAnimation(const char* filename, const char* name)
@@ -1929,23 +1817,6 @@ bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT
 
 				m_AABB.addPoint(D3DXVECTOR3(p_vData[vdi + i].x, p_vData[vdi + i].y, p_vData[vdi + i].z));
 
-				//p_vData[vdi + i].nx = -p_vData[vdi + i].nx;
-				//p_vData[vdi + i].ny = -p_vData[vdi + i].ny;
-				//p_vData[vdi + i].nz = -p_vData[vdi + i].nz;
-
-				/*
-				//debug
-				m_normals[(vdi + i) * 2].x = p_vData[vdi + i].x;
-				m_normals[(vdi + i) * 2].y = p_vData[vdi + i].y;
-				m_normals[(vdi + i) * 2].z = p_vData[vdi + i].z;
-				m_normals[(vdi + i) * 2].color = 0xFF00FF00;
-
-				m_normals[(vdi + i) * 2 + 1].x = p_vData[vdi + i].x + p_vData[vdi + i].nx * 10.f;
-				m_normals[(vdi + i) * 2 + 1].y = p_vData[vdi + i].y + p_vData[vdi + i].ny * 10.f;
-				m_normals[(vdi + i) * 2 + 1].z = p_vData[vdi + i].z + p_vData[vdi + i].nz * 10.f;
-				m_normals[(vdi + i) * 2+1].color = 0xFFFF0000;
-				*/
-
 				p_vData[vdi + i].tv = -p_vData[vdi + i].tv;
 				p_vData[vdi + i].tu = p_vData[vdi + i].tu;
 				p_iData[cit->second.__before * 3 + cit->second.__used_tris * 3 + i] = vdi + i;
@@ -1962,6 +1833,8 @@ bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT
 		if (f) fclose(f);
 		return false;
 	}
+
+	m_AABB.setScale(1.5f);
 
 	m_isLoaded = true;
 	return m_isLoaded;
@@ -2057,22 +1930,9 @@ void gResourceStaticMesh::onFrameRender(gRenderQueue* queue, const gEntity* enti
 	if (!pD3DDev9)
 		return;
 
-//	pD3DDev9->SetTransform( D3DTS_WORLD, &entity->getHoldingNode()->getAbsoluteMatrix() );
-//	pD3DDev9->SetFVF(GSTATIC_FVF);
-//	pD3DDev9->SetStreamSource(0, m_pVB, 0, sizeof(gStaticVertex));
-//	pD3DDev9->SetIndices(m_pIB);
-
-	const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
+	//const D3DXMATRIX& matrix = entity->getHoldingNode()->getAbsoluteMatrix();
+	const D3DXMATRIX& matrix = entity->getAbsoluteMatrix();
 	unsigned short distance = cam->getDistanceToPointUS(D3DXVECTOR3(matrix._41, matrix._42, matrix._43));
-
-//	pD3DDev9->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
-	//pD3DDev9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
-//	pD3DDev9->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_BLENDFACTOR);
-//	pD3DDev9->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
-//	pD3DDev9->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);
-//	pD3DDev9->SetRenderState(D3DRS_BLENDFACTOR, 0xFF5F5F5F);
-
-//	pD3DDev9->SetRenderState(D3DRS_ZWRITEENABLE, false);
 
 	auto it = m_trisCacher.begin();
 	while (it != m_trisCacher.end())

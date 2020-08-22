@@ -26,9 +26,10 @@ public:
 	void reset();
 	bool isEmpty() const;
 
-	void getTransformedByMatrix( gAABB* out, const D3DXMATRIX& transform ) const;
+	void getTransformedByMatrix( gAABB& out, const D3DXMATRIX& transform ) const;
 
 	void getCenterPoint(D3DXVECTOR3* outCenter);
+	void setScale( float scale );
 
 protected:
 	D3DXVECTOR3 m_bmin;

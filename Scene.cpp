@@ -20,6 +20,8 @@ gEntity::gEntity( const char* name )
 	m_offsetOrientation = D3DXQUATERNION( 0.f, 0.f, 0.f, 1.f );
 	m_isNeedOffsetTransform = false;
 
+	m_isAABBVisible = true;
+
 	D3DXMatrixIdentity( &m_offsetMatrix );
 	D3DXMatrixIdentity(&m_asboluteTransformMatrix);
 
@@ -52,7 +54,8 @@ const char* gEntity::getName() const
 void gEntity::onAttachToNode( gSceneNode* node )
 {
 	m_pHoldingNode = node;
-	onHoldingNodeTransformed();
+	//onHoldingNodeTransformed();
+	_rebuildAbsoluteTransformMatrix();
 }
 
 void gEntity::onDetachFromNode()
@@ -63,7 +66,7 @@ void gEntity::onDetachFromNode()
 void gEntity::onHoldingNodeTransformed()
 {
 	_rebuildAbsoluteTransformMatrix();
-
+	
 	if (m_pRenderable)
 	{
 		m_pRenderable->getAABB().getTransformedByMatrix( m_AABB, m_asboluteTransformMatrix );
@@ -153,6 +156,79 @@ const gAABB& gEntity::getAABB()
 	return m_AABB;
 }
 
+void gEntity::drawAABB( IDirect3DDevice9* pDev )
+{
+
+	if (!m_isAABBVisible || !m_isNeedOffsetTransform )
+		return;
+
+	D3DXVECTOR3 bmin = m_AABB.getMinBounds();
+	D3DXVECTOR3 bmax = m_AABB.getMaxBounds();
+
+	gAABB t;
+	m_pRenderable->getAABB().getTransformedByMatrix( t, m_pHoldingNode->getAbsoluteMatrix() );
+	D3DXVECTOR3 bmin1 = t.getMinBounds();
+	D3DXVECTOR3 bmax1 = t.getMaxBounds();
+
+	gVertexAABB points[8] =
+	{
+		gVertexAABB(D3DXVECTOR3(bmin.x, bmin.y, bmin.z), 0xFFFF0000),
+		gVertexAABB(D3DXVECTOR3(bmax.x, bmin.y, bmin.z), 0xFFFF0000),
+		gVertexAABB(D3DXVECTOR3(bmax.x, bmax.y, bmin.z), 0xFFFF0000),
+		gVertexAABB(D3DXVECTOR3(bmin.x, bmax.y, bmin.z), 0xFFFF0000),
+
+		gVertexAABB(D3DXVECTOR3(bmin.x, bmin.y, bmax.z), 0xFFFF0000),
+		gVertexAABB(D3DXVECTOR3(bmax.x, bmin.y, bmax.z), 0xFFFF0000),
+		gVertexAABB(D3DXVECTOR3(bmax.x, bmax.y, bmax.z), 0xFFFF0000),
+		gVertexAABB(D3DXVECTOR3(bmin.x, bmax.y, bmax.z), 0xFFFF0000),
+
+	};
+
+	gVertexAABB points1[8] =
+	{
+		gVertexAABB(D3DXVECTOR3(bmin1.x, bmin1.y, bmin1.z), 0xFF0000FF),
+		gVertexAABB(D3DXVECTOR3(bmax1.x, bmin1.y, bmin1.z), 0xFF0000FF),
+		gVertexAABB(D3DXVECTOR3(bmax1.x, bmax1.y, bmin1.z), 0xFF0000FF),
+		gVertexAABB(D3DXVECTOR3(bmin1.x, bmax1.y, bmin1.z), 0xFF0000FF),
+
+		gVertexAABB(D3DXVECTOR3(bmin1.x, bmin1.y, bmax1.z), 0xFF0000FF),
+		gVertexAABB(D3DXVECTOR3(bmax1.x, bmin1.y, bmax1.z), 0xFF0000FF),
+		gVertexAABB(D3DXVECTOR3(bmax1.x, bmax1.y, bmax1.z), 0xFF0000FF),
+		gVertexAABB(D3DXVECTOR3(bmin1.x, bmax1.y, bmax1.z), 0xFF0000FF),
+
+	};
+
+	unsigned short ind[24] =
+	{
+		0,1,  1,2, 2,3, 3,0,
+
+		4,5, 5,6, 6,7, 7,4,
+
+		0,4, 1,5, 2,6, 3,7
+	};
+
+	D3DXMATRIX m;
+	D3DXMatrixIdentity(&m);
+
+	if (!pDev)return;
+
+	DWORD oldLightingState;
+	pDev->GetRenderState(D3DRS_LIGHTING, &oldLightingState);
+	pDev->SetRenderState(D3DRS_LIGHTING, false);
+
+	pDev->SetTransform(D3DTS_WORLD, &m);
+	pDev->SetTexture(0, 0);
+
+	DWORD fvf;
+	pDev->GetFVF(&fvf);
+	pDev->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+	pDev->DrawIndexedPrimitiveUP(D3DPT_LINELIST, 0, 8, 12, &ind, D3DFMT_INDEX16, &points, sizeof(gVertexAABB));
+	pDev->DrawIndexedPrimitiveUP(D3DPT_LINELIST, 0, 8, 12, &ind, D3DFMT_INDEX16, &points1, sizeof(gVertexAABB));
+	pDev->SetFVF(fvf);
+	pDev->SetRenderState(D3DRS_LIGHTING, oldLightingState);
+}
+
+
 gAnimator* gEntity::getAnimator( GANIMATOR_TYPE type ) const
 {
 	return m_animators[type];
@@ -235,6 +311,7 @@ void gEntity::setRenderableOffsetPosition(const D3DXVECTOR3& offsetPosition)
 	m_offsetPosition = offsetPosition;
 	if ( _checkIsNeedOffsetTransform() )
 		_rebuildOffsetTransformMatrix();
+	_rebuildAbsoluteTransformMatrix();
 }
 
 void gEntity::setRenderableOffsetScale(const D3DXVECTOR3& offsetScale)
@@ -242,6 +319,8 @@ void gEntity::setRenderableOffsetScale(const D3DXVECTOR3& offsetScale)
 	m_offsetScale = offsetScale;
 	if (_checkIsNeedOffsetTransform())
 		_rebuildOffsetTransformMatrix();
+	_rebuildAbsoluteTransformMatrix();
+
 }
 
 void gEntity::setRenderableOffsetOrientaion(const D3DXQUATERNION& offsetOrientation)
@@ -249,6 +328,8 @@ void gEntity::setRenderableOffsetOrientaion(const D3DXQUATERNION& offsetOrientat
 	m_offsetOrientation = offsetOrientation;
 	if (_checkIsNeedOffsetTransform())
 		_rebuildOffsetTransformMatrix();
+	_rebuildAbsoluteTransformMatrix();
+
 }
 
 const D3DXVECTOR3& gEntity::getRenderableOffsetPosition() const
@@ -318,7 +399,7 @@ void gEntity::_rebuildAbsoluteTransformMatrix()
 
 	if (m_isNeedOffsetTransform)
 	{
-		D3DXMatrixMultiply( &m_asboluteTransformMatrix, &m_offsetMatrix, &m_pHoldingNode->getAbsoluteMatrix() );
+		D3DXMatrixMultiply( &m_asboluteTransformMatrix, &m_pHoldingNode->getAbsoluteMatrix(), &m_offsetMatrix );
 	}
 	else
 	{
@@ -340,7 +421,7 @@ gSceneNode::gSceneNode( const char* name, gSceneManager* mgr, gSceneNode* parent
 	m_name[NAME_LENGHT - 1] = 0;
 	m_parent = parent;
 	m_isTransformed = true;
-	m_isAABBVisible = true; // false need
+	m_isAABBVisible = false; // false need
 	m_isAABBChanged = false; // при создании узел не изменяет AABB предка
 
 	D3DXQuaternionIdentity( &m_relOrientation );
@@ -685,8 +766,10 @@ void gSceneNode::nodeAABBChanged()
 
 void gSceneNode::drawEntityList( gRenderQueue& queue )
 {
-	gAABB tmp;
+	//gAABB tmp;
 	const gCamera* cam = 0;
+	LPDIRECT3DDEVICE9 pDev = m_sceneManager->getResourseManager()->getDevice();
+
 	auto it = m_entList.begin();
 	while (it != m_entList.end())
 	{
@@ -695,11 +778,14 @@ void gSceneNode::drawEntityList( gRenderQueue& queue )
 			cam = m_sceneManager->getActiveCamera();
 			if (cam)
 			{
-				it->second->getAABB().getTransformedByMatrix(tmp, m_absoluteMatrix);
-				if (cam->getViewingFrustum().testAABB(tmp))
+				//it->second->getAABB().getTransformedByMatrix(tmp, m_absoluteMatrix);
+				//if (cam->getViewingFrustum().testAABB(it->second->getAABB()))
 				{
 					m_sceneManager->__statEntDraw();
 					it->second->onFrameRender( queue, cam );
+					
+					//debug
+					it->second->drawAABB(pDev);
 				}
 			}
 		}

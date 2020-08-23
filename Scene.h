@@ -48,6 +48,7 @@ public:
 	void onFrameRender( gRenderQueue& queue, const gCamera* camera ) const;
 
 	const gAABB& getAABB();
+	void drawAABB( IDirect3DDevice9* pDev );
 
 	gAnimator* getAnimator( GANIMATOR_TYPE type ) const;
 	
@@ -83,6 +84,8 @@ protected:
 	mutable gRenderable* m_pRenderable;
 	gAnimator* m_animators[GANIMATOR_NUM];
 	gAABB m_AABB;
+	bool m_isAABBVisible;
+
 
 	D3DXVECTOR3 m_offsetScale;
 	D3DXVECTOR3 m_offsetPosition;

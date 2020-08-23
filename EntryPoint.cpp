@@ -656,6 +656,7 @@ void loadScene( const char* mapname )
 		pEnt->setRenderable(pBSPLevel);
 		smgr.getRootNode().attachEntity(pEnt);
 
+
 		//Load skinned mesh
 		gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/barney/BARNEY-X_Template_Biped1.smd", "barney");
 		pSMesh->addAnimation("../data/models/barney/idle1.smd", "idle1" );
@@ -687,11 +688,12 @@ void loadScene( const char* mapname )
 		transpMat->setTransparency(0x40);
 		transpMat->setZWriteEnable(false);
 		ent->setMaterial(transpMat);
-		node_skin2->attachEntity(ent);
-		transpMat->release(); //free mat pointer
 		ent->setRenderableOffsetOrientaion(qC);
 		ent->setRenderableOffsetScale(D3DXVECTOR3(1.5f, 1.5f, 1.5f));
-		ent->setRenderableOffsetPosition(D3DXVECTOR3(0.f, 350.f, 0.f));
+		ent->setRenderableOffsetPosition(D3DXVECTOR3(0.f, 60.f, 0.f));
+		node_skin2->attachEntity(ent);
+		transpMat->release(); //free mat pointer
+
 
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("idle1", GSKINANIM_LOOP)->play();
@@ -710,6 +712,7 @@ void loadScene( const char* mapname )
 		ent->setRenderable(pStaticMesh);
 		node_crystal->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
+	
 		//// Terrain
 		ent = smgr.createEntity("ent__terrain");
 		gResourceTerrain* pTerr = (gResourceTerrain*)rmgr.loadTerrain( "../data/terrain/terrain1.ter", "Terrain1" );
@@ -717,7 +720,7 @@ void loadScene( const char* mapname )
 		ent->setRenderable(pTerr);
 		node_terrain->attachEntity(ent);
 		////////////////////////////////////////////////////////////////////
-
+	
 	//skybox
 	const char* skyBoxName = pBSPLevel->getSkyBoxName();
 	if (skyBoxName != 0)

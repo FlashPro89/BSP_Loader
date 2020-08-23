@@ -821,21 +821,25 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 					//cit->second.trisNum++;
 				}
 
-				//3 вершины, пока пропускаем их
-				//unsigned int tuint; 
-				//float x, y, z;
+				D3DXVECTOR3 point, norm;
+				D3DXVECTOR2 tcord;
+				unsigned int boneId;
+
+				//заполняем AABB
+				fgets(buffer, BUFSZ, f);
+				sscanf_s(buffer, "%u %f %f %f %f %f %f %f %f", &boneId, &point.x, &point.z, &point.y,
+					&norm.x, &norm.z, &norm.y, &tcord.x, &tcord.y);
+				m_AABB.addPoint(point);
 
 				fgets(buffer, BUFSZ, f);
-				//sscanf_s(buffer, "%u %f %f %f", &tuint, &x, &z, &y);
-				//m_AABB.addPoint(D3DXVECTOR3(x, y, z));
-				
+				sscanf_s(buffer, "%u %f %f %f %f %f %f %f %f", &boneId, &point.x, &point.z, &point.y,
+					&norm.x, &norm.z, &norm.y, &tcord.x, &tcord.y);
+				m_AABB.addPoint(point);
+
 				fgets(buffer, BUFSZ, f);
-				//sscanf_s(buffer, "%u %f %f %f", &tuint, &x, &z, &y);
-				//m_AABB.addPoint(D3DXVECTOR3(x, y, z));
-				
-				fgets(buffer, BUFSZ, f);
-				//sscanf_s(buffer, "%u %f %f %f", &tuint, &x, &z, &y);
-				//m_AABB.addPoint(D3DXVECTOR3(x, y, z));
+				sscanf_s(buffer, "%u %f %f %f %f %f %f %f %f", &boneId, &point.x, &point.z, &point.y,
+					&norm.x, &norm.z, &norm.y, &tcord.x, &tcord.y);
+				m_AABB.addPoint(point);
 
 				m_trisNum++;
 			}
@@ -844,6 +848,7 @@ bool gResourceSkinnedMesh::preload() //загрузка статических данных
 	}
 	fclose(f);
 
+	m_AABB.setScale(0.8f); // так как модель подвижная, увеличиваем размер AABBox'a
 
 	if (m_trisCacher.size() > 1)
 	{
@@ -991,7 +996,7 @@ bool gResourceSkinnedMesh::load()
 	// read tris data from SMD
 	//--------------------------------------------------------
 	
-	m_AABB.reset();
+//	m_AABB.reset();
 	fseek(f, m_tris_blockpos, SEEK_SET);
 
 	/*
@@ -1152,7 +1157,7 @@ bool gResourceSkinnedMesh::load()
 						&p_vData[vdi + i].tu,
 						&p_vData[vdi + i].tv);
 
-					m_AABB.addPoint(D3DXVECTOR3(p_vData[vdi + i].x, p_vData[vdi + i].y, p_vData[vdi + i].z));
+					//m_AABB.addPoint(D3DXVECTOR3(p_vData[vdi + i].x, p_vData[vdi + i].y, p_vData[vdi + i].z));
 
 					indexex[i] = tuint;
 
@@ -1311,7 +1316,7 @@ testIndexes:
 
 void gResourceSkinnedMesh::unload() //данные, загруженые preload() в этой функции не изменяются
 {
-	m_AABB.reset();
+	//m_AABB.reset();
 	
 	if (m_pIB)
 		m_pIB->Release();
@@ -1708,9 +1713,26 @@ bool gResourceStaticMesh::preload()
 					cit->second.trisNum++;
 
 				//3 вершины, пока пропускаем их
+
+				D3DXVECTOR3 point, norm;
+				D3DXVECTOR3 tcord;
+				unsigned int boneId;
+
+				//заполняем AABB
 				fgets(buffer, BUFSZ, f);
+				sscanf_s( buffer, "%u %f %f %f %f %f %f %f %f", &boneId, &point.x, &point.z, &point.y,
+					&norm.x, &norm.z, &norm.y, &tcord.x, &tcord.y );
+				m_AABB.addPoint( point );
+
 				fgets(buffer, BUFSZ, f);
+				sscanf_s(buffer, "%u %f %f %f %f %f %f %f %f", &boneId, &point.x, &point.z, &point.y,
+					&norm.x, &norm.z, &norm.y, &tcord.x, &tcord.y);
+				m_AABB.addPoint(point);
+
 				fgets(buffer, BUFSZ, f);
+				sscanf_s(buffer, "%u %f %f %f %f %f %f %f %f", &boneId, &point.x, &point.z, &point.y,
+					&norm.x, &norm.z, &norm.y, &tcord.x, &tcord.y);
+				m_AABB.addPoint(point);
 				m_trisNum++;
 			}
 			break;
@@ -1774,7 +1796,7 @@ bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT
 	//debug
 	//m_normals = new gDebugNormal[m_trisNum * 3 * 2];
 
-	m_AABB.reset();
+	//m_AABB.reset();
 
 	fseek(f, m_tris_blockpos, SEEK_SET);
 	while (fgets(buffer, BUFSZ, f))
@@ -1815,7 +1837,7 @@ bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT
 					&p_vData[vdi + i].tu,
 					&p_vData[vdi + i].tv);
 
-				m_AABB.addPoint(D3DXVECTOR3(p_vData[vdi + i].x, p_vData[vdi + i].y, p_vData[vdi + i].z));
+				//m_AABB.addPoint(D3DXVECTOR3(p_vData[vdi + i].x, p_vData[vdi + i].y, p_vData[vdi + i].z));
 
 				p_vData[vdi + i].tv = -p_vData[vdi + i].tv;
 				p_vData[vdi + i].tu = p_vData[vdi + i].tu;
@@ -1834,15 +1856,13 @@ bool gResourceStaticMesh::load() //загрузка видеоданных POOL_DEFAULT
 		return false;
 	}
 
-	m_AABB.setScale(1.5f);
-
 	m_isLoaded = true;
 	return m_isLoaded;
 }
 
 void gResourceStaticMesh::unload()
 {
-	m_AABB.reset();
+	//m_AABB.reset();
 
 	if (m_pIB)
 		m_pIB->Release();

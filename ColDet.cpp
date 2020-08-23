@@ -115,7 +115,9 @@ void gAABB::getCenterPoint( D3DXVECTOR3* outCenter )
 
 void gAABB::setScale( float scale )
 {
-	D3DXVECTOR3 scaledBound = ( m_bmax - m_bmin ) * ( scale - 1 ); // TODO ??:
-	m_bmax += scaledBound;
-	m_bmin -= scaledBound;
+	//D3DXVECTOR3 scaledBound = ( m_bmax - m_bmin ) * ( scale - 1 ); // TODO ??:
+	//m_bmax += scaledBound;
+	//m_bmin -= scaledBound;
+	m_bmax *= scale;
+	m_bmax *= scale;
 }

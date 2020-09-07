@@ -109,6 +109,9 @@ void gEntity::setRenderable( gRenderable* renderable )
 		if ( m_pRenderable->getGroup() == GRESGROUP_SKINNEDMESH )
 			m_animators[GANIMATOR_SKINNED] = new gSkinnedMeshAnimator(this);
 		//((gSkinnedMeshAnimator*)m_animators[GANIMATOR_SKINNED])->getWordBonesMatrixes();
+
+		//m_AABB = m_pRenderable->getAABB();
+		_rebuildAABB(); 
 	}
 }
 
@@ -390,6 +393,7 @@ void gEntity::_rebuildOffsetTransformMatrix()
 	{
 		D3DXMatrixIdentity(&m_offsetMatrix);
 	}
+	_rebuildAABB();
 }
 
 void gEntity::_rebuildAbsoluteTransformMatrix()
@@ -407,6 +411,13 @@ void gEntity::_rebuildAbsoluteTransformMatrix()
 	}
 }
 
+void gEntity::_rebuildAABB()
+{
+	//m_AABB = m_pRenderable->getAABB();
+	if( m_pRenderable )
+		m_pRenderable->getAABB().getTransformedByMatrix(m_AABB, m_offsetMatrix);
+}
+
 //-----------------------------------------------
 //
 //	CLASS: gSceneNode
@@ -421,7 +432,7 @@ gSceneNode::gSceneNode( const char* name, gSceneManager* mgr, gSceneNode* parent
 	m_name[NAME_LENGHT - 1] = 0;
 	m_parent = parent;
 	m_isTransformed = true;
-	m_isAABBVisible = false; // false need
+	m_isAABBVisible = true; // false need
 	m_isAABBChanged = false; // при создании узел не изменяет AABB предка
 
 	D3DXQuaternionIdentity( &m_relOrientation );

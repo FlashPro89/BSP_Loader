@@ -76,6 +76,7 @@ protected:
 	bool _checkIsNeedOffsetTransform();
 	void _rebuildOffsetTransformMatrix();
 	void _rebuildAbsoluteTransformMatrix();
+	void _rebuildAABB();
 
 	std::map< std::string, gMaterial* > m_userMaterials;
 

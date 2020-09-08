@@ -787,7 +787,7 @@ bool gResourceCubeTexture::load()
 		pTmpTex = 0;
 
 		//debug
-		hr = D3DXSaveTextureToFile( "../out_cube.dds", D3DXIFF_DDS, m_pTex, 0 );
+		//hr = D3DXSaveTextureToFile( "../out_cube.dds", D3DXIFF_DDS, m_pTex, 0 );
 
 		m_isLoaded = SUCCEEDED(hr);
 	}

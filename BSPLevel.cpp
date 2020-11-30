@@ -6,6 +6,11 @@
 #include "Scene.h"
 #include "Materials.h"
 
+#define ONPLANE		0
+#define FRONT		1
+#define BACK		2
+#define EPSILON		0.01f
+
 #pragma warning( disable : 4018 )
 #pragma warning( disable : 4267 )
 
@@ -932,6 +937,50 @@ const char* gResourceBSPLevel::getSkyBoxName() const
 	return 0;
 }
 
+// returned dist point % plane
+inline float gResourceBSPLevel::_testPointOnPlane( const D3DXVECTOR3& point, int plane ) const
+{
+	return (point.x * m_bspPlanes[plane].normal[0] +
+		point.y * m_bspPlanes[plane].normal[2] +
+		point.z * m_bspPlanes[plane].normal[1] - m_bspPlanes[plane].dist);
+}
+
+int  gResourceBSPLevel::_getClipnodeContentInPoint( const D3DXVECTOR3& point, int clipnode ) const
+{
+	if (clipnode < 0)
+	{
+		return clipnode;
+	}
+	else
+	{
+		if ( _testPointOnPlane(point, m_bspClipnodes[clipnode].planenum) > EPSILON )
+			return _getClipnodeContentInPoint(point, m_bspClipnodes[clipnode].children[0]);
+		else
+			return _getClipnodeContentInPoint(point, m_bspClipnodes[clipnode].children[1]);
+	}
+}
+
+int  gResourceBSPLevel::_getClipnodeContentInBoundingSphere(const D3DXVECTOR3& point, 
+	float radius, int clipnode) const
+{
+	if (clipnode < 0)
+	{
+		return clipnode;
+	}
+	else
+	{
+		if ( _testPointOnPlane(point, m_bspClipnodes[clipnode].planenum) > radius )
+			return _getClipnodeContentInBoundingSphere(point, radius, m_bspClipnodes[clipnode].children[0]);
+		else
+			return _getClipnodeContentInBoundingSphere(point, radius, m_bspClipnodes[clipnode].children[1]);
+	}
+}
+
+const gEntityTextBlocks& gResourceBSPLevel::_getEntityTextBlocks() const
+{
+	return m_entityTextBlocks;
+}
+
 bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 {
 	gTextureAtlas mapTexAtlas;
@@ -1041,7 +1090,7 @@ void gResourceBSPLevel::parceEntities()
 
 	while (!pFile->eof())
 	{
-		gEntityParserBlock block;
+		gEntityTextBlock block;
 		
 		while ( pFile->gets( tmp, 256 + 32) )
 		{

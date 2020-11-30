@@ -44,7 +44,8 @@ struct gBSPRendingFace
 };
 
 
-typedef std::map< std::string, std::string >  gEntityParserBlock;
+typedef std::map< std::string, std::string >  gEntityTextBlock;
+typedef std::vector< gEntityTextBlock > gEntityTextBlocks;
 
 class gResourceBSPLevel : public gRenderable
 {
@@ -84,9 +85,23 @@ public:
 
 	const char* getSkyBoxName() const;
 
+
+	//пока что public функции
+	inline float _testPointOnPlane(const D3DXVECTOR3& point, int plane) const;
+	int  _getClipnodeContentInPoint(const D3DXVECTOR3& point, int clipnode) const;
+	int  _getClipnodeContentInBoundingSphere(const D3DXVECTOR3& point, float radius, int clipnode) const;
+
+	const gEntityTextBlocks& _getEntityTextBlocks() const;
+
 protected:
 	gResourceBSPLevel();
 	gResourceBSPLevel(gResourceBSPLevel&);
+
+/*
+	inline float _testPointOnPlane(const D3DXVECTOR3& point, int plane) const;
+	int  _getClipnodeContentInPoint(const D3DXVECTOR3& point, int clipnode) const;
+	int  _getClipnodeContentInBoundingSphere(const D3DXVECTOR3& point, float radius, int clipnode) const;
+*/
 
 	void* getLump(unsigned char lump) const;
 	bool loadLightmaps( unsigned int lightedFacesNum );
@@ -149,7 +164,7 @@ protected:
 	IDirect3DIndexBuffer9* m_pBatchIB;
 	gBSPRendingFace* m_rFaces;
 	D3DXVECTOR3* m_facePositions = 0;
-	std::vector< gEntityParserBlock > m_entityTextBlocks;
+	gEntityTextBlocks m_entityTextBlocks;
 };
 
 #endif

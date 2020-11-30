@@ -134,7 +134,8 @@ typedef struct
 }D3DVertex;
 
 typedef unsigned __int16  D3DIndex;
-
+bool enableCollisions = false;
+unsigned char blend = 0;
 
 bool isLeafInFrustum(int leaf)
 {
@@ -558,6 +559,7 @@ void loadScene( const char* mapname )
 		gSceneNode* node_skin1 = node_centr->createChild("new_skin1");
 		gSceneNode* node_skin2 = node_centr->createChild("new_skin2");
 		gSceneNode* node_skin3 = node_centr->createChild("new_skin3");
+		gSceneNode* node_skin_sas = node_centr->createChild("new_skin_sas");
 		gSceneNode* node_crystal = node_centr->createChild("new_crystal");
 		gSceneNode* node_terrain = smgr.getRootNode().createChild("new_terrain");
 
@@ -645,6 +647,7 @@ void loadScene( const char* mapname )
 		node_skin1->setRelativePosition(D3DXVECTOR3(50.f, 0.f, 0.f));
 		node_skin2->setRelativePosition(D3DXVECTOR3(-50.f, 0.f, 0.f));
 		node_skin3->setRelativePosition(D3DXVECTOR3(-80.f, 0.f, 0.f));
+		node_skin_sas->setRelativePosition(D3DXVECTOR3(-50.f, 0.f, 0.f));
 		node_crystal->setRelativePosition(D3DXVECTOR3(0.f, 100.f, 0));
 		node_crystal->setRelativeScale(D3DXVECTOR3(0.25f, 0.25f, 0.25f));
 		node_terrain->setRelativePosition(D3DXVECTOR3(0.f, -500.f, 0.f));
@@ -656,6 +659,27 @@ void loadScene( const char* mapname )
 		pEnt->setRenderable(pBSPLevel);
 		smgr.getRootNode().attachEntity(pEnt);
 
+		auto etb = pBSPLevel->_getEntityTextBlocks();
+		auto it = etb.begin();
+		while( it != etb.end() )
+		{
+			auto mit = it->find("classname");
+			if (mit != it->end())
+			{
+				if ( !strcmp("info_player_start", mit->second.c_str() ) )
+				{
+					mit = it->find("origin");
+					if (mit != it->end())
+					{
+						int x, y, z;
+						sscanf_s(mit->second.c_str(), "%i %i %i", &x, &z, &y);
+						cam.setPosition(D3DXVECTOR3(x, y, z));
+						break;
+					}
+				}
+			}
+			it++;
+		}
 
 		//Load skinned mesh
 		gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/barney/BARNEY-X_Template_Biped1.smd", "barney");
@@ -666,8 +690,10 @@ void loadScene( const char* mapname )
 		pSMesh->addAnimation("../data/models/barney/run.smd", "run" );
 		pSMesh->addAnimation("../data/models/barney/walk.smd", "walk" );
 		pSMesh->addAnimation("../data/models/barney/sit1.smd", "sit1"); 
-		pSMesh->addAnimation("../data/models/barney/fall_loop.smd", "fall_loop");
-		
+		pSMesh->addAnimation("../data/models/barney/fall_loop.smd", "fall_loop"); 
+		pSMesh->addAnimation("../data/models/barney/shootgun_blend1.smd", "shootgun_blend1");
+		pSMesh->addAnimation("../data/models/barney/shootgun_blend2.smd", "shootgun_blend2");
+
 		ent = smgr.createEntity("ent__skinning1");
 		ent->setRenderable(pSMesh);
 		//ent->setMaterial( matFactory.getMaterial(pSMesh->getDefaultMaterialName() ) );
@@ -675,7 +701,7 @@ void loadScene( const char* mapname )
 
 		gSkinnedMeshAnimator* ctrl = (gSkinnedMeshAnimator * )ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("run",GSKINANIM_LOOP)->play();
-		//ctrl->getTrack("run")->setFPS(30.f);
+		ctrl->getTrack("run")->setFPS(20.f);
 
 		gResourceSkinnedMesh* pSMesh2 =
 			(gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/zombie/Zom3_Template_Biped(White_Suit)1.smd", "zombie");
@@ -705,6 +731,28 @@ void loadScene( const char* mapname )
 		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
 		ctrl->addTrack("eatbody", GSKINANIM_LOOP)->play();
 		ctrl->getTrack("eatbody")->setFPS(40.f);
+
+
+		//SAS
+		pSMesh = (gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/sas/sas.smd", "sas");
+		pSMesh->addAnimation("../data/models/sas/jump.smd", "jump"); 
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend1.smd", "blend1");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend2.smd", "blend2");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend3.smd", "blend3");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend4.smd", "blend4");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend5.smd", "blend5");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend6.smd", "blend6");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend7.smd", "blend7");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend8.smd", "blend8");
+		pSMesh->addAnimation("../data/models/sas/ref_shoot_ak47_blend9.smd", "blend9");
+
+		ent = smgr.createEntity("ent__skinning_sas");
+		ent->setRenderable(pSMesh);
+
+		ctrl = (gSkinnedMeshAnimator*)ent->getAnimator(GANIMATOR_SKINNED);
+		ctrl->addTrack("jump", GSKINANIM_LOOP)->play();
+		ctrl->getTrack("jump")->setFPS(40.f);
+		node_skin_sas->attachEntity(ent);
 		
 		///////////////////////////////////////////////////////////////////
 		// Static mesh test
@@ -731,7 +779,7 @@ void loadScene( const char* mapname )
 		smgr.getRootNode().attachEntity(ent);
 	}
 
-	//cam.setFOV(3.1415f / 4);
+	cam.setFOV(3.1415f / 4);
 
 	FILE* f = 0;
 
@@ -1878,29 +1926,35 @@ void frame_render()
 		rqueue.render(pD3DDev9);
 
 
+		D3DVIEWPORT9 viewport;
+		pD3DDev9->GetViewport(&viewport);
+
 		//Draw Text Test
 		pD3DDev9->SetRenderState(D3DRS_ZENABLE, false);
 		gResourceTextDrawer* tdrawer = (gResourceTextDrawer*)rmgr.getResource("font1", GRESGROUP_TEXTDRAWER);
-		tdrawer->drawInScreenSpace("Test test", 400, 400, 0xFF00FF00, 1024, 768);
+		//tdrawer->drawInScreenSpace( "Test test", 400, 400, 0xFF00FF00, viewport.Width, viewport.Height );
 
 		char buff[256];
 		sprintf_s(buff, 256, "Yaw: %f    Pitch: %f", cam.getYaw(), cam.getPitch());
-		tdrawer->drawInScreenSpace(buff, 20, 20, 0xFF00FF00, 1024, 768);
+		tdrawer->drawInScreenSpace(buff, 20, 20, 0xFF00FF00, viewport.Width, viewport.Height );
 
-		//sprintf_s( buff, 256, "Current face: %i", currentFace );
-		//tdrawer->drawInScreenSpace(buff, 20, 60, 0xFF00FF00, 1024, 768);
+		const gResourceBSPLevel* level = (const gResourceBSPLevel *)rmgr.getResource("bspLevel", GRESGROUP_BSPLEVEL);
+		if (level)
+		{
+			sprintf_s(buff, 256, "Clipnode content: %i", level->_getClipnodeContentInPoint( cam.getPosition(), 0 ) );
+			tdrawer->drawInScreenSpace(buff, 20, 60, 0xFF00FF00, viewport.Width, viewport.Height );
+		}
+
+		sprintf_s(buff, 256, "Collision enable: %s", enableCollisions == true ? "on" : "off" );
+		tdrawer->drawInScreenSpace(buff, 20, 100, 0xFF00FF00, viewport.Width, viewport.Height);
 
 		D3DXVECTOR3 v;
-		D3DVIEWPORT9 viewport;
-		pD3DDev9->GetViewport(&viewport);
 		cam.projPointToScreen(D3DXVECTOR3(0.f, 0.f, 0.f), v, viewport);
 
 		tdrawer = (gResourceTextDrawer*)rmgr.getResource("font2", GRESGROUP_TEXTDRAWER);
 
 		if (v.z < 0.f)
-			tdrawer->drawInScreenSpace("Null Point\nПроверка", (int)v.x, (int)v.y, 0xFF00FF00, 1024, 768);
-
-		//drawMarkedFace(currentFace);
+			tdrawer->drawInScreenSpace("Null Point\nПроверка", (int)v.x, (int)v.y, 0xFF00FF00, viewport.Width, viewport.Height );
 
 		pD3DDev9->SetRenderState(D3DRS_ZENABLE, true);
 
@@ -1955,6 +2009,23 @@ bool frame_move()
 {
 	input->update();
 	float dt = timer->getDelta();
+
+	if (input->isKeyDown(DIK_LBRACKET))
+	{
+		if (blend > 0) blend--;
+
+	}
+
+	if (input->isKeyDown(DIK_RBRACKET))
+	{
+		if (blend < 9) blend++;
+
+	}
+
+	if (input->isKeyDown(DIK_C))
+	{
+		enableCollisions = !enableCollisions;
+	}
 
 	if (input->isKeyPressed(DIK_RIGHT))
 	{
@@ -2011,8 +2082,6 @@ bool frame_move()
 		D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 10.5f);
 		node->setRelativeOrientation(q);
 	}
-
-	smgr.frameMove(dt);
 
 	if (input->isKeyDown(DIK_G))
 		cam.lookAt(D3DXVECTOR3(0, 0, 0));
@@ -2077,6 +2146,9 @@ bool frame_move()
 		wf = !wf;
 		pD3DDev9->SetRenderState(D3DRS_FILLMODE, wf ? D3DFILL_WIREFRAME : D3DFILL_SOLID);
 	}
+
+	smgr.frameMove(dt);
+
 	return true;
 }
 
@@ -2104,8 +2176,95 @@ void cleanUp()
 	wnd_destroy();
 }
 
+#define MAXSTUDIOTRIANGLES	20000	// TODO: tune this
+#define MAXSTUDIOVERTS		2048	// TODO: tune this
+#define MAXSTUDIOSEQUENCES	256		// total animation sequences
+#define MAXSTUDIOSKINS		100		// total textures
+#define MAXSTUDIOSRCBONES	512		// bones allowed at source movement
+#define MAXSTUDIOBONES		128		// total bones actually used
+#define MAXSTUDIOMODELS		32		// sub-models per model
+#define MAXSTUDIOBODYPARTS	32
+#define MAXSTUDIOGROUPS		16
+#define MAXSTUDIOANIMATIONS	512		// per sequence
+#define MAXSTUDIOMESHES		256
+#define MAXSTUDIOEVENTS		1024
+#define MAXSTUDIOPIVOTS		256
+#define MAXSTUDIOCONTROLLERS 8
+
+typedef float vec_t;
+typedef vec_t vec3_t[3];	// x,y,z
+typedef vec_t vec4_t[4];
+
+typedef struct
+{
+	int					id;
+	int					version;
+
+	char				name[64];
+	int					length;
+
+	vec3_t				eyeposition;	// ideal eye position
+	vec3_t				min;			// ideal movement hull size
+	vec3_t				max;
+
+	vec3_t				bbmin;			// clipping bounding box
+	vec3_t				bbmax;
+
+	int					flags;
+
+	int					numbones;			// bones
+	int					boneindex;
+
+	int					numbonecontrollers;		// bone controllers
+	int					bonecontrollerindex;
+
+	int					numhitboxes;			// complex bounding boxes
+	int					hitboxindex;
+
+	int					numseq;				// animation sequences
+	int					seqindex;
+
+	int					numseqgroups;		// demand loaded sequences
+	int					seqgroupindex;
+
+	int					numtextures;		// raw textures
+	int					textureindex;
+	int					texturedataindex;
+
+	int					numskinref;			// replaceable textures
+	int					numskinfamilies;
+	int					skinindex;
+
+	int					numbodyparts;
+	int					bodypartindex;
+
+	int					numattachments;		// queryable attachable points
+	int					attachmentindex;
+
+	int					soundtable;
+	int					soundindex;
+	int					soundgroups;
+	int					soundgroupindex;
+
+	int					numtransitions;		// animation node to animation node transition graph
+	int					transitionindex;
+} studiohdr_t;
+
+void studio_mdl_test()
+{
+	FILE* f = 0;
+	errno_t err = fopen_s( &f, "barney.mdl", "rb" );
+	studiohdr_t header;
+	if (!err)
+	{
+		fread((void*)&header, sizeof(studiohdr_t), 1, f);
+		fclose(f);
+	}
+}
+
 int wmain(int argc, wchar_t* argv[])
 {
+	studio_mdl_test();
 	try
 	{
 		wnd_create( "BSP LEVEL LOADER", 1024, 768 );

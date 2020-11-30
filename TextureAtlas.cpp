@@ -125,6 +125,8 @@ bool gTextureAtlas::mergeTexturesToAtlas( unsigned short maxWidth, unsigned shor
 	*/
 
 	int lMapMaxSideSize = 256;
+	if (lMapMaxSideSize < m_pSortableTextureSizesPointers[0]->height)
+		lMapMaxSideSize += m_pSortableTextureSizesPointers[0]->height;
 
 	//рассчитаем габариты текстуры
 	unsigned short tWidth, tHeight;
@@ -137,6 +139,9 @@ remapping:
 	tWidth = 0, tHeight = 0;
 	tXPos = border, tYPos = border;
 	rowHeight = m_pSortableTextureSizesPointers[0]->height;
+
+	tWidth = lMapMaxSideSize;
+	tHeight = m_pSortableTextureSizesPointers[0]->height + border;
 
 	//размечаем атлас
 	for (unsigned short i = 0; i < m_curPosInArray; i++)

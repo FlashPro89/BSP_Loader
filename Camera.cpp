@@ -313,11 +313,11 @@ void gCamera::_YPtoQuat()
 void gCamera::recompMatrices()
 {
 	D3DXMATRIX rot;
-	D3DXVECTOR3 dir(0, 0, 1),at;
+	D3DXVECTOR3 dir(0, 0, 1),at, vup(0, 1.0f, 0);
 	D3DXMatrixRotationQuaternion(&rot, &m_rot);
 	D3DXVec3TransformCoord(&dir, &dir, &rot);
 	dir += m_pos;
-	D3DXMatrixLookAtLH( &m_mview, &m_pos, &dir, &D3DXVECTOR3(0, 1.0f, 0) );
+	D3DXMatrixLookAtLH( &m_mview, &m_pos, &dir, &vup );
 
 	D3DXMatrixPerspectiveFovLH( &m_mproj, m_FOV, m_aspect, m_nPlane, m_fPlane );
 
@@ -338,10 +338,13 @@ gViewingFrustum::gViewingFrustum(gCamera* cam)
 bool gViewingFrustum::testPoint(float x, float y, float z)  const
 {
 	float dot = 0;
+	D3DXVECTOR3 v;
 
 	// Убеждаемся, что точка внутри пирамиды
-	for( short i = 0; i < 6; i++ ) {
-		dot = D3DXPlaneDotCoord(&m_planes[i], &D3DXVECTOR3(x, y, z));
+	for( short i = 0; i < 6; i++ ) 
+	{
+		v = D3DXVECTOR3(x, y, z);
+		dot = D3DXPlaneDotCoord(&m_planes[i], &v);
 		if( dot < 0.0f )
 			return false;
 	}
@@ -359,6 +362,8 @@ bool gViewingFrustum::testPoint(const D3DXVECTOR3& point)  const
 }
 bool gViewingFrustum::testAABB(const D3DXVECTOR3& bbMin, const D3DXVECTOR3& bbMax)  const
 {
+	D3DXVECTOR3 v;
+
 	// Подсчитываем количество точек внутри пирамиды
 	for (short i = 0; i < 6; i++)
 	{
@@ -366,54 +371,51 @@ bool gViewingFrustum::testAABB(const D3DXVECTOR3& bbMin, const D3DXVECTOR3& bbMa
 		bool PointIn = true;
 
 		// Проверяем все восемь точек относительно плоскости
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3( bbMin.x, bbMin.y, bbMin.z )) < 0.0f) {
+		v = D3DXVECTOR3(bbMin.x, bbMin.y, bbMin.z);
+		if (D3DXPlaneDotCoord( &m_planes[i], &v ) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}
 
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3(bbMax.x, bbMin.y, bbMin.z)) < 0.0f) {
+		v = D3DXVECTOR3(bbMax.x, bbMin.y, bbMin.z);
+		if (D3DXPlaneDotCoord(&m_planes[i], &v) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}
 
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3(bbMin.x, bbMax.y, bbMin.z)) < 0.0f) {
+		v = D3DXVECTOR3(bbMin.x, bbMax.y, bbMin.z);
+		if (D3DXPlaneDotCoord( &m_planes[i], &v ) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}
 
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3(bbMax.x, bbMax.y, bbMin.z)) < 0.0f) {
+		v = D3DXVECTOR3(bbMax.x, bbMax.y, bbMin.z);
+		if (D3DXPlaneDotCoord( &m_planes[i], &v ) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}
 
-		// Проверяем все восемь точек относительно плоскости
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3(bbMin.x, bbMin.y, bbMax.z)) < 0.0f) {
+	
+		v = D3DXVECTOR3(bbMin.x, bbMin.y, bbMax.z);
+		if (D3DXPlaneDotCoord( &m_planes[i], &v ) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}
 
-		// Проверяем все восемь точек относительно плоскости
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3(bbMax.x, bbMin.y, bbMax.z)) < 0.0f) {
+		v = D3DXVECTOR3(bbMax.x, bbMin.y, bbMax.z);
+		if (D3DXPlaneDotCoord( &m_planes[i], &v ) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}
 
-		// Проверяем все восемь точек относительно плоскости
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3(bbMin.x, bbMax.y, bbMax.z)) < 0.0f) {
+		v = D3DXVECTOR3(bbMin.x, bbMax.y, bbMax.z);
+		if (D3DXPlaneDotCoord( &m_planes[i], &v ) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}
 
-		// Проверяем все восемь точек относительно плоскости
-		if (D3DXPlaneDotCoord(&m_planes[i],
-			&D3DXVECTOR3(bbMax.x, bbMax.y, bbMax.z)) < 0.0f) {
+		v = D3DXVECTOR3(bbMax.x, bbMax.y, bbMax.z);
+		if ( D3DXPlaneDotCoord(&m_planes[i],&v) < 0.0f) {
 			PointIn = false;
 			Count--;
 		}

@@ -17,6 +17,7 @@
 #include <string>
 #include <stdlib.h>
 #include <stdio.h>
+#include "studioMDL.h"
 
 LPDIRECT3DVERTEXBUFFER9 m_VB = 0;
 LPDIRECT3DINDEXBUFFER9 m_IB = 0;
@@ -634,7 +635,8 @@ void loadScene( const char* mapname )
 		node_joint53->attachEntity(ent);
 
 		D3DXQUATERNION q;
-		D3DXQuaternionRotationAxis( &q, &D3DXVECTOR3(0, 1.f, 0), D3DX_PI / 16.f );
+		D3DXVECTOR3 vAxis(0, 1.f, 0);
+		D3DXQuaternionRotationAxis( &q, &vAxis, D3DX_PI / 16.f );
 		node_centr->setRelativePosition( D3DXVECTOR3(0, 0, 0.f) );
 		node_joint1->setRelativePosition( D3DXVECTOR3(100.f, 0.f, 0) );
 		node_joint2->setRelativePosition( D3DXVECTOR3(100.f, 0.f, 0) );
@@ -683,16 +685,16 @@ void loadScene( const char* mapname )
 
 		//Load skinned mesh
 		gResourceSkinnedMesh* pSMesh = (gResourceSkinnedMesh*)rmgr.loadSkinnedMeshSMD("../data/models/barney/BARNEY-X_Template_Biped1.smd", "barney");
-		pSMesh->addAnimation("../data/models/barney/idle1.smd", "idle1" );
-		pSMesh->addAnimation("../data/models/barney/idle2.smd", "idle2");
-		pSMesh->addAnimation("../data/models/barney/idle3.smd", "idle3");
-		pSMesh->addAnimation("../data/models/barney/idle4.smd", "idle4");
-		pSMesh->addAnimation("../data/models/barney/run.smd", "run" );
-		pSMesh->addAnimation("../data/models/barney/walk.smd", "walk" );
-		pSMesh->addAnimation("../data/models/barney/sit1.smd", "sit1"); 
-		pSMesh->addAnimation("../data/models/barney/fall_loop.smd", "fall_loop"); 
-		pSMesh->addAnimation("../data/models/barney/shootgun_blend1.smd", "shootgun_blend1");
-		pSMesh->addAnimation("../data/models/barney/shootgun_blend2.smd", "shootgun_blend2");
+		pSMesh->addAnimation( "../data/models/barney/idle1.smd", "idle1" );
+		pSMesh->addAnimation( "../data/models/barney/idle2.smd", "idle2" );
+		pSMesh->addAnimation( "../data/models/barney/idle3.smd", "idle3" );
+		pSMesh->addAnimation( "../data/models/barney/idle4.smd", "idle4" );
+		pSMesh->addAnimation( "../data/models/barney/run.smd", "run" );
+		pSMesh->addAnimation( "../data/models/barney/walk.smd", "walk" );
+		pSMesh->addAnimation( "../data/models/barney/sit1.smd", "sit1"); 
+		pSMesh->addAnimation( "../data/models/barney/fall_loop.smd", "fall_loop" ); 
+		pSMesh->addAnimation( "../data/models/barney/shootgun_blend1.smd", "shootgun_blend1" );
+		pSMesh->addAnimation( "../data/models/barney/shootgun_blend2.smd", "shootgun_blend2" );
 
 		ent = smgr.createEntity("ent__skinning1");
 		ent->setRenderable(pSMesh);
@@ -1256,7 +1258,7 @@ void loadScene( const char* mapname )
 	l.Diffuse.g = 0.4f;
 	l.Diffuse.b = 0.4f;
 	l.Direction = D3DXVECTOR3(-1.f, -0.5f, -1.f);
-	D3DXVec3Normalize(&(D3DXVECTOR3)(l.Direction), &D3DXVECTOR3(l.Direction));
+	D3DXVec3Normalize((D3DXVECTOR3*)&(l.Direction), (D3DXVECTOR3*)&l.Direction);
 	
 	l.Type = D3DLIGHT_DIRECTIONAL;
 	//l.Type = D3DLIGHT_POINT;
@@ -2062,24 +2064,25 @@ bool frame_move()
 	}
 
 	D3DXQUATERNION q;
+	D3DXVECTOR3 vUp(0, 1.f, 0);
 
 	gSceneNode* node = smgr.getNode("new_central");
 	if (node)
 	{
-		D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 1.5f);
+		D3DXQuaternionRotationAxis(&q, &vUp, ti * 1.5f);
 		node->setRelativeOrientation(q);
 	}
 
 	node = smgr.getNode("new_joint2");
 	if (node)
 	{
-		D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 5.5f);
+		D3DXQuaternionRotationAxis(&q, &vUp, ti * 5.5f);
 		node->setRelativeOrientation(q);
 	}
 	node = smgr.getNode("new_joint4");
 	if (node)
 	{
-		D3DXQuaternionRotationAxis(&q, &D3DXVECTOR3(0, 1.f, 0), ti * 10.5f);
+		D3DXQuaternionRotationAxis(&q, &vUp, ti * 10.5f);
 		node->setRelativeOrientation(q);
 	}
 
@@ -2176,89 +2179,144 @@ void cleanUp()
 	wnd_destroy();
 }
 
-#define MAXSTUDIOTRIANGLES	20000	// TODO: tune this
-#define MAXSTUDIOVERTS		2048	// TODO: tune this
-#define MAXSTUDIOSEQUENCES	256		// total animation sequences
-#define MAXSTUDIOSKINS		100		// total textures
-#define MAXSTUDIOSRCBONES	512		// bones allowed at source movement
-#define MAXSTUDIOBONES		128		// total bones actually used
-#define MAXSTUDIOMODELS		32		// sub-models per model
-#define MAXSTUDIOBODYPARTS	32
-#define MAXSTUDIOGROUPS		16
-#define MAXSTUDIOANIMATIONS	512		// per sequence
-#define MAXSTUDIOMESHES		256
-#define MAXSTUDIOEVENTS		1024
-#define MAXSTUDIOPIVOTS		256
-#define MAXSTUDIOCONTROLLERS 8
-
-typedef float vec_t;
-typedef vec_t vec3_t[3];	// x,y,z
-typedef vec_t vec4_t[4];
-
-typedef struct
-{
-	int					id;
-	int					version;
-
-	char				name[64];
-	int					length;
-
-	vec3_t				eyeposition;	// ideal eye position
-	vec3_t				min;			// ideal movement hull size
-	vec3_t				max;
-
-	vec3_t				bbmin;			// clipping bounding box
-	vec3_t				bbmax;
-
-	int					flags;
-
-	int					numbones;			// bones
-	int					boneindex;
-
-	int					numbonecontrollers;		// bone controllers
-	int					bonecontrollerindex;
-
-	int					numhitboxes;			// complex bounding boxes
-	int					hitboxindex;
-
-	int					numseq;				// animation sequences
-	int					seqindex;
-
-	int					numseqgroups;		// demand loaded sequences
-	int					seqgroupindex;
-
-	int					numtextures;		// raw textures
-	int					textureindex;
-	int					texturedataindex;
-
-	int					numskinref;			// replaceable textures
-	int					numskinfamilies;
-	int					skinindex;
-
-	int					numbodyparts;
-	int					bodypartindex;
-
-	int					numattachments;		// queryable attachable points
-	int					attachmentindex;
-
-	int					soundtable;
-	int					soundindex;
-	int					soundgroups;
-	int					soundgroupindex;
-
-	int					numtransitions;		// animation node to animation node transition graph
-	int					transitionindex;
-} studiohdr_t;
-
 void studio_mdl_test()
 {
 	FILE* f = 0;
-	errno_t err = fopen_s( &f, "barney.mdl", "rb" );
+	FILE* d = 0;
+	errno_t err1 = fopen_s( &f, "barney.mdl", "rb" );
+	errno_t err2 = fopen_s(&d, "studioMDL.txt", "wt");
 	studiohdr_t header;
-	if (!err)
+	mstudiobone_t bones[MAXSTUDIOBONES];
+	mstudiobodyparts_t bodyparts[MAXSTUDIOBODYPARTS];
+	mstudioseqdesc_t seq[MAXSTUDIOSEQUENCES];
+	mstudioseqgroup_t seqgroups[MAXSTUDIOGROUPS];
+	mstudiotexture_t textures[MAXSTUDIOSKINS];
+
+	if (!err1 && !err2 )
 	{
+		fseek(f, 0, SEEK_END);
+		size_t fsz = ftell(f);
+		unsigned char* buff = new unsigned char[fsz];
+		fseek(f, 0, SEEK_SET);
+		fread(buff, fsz, 1, f);
+		fseek(f, 0, SEEK_SET);
+
 		fread((void*)&header, sizeof(studiohdr_t), 1, f);
+		size_t bsz;
+
+		//load bones
+		bsz = sizeof(mstudiobone_t) * header.numbones;
+		fseek(f, header.boneindex, SEEK_SET);
+		fread((void*)bones, bsz, 1, f);
+		fprintf(d, "===Bones: %i===\n", header.numbones);
+		
+		//load bodyparts
+		bsz = sizeof(mstudiobodyparts_t) * header.numbodyparts;
+		fseek(f, header.bodypartindex, SEEK_SET);
+		fread((void*)bodyparts, bsz, 1, f);
+		fprintf(d, "===Bodyparts: %i===\n", header.numbodyparts);
+
+		//load sequences
+		bsz = sizeof(mstudioseqdesc_t) * header.numseq;
+		fseek(f, header.seqindex, SEEK_SET);
+		fread((void*)seq, bsz, 1, f);
+		fprintf(d, "===Sequences: %i===\n", header.numseq);
+
+		//load sequence groups
+		bsz = sizeof(mstudioseqdesc_t) * header.numseqgroups;
+		fseek(f, header.seqgroupindex, SEEK_SET);
+		fread((void*)seqgroups, bsz, 1, f);
+		fprintf(d, "===Sequence groups: %i===\n", header.numseqgroups);
+
+		//load textures
+		bsz = sizeof(mstudiotexture_t) * header.numtextures;
+		fseek(f, header.textureindex, SEEK_SET);
+		fread((void*)textures, bsz, 1, f);
+		fprintf(d, "===Textures: %i===\n", header.numtextures);
+
+		mstudioanim_t a[MAXSTUDIOBONES];
+		mstudioanimvalue_t av[MAXSTUDIOBONES][6];
+
+		fseek( f, seqgroups[0].data + seq[0].animindex, SEEK_SET );
+		fread( (void*)a, sizeof(mstudioanim_t), header.numbones, f );
+
+		for (int i = 0; i < header.numbones; i++)
+		{
+			for (int j = 0; j < 6; j++)
+				av[i][j].value = a[i].offset[j];
+		}
+
+		int k,frame = 0;
+
+		float p[6];
+		const float s = 0.0f;
+
+		studiohdr_t* vheader = (studiohdr_t*)(buff);
+
+		mstudioseqdesc_t* seq_ = (mstudioseqdesc_t*)(buff + header.seqindex);
+		//mstudioanim_t* anim = (mstudioanim_t * )(buff + seq_->animindex);
+		mstudioanim_t* anim = (mstudioanim_t*)((byte*)buff + seqgroups->data + seq_->animindex);
+		mstudioanim_t* panim = anim;
+
+
+		for (int i = 0; i < header.numbones; i++, anim++)
+		{
+			for (int j = 0; j < 6; j++)
+			{
+				k = frame;
+
+				mstudioanimvalue_t* panimvalue = (mstudioanimvalue_t*)((byte*)panim + anim->offset[j]);
+
+				p[j] = bones[i].value[j];
+
+				if (anim->offset[j] == 0)
+				{
+					p[j] = bones[i].value[j];
+				}
+				else
+				{
+					while (panimvalue->num.total <= k)
+					{
+						k -= panimvalue->num.total;
+						panimvalue += panimvalue->num.valid + 1;
+					}
+
+					// Bah, missing blend!
+					if (panimvalue->num.valid > k)
+					{
+						// and there's more data in the span
+						if (panimvalue->num.valid > k + 1)
+						{
+							p[j] += (panimvalue[k + 1].value * (1.0 - s) + s * panimvalue[k + 2].value) * bones[i].scale[j];
+						}
+						else
+						{
+							p[j] += panimvalue[k + 1].value * bones[i].scale[j];
+						}
+					}
+					else
+					{
+						// are we at the end of the repeating values section and there's another section with data?
+						if (panimvalue->num.total <= k + 1)
+						{
+							p[j] += (panimvalue[panimvalue->num.valid].value * (1.0 - s) + s * panimvalue[panimvalue->num.valid + 2].value) * bones[i].scale[j];
+						}
+						else
+						{
+							p[j] += panimvalue[panimvalue->num.valid].value * bones[i].scale[j];
+						}
+					}
+				}
+			}
+			fprintf(d, "Bone %i: %f %f %f %f %f %f\n", i, p[0], p[1], p[2], p[3], p[4], p[5]);
+			//fprintf(d, "Offsets %i: %i %i %i %i %i %i\n", i, 
+			//	anim->offset[0], anim->offset[1], anim->offset[2], 
+			//	anim->offset[3], anim->offset[4], anim->offset[5]);
+
+		}
+
 		fclose(f);
+		fclose(d);
 	}
 }
 

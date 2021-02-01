@@ -212,8 +212,8 @@ gResource::gResource( gResourceManager* mgr, GRESOURCEGROUP group, const char* f
 
 void gResource::release()
 {
-	m_refCounter--;
-
+	//if( m_refCounter > 0 ) 
+		m_refCounter--;
 	if (m_refCounter == 0)
 		m_pResMgr->destroyResource( m_resName.c_str(), m_group ); 		
 }
@@ -507,6 +507,8 @@ bool gResource2DTexture::load()
 		if (m_isLoaded)
 			return true;
 		
+		//TODO: оптимизировать хранение в системной пам€ти дл€ bitmap'a
+
 		//create tex in MANAGED_POOL
 		HRESULT hr = m_pResMgr->getDevice()->CreateTexture(m_width, m_height, 1, D3DUSAGE_AUTOGENMIPMAP,
 			D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &m_pTex, 0);
@@ -529,7 +531,7 @@ bool gResource2DTexture::load()
 		const tagRGBTRIPLE* bmp = m_pBitmap->getBitMap();
 		icolor* img = (icolor*)rect.pBits;
 
-		for (unsigned int i = 0; i < ( m_height-1 )* (m_width - 1); i++)
+		for (unsigned int i = 0; i < ( m_height )* (m_width); i++)
 		{
 				
 			img[i].r = bmp[i].rgbtRed;
@@ -541,7 +543,7 @@ bool gResource2DTexture::load()
 		m_pTex->UnlockRect(0);
 
 		//m_pTex->GenerateMipSubLevels();
-		D3DXSaveTextureToFile("LMAP_FROM_gBMPFILE.bmp", D3DXIFF_BMP, m_pTex, 0);
+		//D3DXSaveTextureToFile("LMAP_FROM_gBMPFILE.bmp", D3DXIFF_BMP, m_pTex, 0);
 
 		m_isLoaded = true;
 		return m_isLoaded;

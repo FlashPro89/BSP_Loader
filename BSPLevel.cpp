@@ -230,16 +230,12 @@ bool gResourceBSPLevel::preload() //загрузка статических данных
 	float value = 0;
 
 	m_faceBounds = new gBSPFaceBounds[m_bspFacesNum]; // need zeroMem ?
+	//memset(m_faceBounds, 0, sizeof(gBSPFaceBounds) * m_bspFacesNum);
 
 	for (unsigned int i = 0; i <m_bspFacesNum; i++)
 	{
 		face = &m_bspFaces[i];
 		texinfo = &m_bspTexinfs[face->texinfo];
-
-		if (i == 121)
-		{
-			i++; i--;
-		}
 
 		if ( face->styles[0] == 0 )
 		{
@@ -991,7 +987,6 @@ bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 		if (m_bspFaces[i].styles[0] == 0)
 		{
 			mapTexAtlas.pushTexture(m_faceBounds[i].texsize[0], m_faceBounds[i].texsize[1], &m_faceBounds[i]);
-
 		}
 	}
 
@@ -1032,7 +1027,7 @@ bool gResourceBSPLevel::loadLightmaps( unsigned int lightedFacesNum )
 
 	//gFile* f = m_pResMgr->getFileSystem()->openFile( "new_atlas.bmp", true, true );
 	m_pBitmap->swapRGBtoBGR();
-	//atlasBMP.saveToFile(f);
+	//m_pBitmap->saveToFile(f);
 	//delete f;
 
 	std::string name = m_resName + ".lmap";

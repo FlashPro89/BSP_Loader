@@ -145,6 +145,12 @@ bool gResourceTerrain::preload() //загрузка статических данных
 		pMaterial = m_pResMgr->getMaterialFactory()->createMaterial(m_resName.c_str());
 		pMaterial->setTexture(0, m_pTex);
 		pMaterial->setTexture(1, m_pTexDetail);
+		pMaterial->setSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC);
+		pMaterial->setSamplerState(1, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC);
+		pMaterial->setSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+		pMaterial->setSamplerState(1, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+		pMaterial->setSamplerState(0, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+		pMaterial->setSamplerState(1, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
 	}
 	else
 	{

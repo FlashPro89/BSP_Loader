@@ -499,13 +499,30 @@ void gRenderQueue::render(IDirect3DDevice9* pDevice)
 						{
 							_setTexture(i, (LPDIRECT3DBASETEXTURE9)pTex->getTexture(), pDevice);
 							_setTextureStageState(i, D3DTSS_COLOROP, D3DTOP_MODULATE, pDevice);
+							
+							unsigned long sampValue = 0;
+
+							// setup texture filters
+							if (pMaterial->getSamplerState(&sampValue, i, D3DSAMP_MIPFILTER))
+								_setSamplerState(i, D3DSAMP_MIPFILTER, sampValue, pDevice);
+							else
+								_setSamplerState( i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR, pDevice );
+							
+							if (pMaterial->getSamplerState(&sampValue, i, D3DSAMP_MINFILTER))
+								_setSamplerState(i, D3DSAMP_MINFILTER, sampValue, pDevice);
+							else
+								_setSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_LINEAR, pDevice);
+
+							if (pMaterial->getSamplerState(&sampValue, i, D3DSAMP_MAGFILTER))
+								_setSamplerState(i, D3DSAMP_MAGFILTER, sampValue, pDevice);
+							else
+								_setSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR, pDevice);
 
 						}
 						else
 						{
 							_setTexture(i, 0, pDevice);
 							_setTextureStageState(i, D3DTSS_COLOROP, D3DTOP_DISABLE, pDevice);
-
 						}
 					}
 

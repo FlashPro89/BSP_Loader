@@ -32,16 +32,6 @@ protected:
 
 typedef std::map< unsigned long, unsigned long > gMaterialStateMap;
 
-class gMaterialStateIterator
-{
-public:
-	gMaterialStateIterator();
-	~gMaterialStateIterator();
-
-protected:
-
-};
-
 class gMaterial : public gReferenceCounter
 {
 public:

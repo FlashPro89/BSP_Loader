@@ -476,8 +476,14 @@ bool gResource2DTexture::load()
 			}
 			else
 			{
+				auto usage = inf.MipLevels > 1 ? 0 : D3DUSAGE_AUTOGENMIPMAP;
+
 				hr = D3DXCreateTextureFromFileEx(m_pResMgr->getDevice(), m_fileName.c_str(), D3DX_DEFAULT_NONPOW2,
-					D3DX_DEFAULT_NONPOW2, 0, 0, D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
+					D3DX_DEFAULT_NONPOW2, inf.MipLevels, usage, D3DFMT_FROM_FILE, D3DPOOL_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0, &inf, 0, &m_pTex);
+
+				// test
+				if( m_pTex && usage != 0 )
+					m_pTex->GenerateMipSubLevels();
 			}
 
 			if (FAILED(hr))

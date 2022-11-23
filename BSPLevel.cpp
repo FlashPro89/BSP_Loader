@@ -793,7 +793,7 @@ void gResourceBSPLevel::drawVisibleLeafs( int camLeaf, const gCamera& cam ) cons
 	memset(&pvs[0], 0, 2048);
 
 	int decomprSz = 0;
-	if (m_bspVisData > 0)
+	if (*m_bspVisData > 0)
 		decomprSz = BSPDecompressVisRow( &m_bspVisData[m_bspLeafs[camLeaf].visofs], &pvs[0], m_visRow );
 	
 	for (int leaf = 0; leaf < m_visLeafsNum; leaf++)

@@ -2,7 +2,7 @@
 #include "gmath.h"
 
 #define DEFAULT_CAM_TSPEED 1200.f
-#define DEFAULT_CAM_RSPEED 0.9f
+#define DEFAULT_CAM_RSPEED 5.5f
 #define DEFAULT_CAM_FOV    D3DX_PI / 4.0f
 #define DEFAULT_CAM_FPLANE 15000.f
 #define DEFAULT_CAM_NPLANE 1.f
@@ -67,7 +67,7 @@ void gCamera::tick(float dt)
 
 			if (abs(x) > MOUSE_MAX_MOVEMENT)
 			{
-				if (x < 0)
+				if (x > 0)
 					x = MOUSE_MAX_MOVEMENT;
 				else
 					x = -MOUSE_MAX_MOVEMENT;
@@ -75,7 +75,7 @@ void gCamera::tick(float dt)
 
 			if (abs(y) > MOUSE_MAX_MOVEMENT)
 			{
-				if (y < 0)
+				if (y > 0)
 					y = MOUSE_MAX_MOVEMENT;
 				else
 					y = -MOUSE_MAX_MOVEMENT;

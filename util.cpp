@@ -50,7 +50,7 @@ void wnd_create(const char* title, int w, int h)
 	rect.bottom = h;
 	AdjustWindowRect(&rect, wStyle, false);
 
-	hwnd = CreateWindowEx(0, "UTIL_LIB_WND_CLS", title, wStyle, 0, 0, rect.right, rect.bottom, 0, 0, 0, 0);
+	hwnd = CreateWindowEx(0, "UTIL_LIB_WND_CLS", title, wStyle, 0, 0, rect.right - rect.left, rect.bottom - rect.top, 0, 0, 0, 0);
 	if( ! hwnd )
 		throw( "Ошибка при создании окна!" );
 

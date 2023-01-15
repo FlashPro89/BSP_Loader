@@ -100,6 +100,12 @@ protected:
 	D3DXMATRIX m_mview;
 	D3DXMATRIX m_mproj;
 	D3DXMATRIX m_mviewproj;
+
+	float prev_mouse_x = 0.f;
+	float prev_mouse_y = 0.f;
+	float prev_vel_f = 0.f;
+	float prev_vel_s = 0.f;
+	float prev_linear_speed = 0.f;
 };
 
 

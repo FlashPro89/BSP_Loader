@@ -7,7 +7,8 @@
 #define DEFAULT_CAM_FPLANE 15000.f
 #define DEFAULT_CAM_NPLANE 1.f
 #define DEFAULT_CAM_ASPECT 1.333f
-#define MOUSE_MAX_MOVEMENT 15
+#define DEFAULT_CAM_ROT_SMOOTH 0.9f
+#define DEFAULT_CAM_TR_SMOOTH 0.98f
 
 gCamera::gCamera( gInput* input ) : m_frustum(this)
 {
@@ -55,84 +56,76 @@ void gCamera::tick(float dt)
 {
 	bool changed = false;
 
-	if (m_input)
+	if (!m_input)
+		return;
+
+	float x{}, y{};
+	if (m_input->isMousePressed(0))
 	{
+		x = static_cast<float>(m_input->getMouseX());
+		y = static_cast<float>(m_input->getMouseY());
+	}
+
+	if (prev_mouse_x == 0.f && prev_mouse_y == 0.f && x == 0.f && y == 0.f)
+		return;
+	changed = true;
+
+	float x_f = prev_mouse_x * DEFAULT_CAM_ROT_SMOOTH + x * (1.f - DEFAULT_CAM_ROT_SMOOTH);
+	float y_f = prev_mouse_y * DEFAULT_CAM_ROT_SMOOTH + y * (1.f - DEFAULT_CAM_ROT_SMOOTH);
+
+	m_yaw += x_f * dt * m_rspeed;
+	m_pitch += y_f * dt * m_rspeed;
+	if (m_pitch > D3DX_PI / 2.5f)
+		m_pitch = D3DX_PI / 2.5f;
+	if (m_pitch < -D3DX_PI / 2.5f)
+		m_pitch = -D3DX_PI / 2.5f;
+
+	_YPtoQuat();
+
+	prev_mouse_x = x_f;
+	prev_mouse_y = y_f;
+
+	D3DXMATRIX mat_dir;
+	D3DXMatrixRotationQuaternion(&mat_dir, &m_rot);
+
+	D3DXVECTOR3 dir_forward(0, 0, 1);
+	D3DXVECTOR3 dir_left(-1, 0, 0);
+	D3DXVECTOR3 dir_up(0, 1, 0);
 		
-		if (m_input->isMousePressed(0))
-		{
-			changed = true;
-
-			int x = m_input->getMouseX();
-			int y = m_input->getMouseY();
-
-			if (abs(x) > MOUSE_MAX_MOVEMENT)
-			{
-				if (x > 0)
-					x = MOUSE_MAX_MOVEMENT;
-				else
-					x = -MOUSE_MAX_MOVEMENT;
-			}
-
-			if (abs(y) > MOUSE_MAX_MOVEMENT)
-			{
-				if (y > 0)
-					y = MOUSE_MAX_MOVEMENT;
-				else
-					y = -MOUSE_MAX_MOVEMENT;
-			}
-
-			m_yaw += x * dt * m_rspeed;
-
-			m_pitch += y * dt * m_rspeed;
-			if (m_pitch > D3DX_PI / 2.5f)
-				m_pitch = D3DX_PI / 2.5f;
-			if (m_pitch < -D3DX_PI / 2.5f)
-				m_pitch = -D3DX_PI / 2.5f;
-
-			_YPtoQuat();
-		}
-
-
-		D3DXMATRIX mat_dir;
-		D3DXMatrixRotationQuaternion(&mat_dir, &m_rot);
-
-		D3DXVECTOR3 dir_forward(0, 0, 1);
-		D3DXVECTOR3 dir_left(-1, 0, 0);
-		D3DXVECTOR3 dir_up(0, 1, 0);
-		
-		D3DXVec3TransformCoord(&dir_forward, &dir_forward, &mat_dir);
-		D3DXVec3Normalize(&dir_forward, &dir_forward);
-		D3DXVec3Cross(&dir_left, &dir_forward, &dir_up);
-		D3DXVec3Normalize(&dir_left, &dir_left);
+	D3DXVec3TransformCoord(&dir_forward, &dir_forward, &mat_dir);
+	D3DXVec3Normalize(&dir_forward, &dir_forward);
+	D3DXVec3Cross(&dir_left, &dir_forward, &dir_up);
+	D3DXVec3Normalize(&dir_left, &dir_left);
 
 		
-		if (m_input->isKeyPressed(DIK_W))
-		{
-			m_pos += dir_forward * dt * m_tspeed;
-			changed = true;
-		}
-		if (m_input->isKeyPressed(DIK_S))
-		{
-			m_pos -= dir_forward * dt * m_tspeed;
-			changed = true;
-		}
-		if (m_input->isKeyPressed(DIK_A))
-		{
-			m_pos += dir_left * dt * m_tspeed;
-			changed = true;
-		}
-		if (m_input->isKeyPressed(DIK_D))
-		{
-			m_pos -= dir_left * dt * m_tspeed;
-			changed = true;
-		}
+	float target_current_speed = m_tspeed;
+	if (m_input->isKeyPressed(DIK_LSHIFT))
+		target_current_speed *= 2.f;
+	constexpr float linear_speed_smooth = 0.8f;
+	float linear_current_speed = prev_linear_speed * linear_speed_smooth + target_current_speed * (1.f - linear_speed_smooth);
+	prev_linear_speed = linear_current_speed;
 
+	float vel_f{}, vel_s{};
+	if (m_input->isKeyPressed(DIK_W)) vel_f += dt * linear_current_speed;
+	if (m_input->isKeyPressed(DIK_S)) vel_f -= dt * linear_current_speed;
+	if (m_input->isKeyPressed(DIK_A)) vel_s += dt * linear_current_speed;
+	if (m_input->isKeyPressed(DIK_D)) vel_s -= dt * linear_current_speed;
+
+	if (vel_f != 0.f || vel_s != 0.f || prev_vel_f != 0.f || prev_vel_s != 0.f)
+	{
+		changed = true;
+
+		vel_f = prev_vel_f * DEFAULT_CAM_TR_SMOOTH + vel_f * (1.f - DEFAULT_CAM_TR_SMOOTH);
+		vel_s = prev_vel_s * DEFAULT_CAM_TR_SMOOTH + vel_s * (1.f - DEFAULT_CAM_TR_SMOOTH);
+
+		m_pos += dir_forward * vel_f + dir_left * vel_s;
+
+		prev_vel_f = vel_f;
+		prev_vel_s = vel_s;
 	}
 
 	if (changed)
-	{
 		recompMatrices();
-	}
 }
 
 void gCamera::setMovementSpeed(float speed)
